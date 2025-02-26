@@ -42,6 +42,14 @@ func flattenAccessProfile(d *schema.ResourceData, in *AccessProfile) error {
 
 		d.Set("entitlements", flattenObjectRoles(in.Entitlements, v))
 	}
+	if in.AccessRequestConfig != nil {
+		v, ok := d.Get("access_request_config").([]interface{})
+		if !ok {
+			v = []interface{}{}
+		}
+		accessProfileAccessRequestConfigList := []*AccessRequestConfigList{in.AccessRequestConfig}
+		d.Set("access_request_config", flattenObjectAccessRequestConfig(accessProfileAccessRequestConfigList, v))
+	}
 	return nil
 }
 
@@ -61,6 +69,43 @@ func flattenObjectAccessProfile(in []*ObjectInfo, p []interface{}) []interface{}
 	return out
 }
 
+func flattenObjectAccessRequestConfig(in []*AccessRequestConfigList, p []interface{}) []interface{} {
+	if in == nil {
+		return []interface{}{}
+	}
+
+	out := make([]interface{}, 0, len(in))
+	for i := range in {
+		var obj = make(map[string]interface{})
+		obj["comments_required"] = in[i].CommentsRequired
+		obj["denial_comments_required"] = in[i].DenialCommentsRequired
+                if in[i].ApprovalSchemes != nil {
+                        v, ok := obj["approval_schemes"].([]interface{})
+                        if !ok {
+                                v = []interface{}{}
+                        }
+                        obj["approval_schemes"] = flattenObjectApprovalSchemes(in[i].ApprovalSchemes, v)
+                }
+		out = append(out, obj)
+	}
+	return out
+}
+
+func flattenObjectApprovalSchemes(in []*ApprovalSchemes, p []interface{}) []interface{} {
+	if in == nil {
+		return []interface{}{}
+	}
+
+	out := make([]interface{}, 0, len(in))
+	for i := range in {
+		var obj = make(map[string]interface{})
+		obj["approver_type"] = in[i].ApproverType
+		obj["approver_id"] = in[i].ApproverId
+		out = append(out, obj)
+	}
+	return out
+}
+
 // Expanders
 
 func expandAccessProfile(in *schema.ResourceData) (*AccessProfile, error) {
@@ -71,6 +116,10 @@ func expandAccessProfile(in *schema.ResourceData) (*AccessProfile, error) {
 
 	obj.Name = in.Get("name").(string)
 	obj.Description = in.Get("description").(string)
+
+	if v, ok := in.Get("requestable").(bool); ok {
+		obj.Requestable = &v
+	}
 
 	if v, ok := in.Get("enabled").(bool); ok {
 		obj.Enabled = &v
@@ -86,6 +135,10 @@ func expandAccessProfile(in *schema.ResourceData) (*AccessProfile, error) {
 
 	if v, ok := in.Get("entitlements").([]interface{}); ok && len(v) > 0 {
 		obj.Entitlements = expandObjectRoles(v)
+	}
+
+	if v, ok := in.Get("access_request_config").([]interface{}); ok && len(v) > 0 {
+		obj.AccessRequestConfig = expandObjectAccessRequestConfig(v)[0]
 	}
 
 	return &obj, nil
@@ -128,6 +181,43 @@ func expandObjectAccessProfile(p []interface{}) []*ObjectInfo {
 		obj.ID = in["id"].(string)
 		obj.Name = in["name"].(string)
 		obj.Type = in["type"].(string)
+		out = append(out, &obj)
+	}
+	return out
+}
+
+func expandObjectAccessRequestConfig(p []interface{}) []*AccessRequestConfigList {
+	if len(p) == 0 || p[0] == nil {
+		return []*AccessRequestConfigList{}
+	}
+	out := make([]*AccessRequestConfigList, 0, len(p))
+	for i := range p {
+		obj := AccessRequestConfigList{}
+		in := p[i].(map[string]interface{})
+		if v, ok := in["comments_required"].(bool); ok {
+			obj.CommentsRequired = v
+		}
+		if v, ok := in["denial_comments_required"].(bool); ok {
+			obj.DenialCommentsRequired = v
+		}
+		if v, ok := in["approval_schemes"].([]interface{}); ok && len(v) > 0 {
+                	obj.ApprovalSchemes = expandObjectApprovalSchemes(v)
+        	}
+		out = append(out, &obj)
+	}
+	return out
+}
+
+func expandObjectApprovalSchemes(p []interface{}) []*ApprovalSchemes {
+	if len(p) == 0 || p[0] == nil {
+		return []*ApprovalSchemes{}
+	}
+	out := make([]*ApprovalSchemes, 0, len(p))
+	for i := range p {
+		obj := ApprovalSchemes{}
+		in := p[i].(map[string]interface{})
+		obj.ApproverType = in["approver_type"].(string)
+		obj.ApproverId = in["approver_id"].(string)
 		out = append(out, &obj)
 	}
 	return out

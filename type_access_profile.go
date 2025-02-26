@@ -13,9 +13,9 @@ type AccessProfile struct {
 }
 
 type AccessRequestConfigList struct {
-	CommentsRequired        *bool       `json:"commentsRequired,omitempty"`
-	DenialCommentsRequired  *bool       `json:"denialCommentsRequired,omitempty"`
-	ApprovalSchemes         interface{} `json:"approvalSchemes,omitempty"`
+	CommentsRequired        bool       `json:"commentsRequired,omitempty"`
+	DenialCommentsRequired  bool       `json:"denialCommentsRequired,omitempty"`
+	ApprovalSchemes         []*ApprovalSchemes `json:"approvalSchemes,omitempty"`
 	ReauthorizationRequired *bool       `json:"reauthorizationRequired,omitempty"`
 }
 
@@ -23,4 +23,9 @@ type UpdateAccessProfile struct {
 	Op    string        `json:"op"`
 	Path  string        `json:"path"`
 	Value []interface{} `json:"value"`
+}
+
+type ApprovalSchemes struct {
+	ApproverType    string        `json:"approverType"`
+	ApproverId	string        `json:"approverId"`
 }

@@ -50,7 +50,16 @@ func accessProfileFields() map[string]*schema.Schema {
 
 		"requestable": {
 			Type:     schema.TypeBool,
-			Computed: true,
+			Optional: true,
+		},
+
+		"access_request_config": {
+			Type:     schema.TypeList,
+			Required: true,
+			MaxItems: 1,
+			Elem: &schema.Resource{
+				Schema: accessProfileAccessRequestConfigFields(),
+			},
 		},
 	}
 	return s
@@ -73,6 +82,47 @@ func accessProfileSourceFields() map[string]*schema.Schema {
 			Optional:    true,
 			Default:     "SOURCE",
 			Description: "Type of source",
+		},
+	}
+
+	return s
+}
+
+func accessProfileAccessRequestConfigFields() map[string]*schema.Schema {
+	s := map[string]*schema.Schema{
+		"comments_required": {
+			Type:        schema.TypeBool,
+			Required:    true,
+			Description: "If comment is required",
+		},
+		"denial_comments_required": {
+			Type:        schema.TypeBool,
+			Required:    true,
+			Description: "If denial comment is required",
+		},
+		"approval_schemes": {
+			Type:     schema.TypeList,
+			Required: true,
+			Elem: &schema.Resource{
+				Schema: accessProfileApprovalSchemesFields(),
+			},
+		},
+	}
+
+	return s
+}
+
+func accessProfileApprovalSchemesFields() map[string]*schema.Schema {
+	s := map[string]*schema.Schema{
+		"approver_type": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "Type of approver",
+		},
+		"approver_id": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Id of approver",
 		},
 	}
 

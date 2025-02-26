@@ -789,6 +789,11 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 		return fmt.Errorf("unknown error, status code: %d", res.StatusCode)
 	}
 
+	if res.StatusCode == 204 && req.Method == "DELETE" {
+		log.Printf("Resource deleted successfully.")
+		return nil
+	}
+
 	if err = json.NewDecoder(res.Body).Decode(&v); err != nil {
 		log.Printf("Decoder error:%s", err)
 		return err

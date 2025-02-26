@@ -14,6 +14,10 @@ func resourceAccessProfile() *schema.Resource {
 		Update: resourceAccessProfileUpdate,
 		Delete: resourceAccessProfileDelete,
 
+                Importer: &schema.ResourceImporter{
+                        State: resourceAccessProfileImport,
+                },
+
 		Schema: accessProfileFields(),
 	}
 }
