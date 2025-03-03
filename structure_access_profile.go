@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 )
 
@@ -144,8 +145,59 @@ func expandAccessProfile(in *schema.ResourceData) (*AccessProfile, error) {
 	return &obj, nil
 }
 
+func helperUpdateAccessProfileChangeKeys(input interface{}) interface{} {
+    switch v := input.(type) {
+    case map[string]interface{}:
+	output := make(map[string]interface{})
+
+	for key, value := range v {
+	    newKey := helperUpdateAccessProfileRegex(key)
+	    output[newKey] = helperUpdateAccessProfileChangeKeys(value)
+	}
+
+	return output
+    case []interface{}:
+	output := make([]interface{}, len(v))
+
+	for i, item := range v {
+	    output[i] = helperUpdateAccessProfileChangeKeys(item)
+	}
+
+	return output
+    default:
+        // For other types, return the input as is
+        return input
+    }
+}
+
+func helperUpdateAccessProfileRegex(s string) string {
+    re := regexp.MustCompile(`comments_required|denial_comments_required|approval_schemes|reauthorization_required|approver_type|approver_id`)
+
+    output := re.ReplaceAllStringFunc(s, func(match string) string {
+        switch match {
+        case "comments_required":
+            return "commentsRequired"
+        case "denial_comments_required":
+            return "denialCommentsRequired"
+        case "approval_schemes":
+            return "approvalSchemes"
+        case "reauthorization_required":
+            return "reauthorizationRequired"
+        case "approver_type":
+            return "approverType"
+        case "approver_id":
+            return "approverId"
+        default:
+            return match
+        }
+    })
+
+    return output
+}
+
 func expandUpdateAccessProfile(in *schema.ResourceData) ([]*UpdateAccessProfile, interface{}, error) {
-	updatableFields := []string{"name", "description", "enabled", "owner", "entitlements", "requestable", "source"}
+	updatableFields := []string{"name", "description", "enabled", "owner", "entitlements", "requestable", "source", "accessRequestConfig"}
+	updatableFieldsCodes := []string{"name", "description", "enabled", "owner", "entitlements", "requestable", "source", "access_request_config"}
 	var id interface{}
 	if in == nil {
 		return nil, nil, fmt.Errorf("[ERROR] Expanding Role: Schema Resource data is nil")
@@ -156,15 +208,43 @@ func expandUpdateAccessProfile(in *schema.ResourceData) ([]*UpdateAccessProfile,
 	}
 
 	out := []*UpdateAccessProfile{}
-
-	for i := range updatableFields {
-		obj := UpdateAccessProfile{}
-		if v, ok := in.Get(fmt.Sprintf("/%s", updatableFields[i])).([]interface{}); ok {
-			obj.Op = "replace"
-			obj.Path = fmt.Sprintf("/%s", updatableFields[i])
-			obj.Value = v
+	for key, field := range updatableFields {
+	    obj := UpdateAccessProfile{}
+	    switch field {
+	    case "name", "description" :
+		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).(string); ok {
+		    obj.Op = "replace"
+		    obj.Path = fmt.Sprintf("/%s", field)
+		    obj.Value = v
 		}
-		out = append(out, &obj)
+	    case "enabled", "requestable":
+		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).(bool); ok {
+		    obj.Op = "replace"
+		    obj.Path = fmt.Sprintf("/%s", field)
+		    obj.Value = v
+		}
+	    case "entitlements":
+		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
+		    obj.Op = "replace"
+		    obj.Path = fmt.Sprintf("/%s", field)
+		    obj.Value = v
+		}
+	    case "owner", "source":
+		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
+		    obj.Op = "replace"
+		    obj.Path = fmt.Sprintf("/%s", field)
+		    obj.Value = v[0]
+		}
+	    case "accessRequestConfig":
+		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
+		    obj.Op = "replace"
+		    obj.Path = fmt.Sprintf("/%s", field)
+		    obj.Value = helperUpdateAccessProfileChangeKeys(v[0])
+		}
+	    default:
+		return nil, id, nil
+	    }
+	    out = append(out, &obj)
 	}
 
 	return out, id, nil

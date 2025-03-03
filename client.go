@@ -354,7 +354,7 @@ func (c *Client) UpdateAccessProfile(ctx context.Context, accessProfile []*Updat
 
 	res := AccessProfile{}
 	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Access Profile creation response:%+v\n", res)
+		log.Printf("Failed Access Profile update response:%+v\n", res)
 		log.Fatal(err)
 		return nil, err
 	}

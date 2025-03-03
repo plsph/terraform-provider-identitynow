@@ -22,10 +22,10 @@ type AccessRequestConfigList struct {
 type UpdateAccessProfile struct {
 	Op    string        `json:"op"`
 	Path  string        `json:"path"`
-	Value []interface{} `json:"value"`
+	Value interface{} `json:"value"`
 }
 
 type ApprovalSchemes struct {
 	ApproverType    string        `json:"approverType"`
-	ApproverId	string        `json:"approverId"`
+	ApproverId	string        `json:"approverId,omitempty"`
 }
