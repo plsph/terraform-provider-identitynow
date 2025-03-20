@@ -20,6 +20,7 @@ type Client struct {
 	clientSecret string
 	accessToken  string
 	HTTPClient   *http.Client
+	tokenExpiry time.Time
 }
 
 type errorResponse struct {
@@ -60,6 +61,8 @@ func (c *Client) GetToken(ctx context.Context) error {
 	}
 
 	c.accessToken = res.AccessToken
+	expirationDuration := time.Duration(res.ExpiresIn) * time.Second
+	c.tokenExpiry = time.Now().Add(expirationDuration)
 
 	return nil
 }
@@ -102,7 +105,7 @@ func (c *Client) CreateSourceRequest(ctx context.Context, source *Source) (*Sour
 	res := Source{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed source creation response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 	return &res, nil
@@ -225,7 +228,7 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 	res := Source{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed source update response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -246,7 +249,7 @@ func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
 	var res interface{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed source update response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return err
 	}
 
@@ -265,7 +268,7 @@ func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfil
 	res := AccessProfile{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Access Profile get response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -284,7 +287,7 @@ func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*Sourc
 	var res []*SourceEntitlement
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Source Entitlements get response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 	return res, nil
@@ -303,7 +306,7 @@ func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter
 	var res []*SourceEntitlement
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Source Entitlements get response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 	return res, nil
@@ -329,7 +332,7 @@ func (c *Client) CreateAccessProfile(ctx context.Context, accessProfile *AccessP
 	res := AccessProfile{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Access Profile creation response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -355,7 +358,7 @@ func (c *Client) UpdateAccessProfile(ctx context.Context, accessProfile []*Updat
 	res := AccessProfile{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Access Profile update response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -376,7 +379,7 @@ func (c *Client) DeleteAccessProfile(ctx context.Context, accessProfile *AccessP
 	var res interface{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed access profile update response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return err
 	}
 
@@ -397,7 +400,7 @@ func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
 	res := Role{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Role get response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -425,7 +428,7 @@ func (c *Client) CreateRole(ctx context.Context, role *Role) (*Role, error) {
 	res := Role{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed role creation response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -451,7 +454,7 @@ func (c *Client) UpdateRole(ctx context.Context, role []*UpdateRole, id interfac
 	res := Role{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Role updating response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -476,7 +479,7 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 	res := Role{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Role deletion response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -499,7 +502,7 @@ func (c *Client) GetIdentity(ctx context.Context, alias string) ([]*Identity, er
 	var res []*Identity
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Identity get response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -520,7 +523,7 @@ func (c *Client) GetAccountAggregationSchedule(ctx context.Context, id string) (
 	res := []AccountAggregationSchedule{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Schedule Account Aggregation get response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -545,7 +548,7 @@ func (c *Client) ManageAccountAggregationSchedule(ctx context.Context, scheduleA
 	res := AccountAggregationSchedule{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed schedule account aggregation response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -564,7 +567,7 @@ func (c *Client) GetAccountSchema(ctx context.Context, sourceId string, id strin
 	res := AccountSchema{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Account Schema get response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 	res.SourceID = sourceId
@@ -598,7 +601,7 @@ func (c *Client) GetAccountSchema(ctx context.Context, sourceId string, id strin
 //	log.Printf("get body: %+v\n", req.GetBody)
 //
 //	log.Printf("Failed Account Schema Attribute creation. response:%+v\n", res)
-//	log.Fatal(err)
+//	log.Printf("Error: %s", err)
 //	return nil, err
 //}
 //for _, value := range updateAccountSchema {
@@ -625,7 +628,7 @@ func (c *Client) UpdateAccountSchema(ctx context.Context, accountSchema *Account
 	res := AccountSchema{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Account Schema Attribute updating. response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -651,7 +654,7 @@ func (c *Client) DeleteAccountSchema(ctx context.Context, accountSchema *Account
 
 	if err != nil {
 		log.Printf("Failed Account Schema Attribute deletion. response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return err
 	}
 
@@ -674,7 +677,7 @@ func (c *Client) CreatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	res := PasswordPolicy{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Password Policy creation. response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -697,7 +700,7 @@ func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	res := PasswordPolicy{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed to update Password Policy. response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
@@ -716,7 +719,7 @@ func (c *Client) GetPasswordPolicy(ctx context.Context, passwordPolicyId string)
 	res := PasswordPolicy{}
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed to get Password Policy. response:%+v\n", res)
-		log.Fatal(err)
+		log.Printf("Error: %s", err)
 		return nil, err
 	}
 
