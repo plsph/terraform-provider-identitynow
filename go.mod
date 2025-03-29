@@ -1,6 +1,6 @@
-module axon.com/terraform-provider-identitynow
+module github.com/plsph/terraform-provider-identitynow
 
-go 1.14
+go 1.16
 
 require (
 	github.com/hashicorp/terraform-plugin-sdk v1.15.0
