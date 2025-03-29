@@ -10,7 +10,7 @@ description: |-
 
 The IdentityNow Provider can be used to configure infrastructure in [SailPoint IdentityNow](https://www.sailpoint.com/products/identitynow/) using the official API's. Documentation regarding the [Data Sources](/docs/configuration/data-sources.html) and [Resources](/docs/configuration/resources.html) supported by the IdentityNow Provider can be found in the navigation to the left.
 
-Interested in the provider's latest features, or want to make sure you're up to date? Check out the [changelog](https://github.com/OpenAxon/terraform-provider-identitynow/blob/master/CHANGELOG.md) for version information and release notes.
+Interested in the provider's latest features, or want to make sure you're up to date? Check out the [changelog](https://github.com/plsph/terraform-provider-identitynow/blob/master/CHANGELOG.md) for version information and release notes.
 
 ## Authenticating to IdentityNow
 
@@ -24,8 +24,8 @@ The IdentityNow Provider follows the [Client Credentials Grant Flow](https://dev
 terraform {
   required_providers {
     identitynow = {
-      source  = "OpenAxon/identitynow"
-      version = "=0.3.1"
+      source  = "plsph/identitynow"
+      version = "=0.6.1"
     }
   }
 }
@@ -44,9 +44,13 @@ resource "identitynow_source" "example" {
 }
 ```
 
+## Origin
+
+This is fork of (https://github.com/OpenAxon/terraform-provider-identitynow/) which looked abandoned to me.
+
 ## Features and Bug Requests
 
-The IdentityNow provider's bugs and feature requests can be found in the [GitHub repo issues](https://github.com/OpenAxon/terraform-provider-identitynow/issues).
+The IdentityNow provider's bugs and feature requests can be found in the [GitHub repo issues](https://github.com/plsph/terraform-provider-identitynow/issues).
 Please avoid "me too" or "+1" comments. Instead, use a thumbs up [reaction](https://blog.github.com/2016-03-10-add-reactions-to-pull-requests-issues-and-comments/)
 on enhancement requests. Provider maintainers will often prioritize work based on the number of thumbs on an issue.
 
@@ -56,9 +60,9 @@ experience for you using the IdentityNow provider.
 
 If you have a bug or feature request without an existing issue
 
-* if an existing resource or field is working in an unexpected way, [file a bug](https://github.com/OpenAxon/terraform-provider-identitynow/issues/new?template=Bug_Report.md).
+* if an existing resource or field is working in an unexpected way, [file a bug](https://github.com/plsph/terraform-provider-identitynow/issues/new?template=Bug_Report.md).
 
-* if you'd like the provider to support a new resource or field, [file an enhancement/feature request](https://github.com/OpenAxon/terraform-provider-identitynow/issues/new?template=Feature_Request.md).
+* if you'd like the provider to support a new resource or field, [file an enhancement/feature request](https://github.com/plsph/terraform-provider-identitynow/issues/new?template=Feature_Request.md).
 
 The provider maintainers will often use the assignee field on an issue to mark
 who is working on it.
