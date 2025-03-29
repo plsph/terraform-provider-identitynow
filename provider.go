@@ -45,6 +45,7 @@ func Provider() terraform.ResourceProvider {
 			"identitynow_account_aggregation_schedule": resourceScheduleAccountAggregation(),
 			"identitynow_account_schema_attribute":     resourceAccountSchema(),
 			"identitynow_password_policy":              resourcePasswordPolicy(),
+			"identitynow_governance_group":             resourceGovernanceGroup(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -53,6 +54,7 @@ func Provider() terraform.ResourceProvider {
 			"identitynow_source_entitlement": dataSourceSourceEntitlement(),
 			"identitynow_identity":           dataSourceIdentity(),
 			"identitynow_role":               dataSourceRole(),
+			"identitynow_governance_group":   dataSourceGovernanceGroup(),
 		},
 
 		ConfigureFunc: providerConfigure,

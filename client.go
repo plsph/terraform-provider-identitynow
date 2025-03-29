@@ -765,6 +765,105 @@ func (c *Client) DeletePasswordPolicy(ctx context.Context, passwordPolicyId stri
 	return nil
 }
 
+func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *GovernanceGroup) (*GovernanceGroup, error) {
+	body, err := json.Marshal(&governanceGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v2024/workgroups", c.BaseURL), bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Creation of new http request failed: %+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	req = req.WithContext(ctx)
+
+	res := GovernanceGroup{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Governance Group creation response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) GetGovernanceGroup(ctx context.Context, id string) (*GovernanceGroup, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, id), nil)
+	if err != nil {
+		log.Printf("Creation of new http request failed: %+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	req = req.WithContext(ctx)
+
+	res := GovernanceGroup{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Governance Group get response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*UpdateGovernanceGroup, id interface{}) (*GovernanceGroup, error) {
+	body, err := json.Marshal(&governanceGroup)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, id), bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Creation of new http request failed:%+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	req = req.WithContext(ctx)
+
+	res := GovernanceGroup{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Governance Group update response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *GovernanceGroup) error {
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, governanceGroup.ID), nil)
+	if err != nil {
+		log.Printf("Creation of new http request failed:%+v\n", err)
+		return err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	req = req.WithContext(ctx)
+
+	var res interface{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed access profile update response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
 	res, err := c.HTTPClient.Do(req)

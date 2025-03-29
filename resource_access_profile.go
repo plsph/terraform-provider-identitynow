@@ -62,7 +62,7 @@ func resourceAccessProfileRead(d *schema.ResourceData, m interface{}) error {
 		if notFound {
 			log.Printf("[INFO] Access Profile ID %s not found.", d.Id())
 			d.SetId("")
-			return nil
+			return err
 		}
 		return err
 	}
