@@ -6,7 +6,7 @@ func identityFields() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"alias": {
 			Type:     schema.TypeString,
-			Required: true,
+			Optional: true,
 		},
 
 		"name": {
@@ -21,7 +21,7 @@ func identityFields() map[string]*schema.Schema {
 
 		"email_address": {
 			Type:     schema.TypeString,
-			Computed: true,
+			Optional: true,
 		},
 
 		"enabled": {

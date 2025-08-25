@@ -486,8 +486,8 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 	return &res, nil
 }
 
-func (c *Client) GetIdentity(ctx context.Context, alias string) ([]*Identity, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/beta/identities?filters=alias", c.BaseURL)+url.QueryEscape(" eq ")+fmt.Sprintf("\"%s\"", alias), nil)
+func (c *Client) GetIdentityByAlias(ctx context.Context, alias string) ([]*Identity, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2024/identities?filters=alias", c.BaseURL)+url.QueryEscape(" eq ")+fmt.Sprintf("\"%s\"", alias), nil)
 
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
@@ -498,6 +498,33 @@ func (c *Client) GetIdentity(ctx context.Context, alias string) ([]*Identity, er
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 
 	req = req.WithContext(ctx)
+
+
+	var res []*Identity
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Identity get response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	log.Printf("GetIdentity Response is: %+v\n", res)
+
+	return res, nil
+}
+
+func (c *Client) GetIdentityByEmail(ctx context.Context, email string) ([]*Identity, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2024/identities?filters=email", c.BaseURL)+url.QueryEscape(" eq ")+fmt.Sprintf("\"%s\"", email), nil)
+
+	if err != nil {
+		log.Printf("Creation of new http request failed: %+v\n", err)
+		return nil, err
+	}
+	log.Printf("GetIdentity Request is: %+v\n", req)
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
 
 	var res []*Identity
 	if err := c.sendRequest(req, &res); err != nil {

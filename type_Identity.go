@@ -5,7 +5,7 @@ type Identity struct {
 	Name               string              `json:"name,omitempty"`
 	Description        string              `json:"description,omitempty"`
 	IsManager          bool                `json:"isManager,omitempty"`
-	Alias              string              `json:"alias"`
+	Alias              string              `json:"alias,omitempty"`
 	EmailAddress       string              `json:"emailAddress,omitempty"`
 	IdentityStatus     string              `json:"identityStatus,omitempty"`
 	Enabled            bool                `json:"enabled,omitempty"`
