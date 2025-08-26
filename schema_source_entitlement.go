@@ -16,7 +16,7 @@ func sourceEntitlementFields() map[string]*schema.Schema {
 		},
 		"source_name": {
 			Type:        schema.TypeString,
-			Required:    true,
+			Computed:    true,
 			Description: "source name",
 		},
 		"source_schema_object_type": {
