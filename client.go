@@ -294,8 +294,8 @@ func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*Sourc
 }
 
 func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter string) ([]*SourceEntitlement, error) {
-	filter := fmt.Sprintf("source.id eq \"%s\" and (name sw \"%s\")", id, nameFilter)
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/beta/entitlements?filters=%s", c.BaseURL, url.QueryEscape(filter)), nil)
+	filter := fmt.Sprintf("source.id eq \"%s\" and (name eq \"%s\")", id, nameFilter)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2024/entitlements?filters=%s", c.BaseURL, url.QueryEscape(filter)), nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
