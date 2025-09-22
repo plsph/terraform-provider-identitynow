@@ -23,10 +23,10 @@ func dataSourceSourceEntitlementRead(d *schema.ResourceData, meta interface{}) e
 	}
 
 	sourceEntitlements, err := client.GetSourceEntitlement(context.Background(), d.Get("source_id").(string), d.Get("name").(string))
-	if err != nil {
+	if ( err != nil || len(sourceEntitlements) == 0 ) {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
-		if notFound {
+		if ( notFound || len(sourceEntitlements) == 0 ) {
 			log.Printf("[INFO] Data source for Source ID %s not found.", d.Get("source_id").(string))
 			return nil
 		}
