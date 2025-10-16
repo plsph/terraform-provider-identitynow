@@ -891,6 +891,226 @@ func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *Gov
 	return nil
 }
 
+func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*SourceApp, error) {
+	filter := fmt.Sprintf("name eq \"%s\"", name)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2025/source-apps?filters=%s", c.BaseURL, url.QueryEscape(filter)), nil)
+	if err != nil {
+		log.Printf("Creation of new http request failed: %+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	req = req.WithContext(ctx)
+
+	var res []*SourceApp
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Source App get response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (c *Client) GetSourceApp(ctx context.Context, id string) (*SourceApp, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id), nil)
+	if err != nil {
+		log.Printf("Creation of new http request failed: %+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	req = req.WithContext(ctx)
+
+	res := SourceApp{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Source App get response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) CreateSourceApp(ctx context.Context, sourceApp *SourceApp) (*SourceApp, error) {
+	body, err := json.Marshal(&sourceApp)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v2025/source-apps", c.BaseURL), bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Creation of new http request failed: %+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := SourceApp{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Source App creation response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) UpdateSourceApp(ctx context.Context, sourceApp []*UpdateSourceApp, id interface{}) (*SourceApp, error) {
+	body, err := json.Marshal(&sourceApp)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id), bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Creation of new http request failed:%+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+	req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := SourceApp{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Source App update response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) DeleteSourceApp(ctx context.Context, sourceApp *SourceApp) error {
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, sourceApp.ID), nil)
+	if err != nil {
+		log.Printf("Creation of new http request failed:%+v\n", err)
+		return err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	var res interface{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Source App delete response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*AccessProfileAttachment, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles", c.BaseURL, id), nil)
+	if err != nil {
+		log.Printf("Creation of new http request failed: %+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	req = req.WithContext(ctx)
+
+	res := []AccessProfileFromSourceApp{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Access Profile Attachment get response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	var accessProfiles []string
+	for _, ap := range res {
+		accessProfiles = append(accessProfiles, ap.ID)
+	}
+
+	accessProfileAttachment := AccessProfileAttachment{
+		SourceAppId: id,
+		AccessProfiles: accessProfiles,
+	}
+
+	return &accessProfileAttachment, nil
+}
+
+func (c *Client) UpdateAccessProfileAttachment(ctx context.Context, accessProfileAttachment *AccessProfileAttachment, id string) (*AccessProfileAttachment, error) {
+	//var accessProfiles []string
+
+//	for _, apa := range UpdateAccessProfileAttachment {
+//		accessProfiles = append(accessProfiles, apa.AccessProfiles...)
+//	}
+
+	updateAccessProfileAttachment := UpdateAccessProfileAttachment{
+		Op:    "replace",
+		Path:  "/accessProfiles",
+		Value: accessProfileAttachment.AccessProfiles,
+		//Value: accessProfiles,
+	}
+	updates := []UpdateAccessProfileAttachment{updateAccessProfileAttachment}
+
+	body, err := json.Marshal(updates)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id), bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Creation of new http request failed:%+v\n", err)
+		return nil, err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+	req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := AccessProfileAttachment{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Access Profile Attachment update response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) DeleteAccessProfileAttachment(ctx context.Context, accessProfileAttachment *AccessProfileAttachment) error {
+	body, err := json.Marshal(accessProfileAttachment.AccessProfiles)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles/bulk-remove", c.BaseURL, accessProfileAttachment.SourceAppId), bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Creation of new http request failed:%+v\n", err)
+		return err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	var res interface{}
+	if err := c.sendRequest(req, &res); err != nil {
+		log.Printf("Failed Access Profile Attachment update response:%+v\n", res)
+		log.Printf("Error: %s", err)
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
 	res, err := c.HTTPClient.Do(req)
