@@ -25,7 +25,7 @@ terraform {
   required_providers {
     identitynow = {
       source  = "plsph/identitynow"
-      version = "=0.6.1"
+      version = "=0.7.0"
     }
   }
 }

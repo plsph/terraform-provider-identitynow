@@ -6,7 +6,7 @@ description: |-
   Manages an IdentityNow Access Profile.
 ---
 
-# identitynow_source
+# identitynow_access_profile
 
 Manages an IdentityNow Access Profile.
 
