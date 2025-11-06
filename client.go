@@ -58,7 +58,7 @@ func (c *Client) GetToken(ctx context.Context) error {
 		"client_id": c.clientId,
 	})
 
-	tflog.Debug(ctx, "Stolec123")
+	tflog.Debug(c.loggerCtx, "Stolec123")
 
 	log.Printf("Stolec123\n")
 
