@@ -67,7 +67,7 @@ func dataSourceSourceAppRead(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	sourceApp, err := client.GetSourceAppByName(context.Background(), d.Get("name").(string))
-	if err != nil {
+	if ( err != nil || len(sourceApp) == 0 ) {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {

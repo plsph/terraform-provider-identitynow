@@ -1012,26 +1012,37 @@ func (c *Client) DeleteSourceApp(ctx context.Context, sourceApp *SourceApp) erro
 }
 
 func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*AccessProfileAttachment, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles", c.BaseURL, id), nil)
-	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
-		return nil, err
-	}
-
-	req.Header.Set("X-SailPoint-Experimental", "true")
-
-	req = req.WithContext(ctx)
-
-	res := []AccessProfileFromSourceApp{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Access Profile Attachment get response:%+v\n", res)
-		log.Printf("Error: %s", err)
-		return nil, err
-	}
-
 	var accessProfiles []string
-	for _, ap := range res {
-		accessProfiles = append(accessProfiles, ap.ID)
+	offset := 0
+	limit := 250
+	for {
+		url := fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			log.Printf("Creation of new http request failed: %+v\n", err)
+			return nil, err
+		}
+
+		req.Header.Set("X-SailPoint-Experimental", "true")
+
+		req = req.WithContext(ctx)
+
+		var res []AccessProfileFromSourceApp
+		if err := c.sendRequest(req, &res); err != nil {
+			log.Printf("Failed Access Profile Attachment get response:%+v\n", res)
+			log.Printf("Error: %s", err)
+			return nil, err
+		}
+
+		for _, ap := range res {
+			accessProfiles = append(accessProfiles, ap.ID)
+		}
+
+		if len(res) < limit - 1 {
+			break
+		}
+
+		offset += limit
 	}
 
 	accessProfileAttachment := AccessProfileAttachment{

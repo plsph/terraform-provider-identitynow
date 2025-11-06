@@ -15,7 +15,7 @@ func accessProfileAttachmentFields() map[string]*schema.Schema {
 		"access_profiles": {
 			Type:     schema.TypeList,
 			Required: true,
-			MaxItems: 250,
+			MaxItems: 500,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
