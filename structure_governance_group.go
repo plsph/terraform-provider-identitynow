@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -11,6 +14,13 @@ func flattenGovernanceGroup(d *schema.ResourceData, in *GovernanceGroup) error {
 	if in == nil {
 		return nil
 	}
+
+	tflog.Debug(context.Background(), "Flattening Governance Group", map[string]interface{}{
+		"id":          in.ID,
+		"name":        in.Name,
+		"description": in.Description,
+		"owner":       fmt.Sprintf("%+v", in.GovernanceGroupOwner),
+	})
 
 	d.SetId(in.ID)
 	d.Set("name", in.Name)
@@ -74,24 +84,24 @@ func expandUpdateGovernanceGroup(in *schema.ResourceData) ([]*UpdateGovernanceGr
 
 	out := []*UpdateGovernanceGroup{}
 	for _, field := range updatableFields {
-	    obj := UpdateGovernanceGroup{}
-	    switch field {
-	    case "name", "description" :
-		if v, ok := in.Get(fmt.Sprintf("%s", field)).(string); ok {
-		    obj.Op = "replace"
-		    obj.Path = fmt.Sprintf("/%s", field)
-		    obj.Value = v
+		obj := UpdateGovernanceGroup{}
+		switch field {
+		case "name", "description":
+			if v, ok := in.Get(fmt.Sprintf("%s", field)).(string); ok {
+				obj.Op = "replace"
+				obj.Path = fmt.Sprintf("/%s", field)
+				obj.Value = v
+			}
+		case "owner":
+			if v, ok := in.Get(fmt.Sprintf("%s", field)).([]interface{}); ok {
+				obj.Op = "replace"
+				obj.Path = fmt.Sprintf("/%s", field)
+				obj.Value = v[0]
+			}
+		default:
+			return nil, id, nil
 		}
-	    case "owner":
-		if v, ok := in.Get(fmt.Sprintf("%s", field)).([]interface{}); ok {
-		    obj.Op = "replace"
-		    obj.Path = fmt.Sprintf("/%s", field)
-		    obj.Value = v[0]
-		}
-	    default:
-		return nil, id, nil
-	    }
-	    out = append(out, &obj)
+		out = append(out, &obj)
 	}
 
 	return out, id, nil
@@ -112,4 +122,3 @@ func expandObjectGovernanceGroup(p []interface{}) []*GovernanceGroupOwner {
 	}
 	return out
 }
-

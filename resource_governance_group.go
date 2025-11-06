@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -16,9 +17,9 @@ func resourceGovernanceGroup() *schema.Resource {
 		UpdateContext: resourceGovernanceGroupUpdate,
 		DeleteContext: resourceGovernanceGroupDelete,
 
-                Importer: &schema.ResourceImporter{
-                        StateContext: resourceGovernanceGroupImport,
-                },
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceGovernanceGroupImport,
+		},
 
 		Schema: governanceGroupFields(),
 	}
@@ -68,6 +69,14 @@ func resourceGovernanceGroupRead(ctx context.Context, d *schema.ResourceData, m 
 		}
 		return diag.FromErr(err)
 	}
+
+	// Add debug logging to see what fields are in the governance group
+	tflog.Debug(ctx, "Governance Group API response", map[string]interface{}{
+		"id":          governanceGroup.ID,
+		"name":        governanceGroup.Name,
+		"description": governanceGroup.Description,
+		"owner":       fmt.Sprintf("%+v", governanceGroup.GovernanceGroupOwner),
+	})
 
 	err = flattenGovernanceGroup(d, governanceGroup)
 	if err != nil {
