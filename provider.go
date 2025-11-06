@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -75,9 +76,17 @@ func init() {
 }
 
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+	tflog.Info(ctx, "Configuring IdentityNow provider")
+
 	apiURL := d.Get("api_url").(string)
 	clientId := d.Get("client_id").(string)
 	clientSecret := d.Get("client_secret").(string)
+
+	tflog.Debug(ctx, "Provider configuration", map[string]interface{}{
+		"api_url":   apiURL,
+		"client_id": clientId,
+		// Note: client_secret is intentionally not logged for security
+	})
 
 	config := &Config{
 		URL:          apiURL,
@@ -85,5 +94,6 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		ClientSecret: clientSecret,
 	}
 
+	tflog.Info(ctx, "Successfully configured IdentityNow provider")
 	return config, nil
 }

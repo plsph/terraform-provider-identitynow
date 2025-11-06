@@ -58,11 +58,12 @@ func (c *Client) GetToken(ctx context.Context) error {
 		"client_id": c.clientId,
 	})
 
-	tflog.Debug(c.loggerCtx, "Stolec123")
-
-	log.Printf("Stolec123\n")
-
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/oauth/token?grant_type=client_credentials&client_id=%s&client_secret=%s", c.BaseURL, c.clientId, c.clientSecret), nil)
+	tokenURL := fmt.Sprintf("%s/oauth/token?grant_type=client_credentials&client_id=%s&client_secret=%s", c.BaseURL, c.clientId, c.clientSecret)
+	tflog.Debug(ctx, "Creating HTTP request for OAuth token", map[string]interface{}{
+		"method": "POST",
+		"url":    c.BaseURL + "/oauth/token", // Don't log credentials in URL
+	})
+	req, err := http.NewRequest("POST", tokenURL, nil)
 	if err != nil {
 		return err
 	}
@@ -85,8 +86,13 @@ func (c *Client) GetToken(ctx context.Context) error {
 }
 
 func (c *Client) GetSource(ctx context.Context, id string) (*Source, error) {
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, id), nil)
+	sourceURL := fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to get source", map[string]interface{}{
+		"method":    "GET",
+		"url":       sourceURL,
+		"source_id": id,
+	})
+	req, err := http.NewRequest("GET", sourceURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +114,12 @@ func (c *Client) CreateSourceRequest(ctx context.Context, source *Source) (*Sour
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/beta/sources", c.BaseURL), bytes.NewBuffer(body))
+	sourceURL := fmt.Sprintf("%s/beta/sources", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to create source", map[string]interface{}{
+		"method": "POST",
+		"url":    sourceURL,
+	})
+	req, err := http.NewRequest("POST", sourceURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("New request failed:%+v\n", err)
 		return nil, err
@@ -175,7 +186,13 @@ func (c *Client) AddConnectorAttributesToMicrosoftEntraSource(ctx context.Contex
 	log.Printf("updateSource: %s\n", string(body))
 
 	// Create the HTTP PATCH request
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v3/sources/%s", c.BaseURL, source.ID), bytes.NewBuffer(body))
+	patchURL := fmt.Sprintf("%s/v3/sources/%s", c.BaseURL, source.ID)
+	tflog.Debug(ctx, "Creating HTTP request to add connector attributes to Microsoft Entra source", map[string]interface{}{
+		"method":    "PATCH",
+		"url":       patchURL,
+		"source_id": source.ID,
+	})
+	req, err := http.NewRequest("PATCH", patchURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Failed to create HTTP request: %v\n", err)
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
@@ -231,7 +248,13 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, source.ID), bytes.NewBuffer(body))
+	updateURL := fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, source.ID)
+	tflog.Debug(ctx, "Creating HTTP request to update source", map[string]interface{}{
+		"method":    "PUT",
+		"url":       updateURL,
+		"source_id": source.ID,
+	})
+	req, err := http.NewRequest("PUT", updateURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return nil, err
@@ -253,7 +276,13 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 }
 
 func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, source.ID), nil)
+	deleteURL := fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, source.ID)
+	tflog.Debug(ctx, "Creating HTTP request to delete source", map[string]interface{}{
+		"method":    "DELETE",
+		"url":       deleteURL,
+		"source_id": source.ID,
+	})
+	req, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return err
@@ -274,7 +303,13 @@ func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
 }
 
 func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfile, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v3/access-profiles/%s", c.BaseURL, id), nil)
+	profileURL := fmt.Sprintf("%s/v3/access-profiles/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to get access profile", map[string]interface{}{
+		"method":     "GET",
+		"url":        profileURL,
+		"profile_id": id,
+	})
+	req, err := http.NewRequest("GET", profileURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -293,7 +328,13 @@ func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfil
 }
 
 func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*SourceEntitlement, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/beta/entitlements?filters=source.id", c.BaseURL)+url.QueryEscape(" eq ")+fmt.Sprintf("\"%s\"", id), nil)
+	entitlementsURL := fmt.Sprintf("%s/beta/entitlements?filters=source.id", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", id)
+	tflog.Debug(ctx, "Creating HTTP request to get source entitlements", map[string]interface{}{
+		"method":    "GET",
+		"url":       entitlementsURL,
+		"source_id": id,
+	})
+	req, err := http.NewRequest("GET", entitlementsURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -312,7 +353,14 @@ func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*Sourc
 
 func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter string) ([]*SourceEntitlement, error) {
 	filter := fmt.Sprintf("source.id eq \"%s\" and (name eq \"%s\")", id, nameFilter)
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2024/entitlements?filters=%s", c.BaseURL, url.QueryEscape(filter)), nil)
+	entitlementURL := fmt.Sprintf("%s/v2024/entitlements?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	tflog.Debug(ctx, "Creating HTTP request to get source entitlement", map[string]interface{}{
+		"method":      "GET",
+		"url":         entitlementURL,
+		"source_id":   id,
+		"name_filter": nameFilter,
+	})
+	req, err := http.NewRequest("GET", entitlementURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -335,7 +383,12 @@ func (c *Client) CreateAccessProfile(ctx context.Context, accessProfile *AccessP
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v3/access-profiles", c.BaseURL), bytes.NewBuffer(body))
+	createURL := fmt.Sprintf("%s/v3/access-profiles", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to create access profile", map[string]interface{}{
+		"method": "POST",
+		"url":    createURL,
+	})
+	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -361,7 +414,13 @@ func (c *Client) UpdateAccessProfile(ctx context.Context, accessProfile []*Updat
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v3/access-profiles/%s", c.BaseURL, id), bytes.NewBuffer(body))
+	updateURL := fmt.Sprintf("%s/v3/access-profiles/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to update access profile", map[string]interface{}{
+		"method":     "PATCH",
+		"url":        updateURL,
+		"profile_id": id,
+	})
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return nil, err
@@ -383,7 +442,13 @@ func (c *Client) UpdateAccessProfile(ctx context.Context, accessProfile []*Updat
 }
 
 func (c *Client) DeleteAccessProfile(ctx context.Context, accessProfile *AccessProfile) error {
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/v3/access-profiles/%s", c.BaseURL, accessProfile.ID), nil)
+	deleteURL := fmt.Sprintf("%s/v3/access-profiles/%s", c.BaseURL, accessProfile.ID)
+	tflog.Debug(ctx, "Creating HTTP request to delete access profile", map[string]interface{}{
+		"method":     "DELETE",
+		"url":        deleteURL,
+		"profile_id": accessProfile.ID,
+	})
+	req, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return err
@@ -404,7 +469,13 @@ func (c *Client) DeleteAccessProfile(ctx context.Context, accessProfile *AccessP
 }
 
 func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v3/roles/%s", c.BaseURL, id), nil)
+	roleURL := fmt.Sprintf("%s/v3/roles/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to get role", map[string]interface{}{
+		"method":  "GET",
+		"url":     roleURL,
+		"role_id": id,
+	})
+	req, err := http.NewRequest("GET", roleURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -430,7 +501,12 @@ func (c *Client) CreateRole(ctx context.Context, role *Role) (*Role, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v3/roles", c.BaseURL), bytes.NewBuffer(body))
+	createURL := fmt.Sprintf("%s/v3/roles", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to create role", map[string]interface{}{
+		"method": "POST",
+		"url":    createURL,
+	})
+	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("New request failed:%+v\n", err)
 		return nil, err
@@ -457,7 +533,13 @@ func (c *Client) UpdateRole(ctx context.Context, role []*UpdateRole, id interfac
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v3/roles/%s", c.BaseURL, id), bytes.NewBuffer(body))
+	updateURL := fmt.Sprintf("%s/v3/roles/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to update role", map[string]interface{}{
+		"method":  "PATCH",
+		"url":     updateURL,
+		"role_id": id,
+	})
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return nil, err
@@ -483,7 +565,13 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/v3/role/%s", c.BaseURL, role.ID), bytes.NewBuffer(body))
+	deleteURL := fmt.Sprintf("%s/v3/role/%s", c.BaseURL, role.ID)
+	tflog.Debug(ctx, "Creating HTTP request to delete role", map[string]interface{}{
+		"method":  "DELETE",
+		"url":     deleteURL,
+		"role_id": role.ID,
+	})
+	req, err := http.NewRequest("DELETE", deleteURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return nil, err
@@ -504,7 +592,13 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 }
 
 func (c *Client) GetIdentityByAlias(ctx context.Context, alias string) ([]*Identity, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2024/identities?filters=alias", c.BaseURL)+url.QueryEscape(" eq ")+fmt.Sprintf("\"%s\"", alias), nil)
+	identityURL := fmt.Sprintf("%s/v2024/identities?filters=alias", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", alias)
+	tflog.Debug(ctx, "Creating HTTP request to get identity by alias", map[string]interface{}{
+		"method": "GET",
+		"url":    identityURL,
+		"alias":  alias,
+	})
+	req, err := http.NewRequest("GET", identityURL, nil)
 
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
@@ -529,7 +623,13 @@ func (c *Client) GetIdentityByAlias(ctx context.Context, alias string) ([]*Ident
 }
 
 func (c *Client) GetIdentityByEmail(ctx context.Context, email string) ([]*Identity, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2024/identities?filters=email", c.BaseURL)+url.QueryEscape(" eq ")+fmt.Sprintf("\"%s\"", email), nil)
+	identityURL := fmt.Sprintf("%s/v2024/identities?filters=email", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", email)
+	tflog.Debug(ctx, "Creating HTTP request to get identity by email", map[string]interface{}{
+		"method": "GET",
+		"url":    identityURL,
+		"email":  email,
+	})
+	req, err := http.NewRequest("GET", identityURL, nil)
 
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
@@ -554,7 +654,13 @@ func (c *Client) GetIdentityByEmail(ctx context.Context, email string) ([]*Ident
 }
 
 func (c *Client) GetAccountAggregationSchedule(ctx context.Context, id string) (*AccountAggregationSchedule, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/cc/api/source/getAggregationSchedules/%s", c.BaseURL, id), nil)
+	scheduleURL := fmt.Sprintf("%s/cc/api/source/getAggregationSchedules/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to get account aggregation schedule", map[string]interface{}{
+		"method":    "GET",
+		"url":       scheduleURL,
+		"source_id": id,
+	})
+	req, err := http.NewRequest("GET", scheduleURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -577,6 +683,12 @@ func (c *Client) ManageAccountAggregationSchedule(ctx context.Context, scheduleA
 	data := url.Values{}
 	data.Set("enable", fmt.Sprintf("%t", enable))
 	data.Set("cronExp", scheduleAggregation.CronExpressions[0])
+	tflog.Debug(ctx, "Creating HTTP request to manage account aggregation schedule", map[string]interface{}{
+		"method":    "POST",
+		"url":       endpoint,
+		"source_id": scheduleAggregation.SourceID,
+		"enable":    enable,
+	})
 	req, err := http.NewRequest("POST", endpoint, strings.NewReader(data.Encode()))
 	if err != nil {
 		log.Printf("New request failed:%+v\n", err)
@@ -598,7 +710,14 @@ func (c *Client) ManageAccountAggregationSchedule(ctx context.Context, scheduleA
 }
 
 func (c *Client) GetAccountSchema(ctx context.Context, sourceId string, id string) (*AccountSchema, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v3/sources/%s/schemas/%s", c.BaseURL, sourceId, id), nil)
+	schemaURL := fmt.Sprintf("%s/v3/sources/%s/schemas/%s", c.BaseURL, sourceId, id)
+	tflog.Debug(ctx, "Creating HTTP request to get account schema", map[string]interface{}{
+		"method":    "GET",
+		"url":       schemaURL,
+		"source_id": sourceId,
+		"schema_id": id,
+	})
+	req, err := http.NewRequest("GET", schemaURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -657,7 +776,14 @@ func (c *Client) UpdateAccountSchema(ctx context.Context, accountSchema *Account
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/v3/sources/%s/schemas/%s", c.BaseURL, accountSchema.SourceID, accountSchema.ID), bytes.NewBuffer(body))
+	schemaURL := fmt.Sprintf("%s/v3/sources/%s/schemas/%s", c.BaseURL, accountSchema.SourceID, accountSchema.ID)
+	tflog.Debug(ctx, "Creating HTTP request to update account schema", map[string]interface{}{
+		"method":    "PUT",
+		"url":       schemaURL,
+		"source_id": accountSchema.SourceID,
+		"schema_id": accountSchema.ID,
+	})
+	req, err := http.NewRequest("PUT", schemaURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("New request failed:%+v\n", err)
 		return nil, err
@@ -682,6 +808,12 @@ func (c *Client) DeleteAccountSchema(ctx context.Context, accountSchema *Account
 
 	client := &http.Client{}
 
+	tflog.Debug(ctx, "Creating HTTP request to delete account schema", map[string]interface{}{
+		"method":    "DELETE",
+		"url":       endpoint,
+		"source_id": accountSchema.SourceID,
+		"schema_id": accountSchema.ID,
+	})
 	req, err := http.NewRequest("DELETE", endpoint, nil)
 
 	if err != nil {
@@ -705,7 +837,15 @@ func (c *Client) DeleteAccountSchema(ctx context.Context, accountSchema *Account
 
 func (c *Client) CreatePasswordPolicy(ctx context.Context, passwordPolicy *PasswordPolicy) (*PasswordPolicy, error) {
 	body, err := json.Marshal(&passwordPolicy)
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/beta/password-policies", c.BaseURL), bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	policyURL := fmt.Sprintf("%s/beta/password-policies", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to create password policy", map[string]interface{}{
+		"method": "POST",
+		"url":    policyURL,
+	})
+	req, err := http.NewRequest("POST", policyURL, bytes.NewBuffer(body))
 
 	if err != nil {
 		return nil, err
@@ -729,7 +869,15 @@ func (c *Client) CreatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *PasswordPolicy) (*PasswordPolicy, error) {
 
 	body, err := json.Marshal(&passwordPolicy)
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/beta/password-policies", c.BaseURL), bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	policyURL := fmt.Sprintf("%s/beta/password-policies", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to update password policy", map[string]interface{}{
+		"method": "PUT",
+		"url":    policyURL,
+	})
+	req, err := http.NewRequest("PUT", policyURL, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
@@ -750,7 +898,13 @@ func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 }
 
 func (c *Client) GetPasswordPolicy(ctx context.Context, passwordPolicyId string) (*PasswordPolicy, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/beta/password-policies/%s", c.BaseURL, passwordPolicyId), nil)
+	policyURL := fmt.Sprintf("%s/beta/password-policies/%s", c.BaseURL, passwordPolicyId)
+	tflog.Debug(ctx, "Creating HTTP request to get password policy", map[string]interface{}{
+		"method":    "GET",
+		"url":       policyURL,
+		"policy_id": passwordPolicyId,
+	})
+	req, err := http.NewRequest("GET", policyURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -771,6 +925,11 @@ func (c *Client) GetPasswordPolicy(ctx context.Context, passwordPolicyId string)
 func (c *Client) DeletePasswordPolicy(ctx context.Context, passwordPolicyId string) error {
 	endpoint := fmt.Sprintf("%s/beta/password-policies/%s", c.BaseURL, passwordPolicyId)
 
+	tflog.Debug(ctx, "Creating HTTP request to delete password policy", map[string]interface{}{
+		"method":    "DELETE",
+		"url":       endpoint,
+		"policy_id": passwordPolicyId,
+	})
 	req, err := http.NewRequest("DELETE", endpoint, nil)
 
 	if err != nil {
@@ -813,7 +972,12 @@ func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *Gov
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v2024/workgroups", c.BaseURL), bytes.NewBuffer(body))
+	workgroupURL := fmt.Sprintf("%s/v2024/workgroups", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to create governance group", map[string]interface{}{
+		"method": "POST",
+		"url":    workgroupURL,
+	})
+	req, err := http.NewRequest("POST", workgroupURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -836,7 +1000,13 @@ func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *Gov
 }
 
 func (c *Client) GetGovernanceGroup(ctx context.Context, id string) (*GovernanceGroup, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, id), nil)
+	workgroupURL := fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to get governance group", map[string]interface{}{
+		"method":   "GET",
+		"url":      workgroupURL,
+		"group_id": id,
+	})
+	req, err := http.NewRequest("GET", workgroupURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -862,7 +1032,13 @@ func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*U
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, id), bytes.NewBuffer(body))
+	updateURL := fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to update governance group", map[string]interface{}{
+		"method":   "PATCH",
+		"url":      updateURL,
+		"group_id": id,
+	})
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return nil, err
@@ -885,7 +1061,13 @@ func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*U
 }
 
 func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *GovernanceGroup) error {
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, governanceGroup.ID), nil)
+	deleteURL := fmt.Sprintf("%s/v2024/workgroups/%s", c.BaseURL, governanceGroup.ID)
+	tflog.Debug(ctx, "Creating HTTP request to delete governance group", map[string]interface{}{
+		"method":   "DELETE",
+		"url":      deleteURL,
+		"group_id": governanceGroup.ID,
+	})
+	req, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return err
@@ -908,7 +1090,13 @@ func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *Gov
 
 func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*SourceApp, error) {
 	filter := fmt.Sprintf("name eq \"%s\"", name)
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2025/source-apps?filters=%s", c.BaseURL, url.QueryEscape(filter)), nil)
+	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	tflog.Debug(ctx, "Creating HTTP request to get source app by name", map[string]interface{}{
+		"method":   "GET",
+		"url":      sourceAppURL,
+		"app_name": name,
+	})
+	req, err := http.NewRequest("GET", sourceAppURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -929,7 +1117,13 @@ func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*Source
 }
 
 func (c *Client) GetSourceApp(ctx context.Context, id string) (*SourceApp, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id), nil)
+	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to get source app", map[string]interface{}{
+		"method": "GET",
+		"url":    sourceAppURL,
+		"app_id": id,
+	})
+	req, err := http.NewRequest("GET", sourceAppURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -955,7 +1149,12 @@ func (c *Client) CreateSourceApp(ctx context.Context, sourceApp *SourceApp) (*So
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v2025/source-apps", c.BaseURL), bytes.NewBuffer(body))
+	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to create source app", map[string]interface{}{
+		"method": "POST",
+		"url":    sourceAppURL,
+	})
+	req, err := http.NewRequest("POST", sourceAppURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed: %+v\n", err)
 		return nil, err
@@ -982,7 +1181,13 @@ func (c *Client) UpdateSourceApp(ctx context.Context, sourceApp []*UpdateSourceA
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id), bytes.NewBuffer(body))
+	updateURL := fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to update source app", map[string]interface{}{
+		"method": "PATCH",
+		"url":    updateURL,
+		"app_id": id,
+	})
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return nil, err
@@ -1005,7 +1210,13 @@ func (c *Client) UpdateSourceApp(ctx context.Context, sourceApp []*UpdateSourceA
 }
 
 func (c *Client) DeleteSourceApp(ctx context.Context, sourceApp *SourceApp) error {
-	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, sourceApp.ID), nil)
+	deleteURL := fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, sourceApp.ID)
+	tflog.Debug(ctx, "Creating HTTP request to delete source app", map[string]interface{}{
+		"method": "DELETE",
+		"url":    deleteURL,
+		"app_id": sourceApp.ID,
+	})
+	req, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return err
@@ -1087,7 +1298,13 @@ func (c *Client) UpdateAccessProfileAttachment(ctx context.Context, accessProfil
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id), bytes.NewBuffer(body))
+	updateURL := fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to update access profile attachment", map[string]interface{}{
+		"method": "PATCH",
+		"url":    updateURL,
+		"app_id": id,
+	})
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return nil, err
@@ -1115,7 +1332,13 @@ func (c *Client) DeleteAccessProfileAttachment(ctx context.Context, accessProfil
 		return err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles/bulk-remove", c.BaseURL, accessProfileAttachment.SourceAppId), bytes.NewBuffer(body))
+	deleteURL := fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles/bulk-remove", c.BaseURL, accessProfileAttachment.SourceAppId)
+	tflog.Debug(ctx, "Creating HTTP request to delete access profile attachment", map[string]interface{}{
+		"method":        "POST",
+		"url":           deleteURL,
+		"source_app_id": accessProfileAttachment.SourceAppId,
+	})
+	req, err := http.NewRequest("POST", deleteURL, bytes.NewBuffer(body))
 	if err != nil {
 		log.Printf("Creation of new http request failed:%+v\n", err)
 		return err
