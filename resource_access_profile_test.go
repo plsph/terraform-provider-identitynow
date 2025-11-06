@@ -1,11 +1,11 @@
 package main
 
 import (
-	"context"
+"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	log "log"
 	"os"
 	"testing"
@@ -116,7 +116,7 @@ func testAccIdentitynowAccessProfileDestroy(state *terraform.State) error {
 			continue
 		}
 
-		client, err := testAccProvider.Meta().(*Config).IdentityNowClient()
+		client, err := testAccProvider.Meta().(*Config).IdentityNowClient(context.Background())
 		if err != nil {
 			return err
 		}
@@ -141,7 +141,7 @@ func testAccCheckAccessProfileExist(name string, accessProfile AccessProfile) re
 			return fmt.Errorf("no Access Profile ID is set")
 		}
 
-		client, err := testAccProvider.Meta().(*Config).IdentityNowClient()
+		client, err := testAccProvider.Meta().(*Config).IdentityNowClient(context.Background())
 		if err != nil {
 			return err
 		}

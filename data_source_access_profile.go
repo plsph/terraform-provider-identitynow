@@ -4,12 +4,13 @@ import (
 	"context"
 	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceAccessProfile() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceAccessProfileRead,
+		ReadContext: dataSourceAccessProfileRead,
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -65,14 +66,14 @@ func dataSourceAccessProfile() *schema.Resource {
 	}
 }
 
-func dataSourceAccessProfileRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceAccessProfileRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Data source for Access Profile ID %s", d.Get("id").(string))
-	client, err := meta.(*Config).IdentityNowClient()
+	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	accessProfile, err := client.GetAccessProfile(context.Background(), d.Get("id").(string))
+	accessProfile, err := client.GetAccessProfile(ctx, d.Get("id").(string))
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
@@ -80,8 +81,12 @@ func dataSourceAccessProfileRead(d *schema.ResourceData, meta interface{}) error
 			log.Printf("[INFO] Data source for Access Profile ID %s not found.", d.Get("id").(string))
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
-	return flattenAccessProfile(d, accessProfile)
+	err = flattenAccessProfile(d, accessProfile)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }

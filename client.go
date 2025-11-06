@@ -12,6 +12,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type Client struct {
@@ -20,7 +22,8 @@ type Client struct {
 	clientSecret string
 	accessToken  string
 	HTTPClient   *http.Client
-	tokenExpiry time.Time
+	tokenExpiry  time.Time
+	loggerCtx    context.Context
 }
 
 type errorResponse struct {
@@ -32,11 +35,16 @@ type errorResponse struct {
 	} `json:"messages"`
 }
 
-func NewClient(baseURL string, clientId string, secret string) *Client {
+func NewClient(ctx context.Context, baseURL string, clientId string, secret string) *Client {
+	subctx := tflog.NewSubsystem(ctx, "identitynow")
+	// Mask the client_secret if it ever appears as a field
+	subctx = tflog.MaskFieldValuesWithFieldKeys(subctx, "client_secret")
+
 	return &Client{
 		BaseURL:      baseURL,
 		clientId:     clientId,
 		clientSecret: secret,
+		loggerCtx:    subctx,
 		HTTPClient: &http.Client{
 			Timeout: time.Minute,
 		},
@@ -44,7 +52,16 @@ func NewClient(baseURL string, clientId string, secret string) *Client {
 }
 
 func (c *Client) GetToken(ctx context.Context) error {
-	//log.Printf("%s/oauth/token?grant_type=client_credentials&client_id=%s&client_secret=%s", c.BaseURL, c.clientId, c.clientSecret)
+
+	tflog.Info(ctx, "Obtaining OAuth token from IdentityNow", map[string]interface{}{
+		"base_url":  c.BaseURL,
+		"client_id": c.clientId,
+	})
+
+	tflog.Debug(ctx, "Stolec123")
+
+	log.Printf("Stolec123\n")
+
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/oauth/token?grant_type=client_credentials&client_id=%s&client_secret=%s", c.BaseURL, c.clientId, c.clientSecret), nil)
 	if err != nil {
 		return err
@@ -499,7 +516,6 @@ func (c *Client) GetIdentityByAlias(ctx context.Context, alias string) ([]*Ident
 
 	req = req.WithContext(ctx)
 
-
 	var res []*Identity
 	if err := c.sendRequest(req, &res); err != nil {
 		log.Printf("Failed Identity get response:%+v\n", res)
@@ -524,7 +540,6 @@ func (c *Client) GetIdentityByEmail(ctx context.Context, email string) ([]*Ident
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 
 	req = req.WithContext(ctx)
-
 
 	var res []*Identity
 	if err := c.sendRequest(req, &res); err != nil {
@@ -1038,7 +1053,7 @@ func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*Ac
 			accessProfiles = append(accessProfiles, ap.ID)
 		}
 
-		if len(res) < limit - 1 {
+		if len(res) < limit-1 {
 			break
 		}
 
@@ -1046,7 +1061,7 @@ func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*Ac
 	}
 
 	accessProfileAttachment := AccessProfileAttachment{
-		SourceAppId: id,
+		SourceAppId:    id,
 		AccessProfiles: accessProfiles,
 	}
 
@@ -1056,9 +1071,9 @@ func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*Ac
 func (c *Client) UpdateAccessProfileAttachment(ctx context.Context, accessProfileAttachment *AccessProfileAttachment, id string) (*AccessProfileAttachment, error) {
 	//var accessProfiles []string
 
-//	for _, apa := range UpdateAccessProfileAttachment {
-//		accessProfiles = append(accessProfiles, apa.AccessProfiles...)
-//	}
+	//	for _, apa := range UpdateAccessProfileAttachment {
+	//		accessProfiles = append(accessProfiles, apa.AccessProfiles...)
+	//	}
 
 	updateAccessProfileAttachment := UpdateAccessProfileAttachment{
 		Op:    "replace",

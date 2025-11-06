@@ -48,7 +48,7 @@ resource "identitynow_source" "active_directory_source" {
       password = "<IQ_SERVICE_PASSWORD>"
       servers = [
         "ad1.example.com:3269",
-        "ad2.example.com:3269"]
+      "ad2.example.com:3269"]
       port               = "636"
       forest_name        = "example.com"
       authorization_type = "simple"
@@ -66,7 +66,7 @@ resource "identitynow_source" "active_directory_source" {
       search_scope          = "SUBTREE"
     }
     group_search_dns {
-      search_dn = "OU=Groups,DC=example,DC=com"
+      search_dn             = "OU=Groups,DC=example,DC=com"
       iterate_search_filter = "(objectclass=group)"
       search_scope          = "SUBTREE"
     }

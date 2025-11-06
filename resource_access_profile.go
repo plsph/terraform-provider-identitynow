@@ -3,107 +3,109 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceAccessProfile() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceAccessProfileCreate,
-		Read:   resourceAccessProfileRead,
-		Update: resourceAccessProfileUpdate,
-		Delete: resourceAccessProfileDelete,
+		CreateContext: resourceAccessProfileCreate,
+		ReadContext:   resourceAccessProfileRead,
+		UpdateContext: resourceAccessProfileUpdate,
+		DeleteContext: resourceAccessProfileDelete,
 
-                Importer: &schema.ResourceImporter{
-                        State: resourceAccessProfileImport,
-                },
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceAccessProfileImport,
+		},
 
 		Schema: accessProfileFields(),
 	}
 }
 
-func resourceAccessProfileCreate(d *schema.ResourceData, m interface{}) error {
+func resourceAccessProfileCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	accessProfile, err := expandAccessProfile(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Creating Access Profile %s", accessProfile.Name)
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	newAccessProfile, err := client.CreateAccessProfile(context.Background(), accessProfile)
+	newAccessProfile, err := client.CreateAccessProfile(ctx, accessProfile)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenAccessProfile(d, newAccessProfile)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceAccessProfileRead(d, m)
+	return resourceAccessProfileRead(ctx, d, m)
 }
 
-func resourceAccessProfileRead(d *schema.ResourceData, m interface{}) error {
+func resourceAccessProfileRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Refreshing Access Profile ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	accessProfile, err := client.GetAccessProfile(context.Background(), d.Id())
+	accessProfile, err := client.GetAccessProfile(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
 			log.Printf("[INFO] Access Profile ID %s not found.", d.Id())
 			d.SetId("")
-			return err
+			return diag.FromErr(err)
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenAccessProfile(d, accessProfile)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceAccessProfileUpdate(d *schema.ResourceData, m interface{}) error {
+func resourceAccessProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Updating Access Profile ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	updatedAccessProfile, id, err := expandUpdateAccessProfile(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	_, err = client.UpdateAccessProfile(context.Background(), updatedAccessProfile, id)
+	_, err = client.UpdateAccessProfile(ctx, updatedAccessProfile, id)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceAccessProfileRead(d, m)
+	return resourceAccessProfileRead(ctx, d, m)
 }
 
-func resourceAccessProfileDelete(d *schema.ResourceData, m interface{}) error {
+func resourceAccessProfileDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Deleting Access Profile ID %s", d.Id())
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	accessProfile, err := client.GetAccessProfile(context.Background(), d.Id())
+	accessProfile, err := client.GetAccessProfile(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
@@ -112,12 +114,12 @@ func resourceAccessProfileDelete(d *schema.ResourceData, m interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
-	err = client.DeleteAccessProfile(context.Background(), accessProfile)
+	err = client.DeleteAccessProfile(ctx, accessProfile)
 	if err != nil {
-		return fmt.Errorf("Error removing Access Profile: %s", err)
+		return diag.FromErr(fmt.Errorf("Error removing Access Profile: %s", err))
 	}
 
 	d.SetId("")

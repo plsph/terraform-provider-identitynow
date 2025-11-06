@@ -3,59 +3,61 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"log"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceSource() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceSourceCreate,
-		Read:   resourceSourceRead,
-		Update: resourceSourceUpdate,
-		Delete: resourceSourceDelete,
+		CreateContext: resourceSourceCreate,
+		ReadContext:   resourceSourceRead,
+		UpdateContext: resourceSourceUpdate,
+		DeleteContext: resourceSourceDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceSourceImport,
+			StateContext: resourceSourceImport,
 		},
 
 		Schema: sourceFields(),
 	}
 }
 
-func resourceSourceCreate(d *schema.ResourceData, m interface{}) error {
+func resourceSourceCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	source, err := expandSource(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	log.Printf("[INFO] Creating Source %s", source.Name)
 
-	c, err := m.(*Config).IdentityNowClient()
+	c, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	newSource, err := c.CreateSource(context.Background(), source)
+	newSource, err := c.CreateSource(ctx, source)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenSource(d, newSource)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceSourceRead(d, m)
+	return resourceSourceRead(ctx, d, m)
 }
 
-func resourceSourceRead(d *schema.ResourceData, m interface{}) error {
+func resourceSourceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Refreshing source ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	source, err := client.GetSource(context.Background(), d.Id())
+	source, err := client.GetSource(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
@@ -64,46 +66,46 @@ func resourceSourceRead(d *schema.ResourceData, m interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenSource(d, source)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceSourceUpdate(d *schema.ResourceData, m interface{}) error {
+func resourceSourceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Updating Source ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	updatedSource, err := expandSource(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	_, err = client.UpdateSource(context.Background(), updatedSource)
+	_, err = client.UpdateSource(ctx, updatedSource)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceSourceRead(d, m)
+	return resourceSourceRead(ctx, d, m)
 }
 
-func resourceSourceDelete(d *schema.ResourceData, m interface{}) error {
+func resourceSourceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	log.Printf("[INFO] Deleting Source ID %s", d.Id())
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	source, err := client.GetSource(context.Background(), d.Id())
+	source, err := client.GetSource(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
@@ -112,12 +114,12 @@ func resourceSourceDelete(d *schema.ResourceData, m interface{}) error {
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
-	err = client.DeleteSource(context.Background(), source)
+	err = client.DeleteSource(ctx, source)
 	if err != nil {
-		return fmt.Errorf("Error removing Source: %s", err)
+		return diag.FromErr(fmt.Errorf("Error removing Source: %s", err))
 	}
 
 	d.SetId("")

@@ -1,11 +1,16 @@
 package main
 
-import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+import (
+"context"
+"errors"
 
-func resourceGovernanceGroupImport(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
-	err := resourceGovernanceGroupRead(d, meta)
-	if err != nil {
-		return []*schema.ResourceData{}, err
+"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+)
+
+func resourceGovernanceGroupImport(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	diags := resourceGovernanceGroupRead(ctx, d, meta)
+	if diags.HasError() {
+		return []*schema.ResourceData{}, errors.New(diags[0].Summary)
 	}
 
 	return []*schema.ResourceData{d}, nil

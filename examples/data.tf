@@ -1,5 +1,5 @@
 data "identitynow_identity" "john_doe" {
-  alias    = "A12BCDE3F" #user identity alias in IdN
+  alias = "A12BCDE3F" #user identity alias in IdN
 }
 
 data "identitynow_source_entitlement" "aad_operator" {
