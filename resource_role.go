@@ -3,151 +3,153 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
+"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceRole() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceRoleCreate,
-		Read:   resourceRoleRead,
-		Update: resourceRoleUpdate,
-		Delete: resourceRoleDelete,
+		CreateContext: resourceRoleCreate,
+		ReadContext:   resourceRoleRead,
+		UpdateContext: resourceRoleUpdate,
+		DeleteContext: resourceRoleDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: resourceRoleImport,
+			StateContext: resourceRoleImport,
 		},
 
 		Schema: roleFields(),
 	}
 }
 
-func resourceRoleCreate(d *schema.ResourceData, m interface{}) error {
+func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	role, err := expandRole(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Role %s", role.Name)
+	tflog.Info(ctx, "Creating Role", map[string]interface{}{"name": role.Name})
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	newRole, err := client.CreateRole(context.Background(), role)
+	newRole, err := client.CreateRole(ctx, role)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenRole(d, newRole)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceRoleRead(d, m)
+	return resourceRoleRead(ctx, d, m)
 }
 
-func resourceRoleRead(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Refreshing Role ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Refreshing Role", map[string]interface{}{"id": d.Id()})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	role, err := client.GetRole(context.Background(), d.Id())
+	role, err := client.GetRole(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Role ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Role not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenRole(d, role)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceUpdateRoleRead(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Refreshing Role ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+func resourceUpdateRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Refreshing Role", map[string]interface{}{"id": d.Id()})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	role, err := client.GetRole(context.Background(), d.Id())
+	role, err := client.GetRole(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Role ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Role not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenRole(d, role)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceRoleUpdate(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Updating Role ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Updating Role", map[string]interface{}{"id": d.Id()})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	log.Printf("disabled in role: %s\n", d.Get("disabled"))
+	tflog.Debug(ctx, "Role disabled status", map[string]interface{}{"disabled": d.Get("disabled")})
 
 	updatedRole, id, err := expandUpdateRole(d)
-	log.Printf("role after expand: %v\n", updatedRole)
+	tflog.Debug(ctx, "Role after expand", map[string]interface{}{"role": fmt.Sprintf("%v", updatedRole)})
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	_, err = client.UpdateRole(context.Background(), updatedRole, id)
+	_, err = client.UpdateRole(ctx, updatedRole, id)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceRoleRead(d, m)
+	return resourceRoleRead(ctx, d, m)
 }
 
-func resourceRoleDelete(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Deleting Role ID %s", d.Id())
+func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Deleting Role", map[string]interface{}{"id": d.Id()})
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	role, err := client.GetRole(context.Background(), d.Id())
+	role, err := client.GetRole(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Role ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Role not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
-	_, err = client.DeleteRole(context.Background(), role)
+	_, err = client.DeleteRole(ctx, role)
 	if err != nil {
-		return fmt.Errorf("error removing Role: %s", err)
+		return diag.FromErr(fmt.Errorf("error removing Role: %s", err))
 	}
 
 	d.SetId("")

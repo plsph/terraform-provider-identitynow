@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"regexp"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // Flatteners
@@ -80,13 +81,13 @@ func flattenObjectAccessRequestConfig(in []*AccessRequestConfigList, p []interfa
 		var obj = make(map[string]interface{})
 		obj["comments_required"] = in[i].CommentsRequired
 		obj["denial_comments_required"] = in[i].DenialCommentsRequired
-                if in[i].ApprovalSchemes != nil {
-                        v, ok := obj["approval_schemes"].([]interface{})
-                        if !ok {
-                                v = []interface{}{}
-                        }
-                        obj["approval_schemes"] = flattenObjectApprovalSchemes(in[i].ApprovalSchemes, v)
-                }
+		if in[i].ApprovalSchemes != nil {
+			v, ok := obj["approval_schemes"].([]interface{})
+			if !ok {
+				v = []interface{}{}
+			}
+			obj["approval_schemes"] = flattenObjectApprovalSchemes(in[i].ApprovalSchemes, v)
+		}
 		out = append(out, obj)
 	}
 	return out
@@ -101,7 +102,9 @@ func flattenObjectApprovalSchemes(in []*ApprovalSchemes, p []interface{}) []inte
 	for i := range in {
 		var obj = make(map[string]interface{})
 		obj["approver_type"] = in[i].ApproverType
-		obj["approver_id"] = in[i].ApproverId
+		if in[i].ApproverId != "" {
+			obj["approver_id"] = in[i].ApproverId
+		}
 		out = append(out, obj)
 	}
 	return out
@@ -146,53 +149,53 @@ func expandAccessProfile(in *schema.ResourceData) (*AccessProfile, error) {
 }
 
 func helperUpdateAccessProfileChangeKeys(input interface{}) interface{} {
-    switch v := input.(type) {
-    case map[string]interface{}:
-	output := make(map[string]interface{})
+	switch v := input.(type) {
+	case map[string]interface{}:
+		output := make(map[string]interface{})
 
-	for key, value := range v {
-	    newKey := helperUpdateAccessProfileRegex(key)
-	    output[newKey] = helperUpdateAccessProfileChangeKeys(value)
+		for key, value := range v {
+			newKey := helperUpdateAccessProfileRegex(key)
+			output[newKey] = helperUpdateAccessProfileChangeKeys(value)
+		}
+
+		return output
+	case []interface{}:
+		output := make([]interface{}, len(v))
+
+		for i, item := range v {
+			output[i] = helperUpdateAccessProfileChangeKeys(item)
+		}
+
+		return output
+	default:
+		// For other types, return the input as is
+		return input
 	}
-
-	return output
-    case []interface{}:
-	output := make([]interface{}, len(v))
-
-	for i, item := range v {
-	    output[i] = helperUpdateAccessProfileChangeKeys(item)
-	}
-
-	return output
-    default:
-        // For other types, return the input as is
-        return input
-    }
 }
 
 func helperUpdateAccessProfileRegex(s string) string {
-    re := regexp.MustCompile(`comments_required|denial_comments_required|approval_schemes|reauthorization_required|approver_type|approver_id`)
+	re := regexp.MustCompile(`comments_required|denial_comments_required|approval_schemes|reauthorization_required|approver_type|approver_id`)
 
-    output := re.ReplaceAllStringFunc(s, func(match string) string {
-        switch match {
-        case "comments_required":
-            return "commentsRequired"
-        case "denial_comments_required":
-            return "denialCommentsRequired"
-        case "approval_schemes":
-            return "approvalSchemes"
-        case "reauthorization_required":
-            return "reauthorizationRequired"
-        case "approver_type":
-            return "approverType"
-        case "approver_id":
-            return "approverId"
-        default:
-            return match
-        }
-    })
+	output := re.ReplaceAllStringFunc(s, func(match string) string {
+		switch match {
+		case "comments_required":
+			return "commentsRequired"
+		case "denial_comments_required":
+			return "denialCommentsRequired"
+		case "approval_schemes":
+			return "approvalSchemes"
+		case "reauthorization_required":
+			return "reauthorizationRequired"
+		case "approver_type":
+			return "approverType"
+		case "approver_id":
+			return "approverId"
+		default:
+			return match
+		}
+	})
 
-    return output
+	return output
 }
 
 func expandUpdateAccessProfile(in *schema.ResourceData) ([]*UpdateAccessProfile, interface{}, error) {
@@ -209,42 +212,42 @@ func expandUpdateAccessProfile(in *schema.ResourceData) ([]*UpdateAccessProfile,
 
 	out := []*UpdateAccessProfile{}
 	for key, field := range updatableFields {
-	    obj := UpdateAccessProfile{}
-	    switch field {
-	    case "name", "description" :
-		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).(string); ok {
-		    obj.Op = "replace"
-		    obj.Path = fmt.Sprintf("/%s", field)
-		    obj.Value = v
+		obj := UpdateAccessProfile{}
+		switch field {
+		case "name", "description":
+			if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).(string); ok {
+				obj.Op = "replace"
+				obj.Path = fmt.Sprintf("/%s", field)
+				obj.Value = v
+			}
+		case "enabled", "requestable":
+			if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).(bool); ok {
+				obj.Op = "replace"
+				obj.Path = fmt.Sprintf("/%s", field)
+				obj.Value = v
+			}
+		case "entitlements":
+			if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
+				obj.Op = "replace"
+				obj.Path = fmt.Sprintf("/%s", field)
+				obj.Value = v
+			}
+		case "owner", "source":
+			if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
+				obj.Op = "replace"
+				obj.Path = fmt.Sprintf("/%s", field)
+				obj.Value = v[0]
+			}
+		case "accessRequestConfig":
+			if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
+				obj.Op = "replace"
+				obj.Path = fmt.Sprintf("/%s", field)
+				obj.Value = helperUpdateAccessProfileChangeKeys(v[0])
+			}
+		default:
+			return nil, id, nil
 		}
-	    case "enabled", "requestable":
-		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).(bool); ok {
-		    obj.Op = "replace"
-		    obj.Path = fmt.Sprintf("/%s", field)
-		    obj.Value = v
-		}
-	    case "entitlements":
-		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
-		    obj.Op = "replace"
-		    obj.Path = fmt.Sprintf("/%s", field)
-		    obj.Value = v
-		}
-	    case "owner", "source":
-		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
-		    obj.Op = "replace"
-		    obj.Path = fmt.Sprintf("/%s", field)
-		    obj.Value = v[0]
-		}
-	    case "accessRequestConfig":
-		if v, ok := in.Get(fmt.Sprintf("%s", updatableFieldsCodes[key])).([]interface{}); ok {
-		    obj.Op = "replace"
-		    obj.Path = fmt.Sprintf("/%s", field)
-		    obj.Value = helperUpdateAccessProfileChangeKeys(v[0])
-		}
-	    default:
-		return nil, id, nil
-	    }
-	    out = append(out, &obj)
+		out = append(out, &obj)
 	}
 
 	return out, id, nil
@@ -281,8 +284,8 @@ func expandObjectAccessRequestConfig(p []interface{}) []*AccessRequestConfigList
 			obj.DenialCommentsRequired = v
 		}
 		if v, ok := in["approval_schemes"].([]interface{}); ok && len(v) > 0 {
-                	obj.ApprovalSchemes = expandObjectApprovalSchemes(v)
-        	}
+			obj.ApprovalSchemes = expandObjectApprovalSchemes(v)
+		}
 		out = append(out, &obj)
 	}
 	return out
@@ -297,7 +300,9 @@ func expandObjectApprovalSchemes(p []interface{}) []*ApprovalSchemes {
 		obj := ApprovalSchemes{}
 		in := p[i].(map[string]interface{})
 		obj.ApproverType = in["approver_type"].(string)
-		obj.ApproverId = in["approver_id"].(string)
+		if v, ok := in["approver_id"].(string); ok && v != "" {
+			obj.ApproverId = v
+		}
 		out = append(out, &obj)
 	}
 	return out

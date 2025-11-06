@@ -16,25 +16,25 @@ resource "identitynow_access_profile" "this" {
   description = var.description
   requestable = true
   enabled     = true
- 
+
   entitlements {
     id   = var.entitlement_id
     name = var.entitlement_name
     type = "ENTITLEMENT"
   }
- 
+
   source {
     id   = var.src_id
     name = var.src_name
     type = "SOURCE"
   }
- 
+
   owner {
     id   = var.owner_id
     name = var.owner_name
     type = "IDENTITY"
   }
- 
+
   access_request_config {
     comments_required        = true
     denial_comments_required = true

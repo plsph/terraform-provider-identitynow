@@ -32,9 +32,9 @@ resource "identitynow_source" "azure_ad_source" {
     client_id                    = "<CLIENT_ID>"
     client_secret                = "<CLIENT_SECRET"
     domain_name                  = "example.come"
-    ms_graph_resource_base       = "https://graph.microsoft.us" #for commercial https://graph.microsoft.com
+    ms_graph_resource_base       = "https://graph.microsoft.us"       #for commercial https://graph.microsoft.com
     ms_graph_token_base          = "https://login.microsoftonline.us" #for commercial https://login.windows.net
-    azure_ad_graph_resource_base = "https://graph.microsoftazure.us" #for commercial https://graph.windows.net
+    azure_ad_graph_resource_base = "https://graph.microsoftazure.us"  #for commercial https://graph.windows.net
     azure_ad_graph_token_base    = "https://login.microsoftonline.us" #for commercial https://login.microsoftonline.com
     api_version                  = "1.6"
     encrypted                    = "clientSecret" #more fields can be add here separated with `,`

@@ -3,121 +3,123 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
+"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceSourceApp() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceSourceAppCreate,
-		Read:   resourceSourceAppRead,
-		Update: resourceSourceAppUpdate,
-		Delete: resourceSourceAppDelete,
+		CreateContext: resourceSourceAppCreate,
+		ReadContext:   resourceSourceAppRead,
+		UpdateContext: resourceSourceAppUpdate,
+		DeleteContext: resourceSourceAppDelete,
 
                 Importer: &schema.ResourceImporter{
-                        State: resourceSourceAppImport,
+                        StateContext: resourceSourceAppImport,
                 },
 
 		Schema: sourceAppFields(),
 	}
 }
 
-func resourceSourceAppCreate(d *schema.ResourceData, m interface{}) error {
+func resourceSourceAppCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	sourceApp, err := expandSourceApp(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Source App %s", sourceApp.Name)
+	tflog.Info(ctx, "Creating Source App", map[string]interface{}{"name": sourceApp.Name})
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	newSourceApp, err := client.CreateSourceApp(context.Background(), sourceApp)
+	newSourceApp, err := client.CreateSourceApp(ctx, sourceApp)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenSourceApp(d, newSourceApp)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceSourceAppRead(d, m)
+	return resourceSourceAppRead(ctx, d, m)
 }
 
-func resourceSourceAppRead(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Refreshing Source App ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+func resourceSourceAppRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Refreshing Source App", map[string]interface{}{"id": d.Id()})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	sourceApp, err := client.GetSourceApp(context.Background(), d.Id())
+	sourceApp, err := client.GetSourceApp(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Source App ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Source App not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
-			return err
+			return diag.FromErr(err)
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenSourceApp(d, sourceApp)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceSourceAppUpdate(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Updating Source App ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+func resourceSourceAppUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Updating Source App", map[string]interface{}{"id": d.Id()})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	updatedSourceApp, id, err := expandUpdateSourceApp(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	_, err = client.UpdateSourceApp(context.Background(), updatedSourceApp, id)
+	_, err = client.UpdateSourceApp(ctx, updatedSourceApp, id)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceSourceAppRead(d, m)
+	return resourceSourceAppRead(ctx, d, m)
 }
 
-func resourceSourceAppDelete(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Deleting Source App ID %s", d.Id())
+func resourceSourceAppDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Deleting Source App", map[string]interface{}{"id": d.Id()})
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	sourceApp, err := client.GetSourceApp(context.Background(), d.Id())
+	sourceApp, err := client.GetSourceApp(ctx, d.Id())
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Source App ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Source App not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
-	err = client.DeleteSourceApp(context.Background(), sourceApp)
+	err = client.DeleteSourceApp(ctx, sourceApp)
 	if err != nil {
-		return fmt.Errorf("Error removing Source App: %s", err)
+		return diag.FromErr(fmt.Errorf("Error removing Source App: %s", err))
 	}
 
 	d.SetId("")
