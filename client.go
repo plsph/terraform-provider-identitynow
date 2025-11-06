@@ -40,6 +40,9 @@ func NewClient(ctx context.Context, baseURL string, clientId string, secret stri
 	// Mask the client_secret if it ever appears as a field
 	subctx = tflog.MaskFieldValuesWithFieldKeys(subctx, "client_secret")
 
+	// Normalize baseURL by removing trailing slash
+	baseURL = strings.TrimSuffix(baseURL, "/")
+
 	return &Client{
 		BaseURL:      baseURL,
 		clientId:     clientId,
