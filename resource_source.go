@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceSource() *schema.Resource {
@@ -30,7 +31,7 @@ func resourceSourceCreate(ctx context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Source %s", source.Name)
+	tflog.Info(ctx, "Creating Source", map[string]interface{}{"name": source.Name})
 
 	c, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -51,7 +52,7 @@ func resourceSourceCreate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceSourceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Refreshing source ID %s", d.Id())
+	tflog.Info(ctx, "Refreshing source", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -62,7 +63,7 @@ func resourceSourceRead(ctx context.Context, d *schema.ResourceData, m interface
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Source ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Source not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
@@ -78,7 +79,7 @@ func resourceSourceRead(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceSourceUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Updating Source ID %s", d.Id())
+	tflog.Info(ctx, "Updating Source", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -98,7 +99,7 @@ func resourceSourceUpdate(ctx context.Context, d *schema.ResourceData, m interfa
 }
 
 func resourceSourceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Deleting Source ID %s", d.Id())
+	tflog.Info(ctx, "Deleting Source", map[string]interface{}{"id": d.Id()})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -110,7 +111,7 @@ func resourceSourceDelete(ctx context.Context, d *schema.ResourceData, m interfa
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Source ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Source not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}

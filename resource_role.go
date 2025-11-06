@@ -5,7 +5,8 @@ import (
 	"fmt"
 "github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceRole() *schema.Resource {
@@ -29,7 +30,7 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Role %s", role.Name)
+	tflog.Info(ctx, "Creating Role", map[string]interface{}{"name": role.Name})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -50,7 +51,7 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Refreshing Role ID %s", d.Id())
+	tflog.Info(ctx, "Refreshing Role", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -61,7 +62,7 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Role ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Role not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
@@ -77,7 +78,7 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}
 }
 
 func resourceUpdateRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Refreshing Role ID %s", d.Id())
+	tflog.Info(ctx, "Refreshing Role", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -88,7 +89,7 @@ func resourceUpdateRoleRead(ctx context.Context, d *schema.ResourceData, m inter
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Role ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Role not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
@@ -104,16 +105,16 @@ func resourceUpdateRoleRead(ctx context.Context, d *schema.ResourceData, m inter
 }
 
 func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Updating Role ID %s", d.Id())
+	tflog.Info(ctx, "Updating Role", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	log.Printf("disabled in role: %s\n", d.Get("disabled"))
+	tflog.Debug(ctx, "Role disabled status", map[string]interface{}{"disabled": d.Get("disabled")})
 
 	updatedRole, id, err := expandUpdateRole(d)
-	log.Printf("role after expand: %v\n", updatedRole)
+	tflog.Debug(ctx, "Role after expand", map[string]interface{}{"role": fmt.Sprintf("%v", updatedRole)})
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -127,7 +128,7 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Deleting Role ID %s", d.Id())
+	tflog.Info(ctx, "Deleting Role", map[string]interface{}{"id": d.Id()})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -139,7 +140,7 @@ func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Role ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Role not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}

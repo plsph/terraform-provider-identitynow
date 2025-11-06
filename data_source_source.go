@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
+
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func dataSourceSource() *schema.Resource {
@@ -82,7 +83,7 @@ func dataSourceSource() *schema.Resource {
 }
 
 func dataSourceSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Data source for Source ID %s", d.Get("id").(string))
+	tflog.Info(ctx, "Getting Source data source", map[string]interface{}{"id": d.Get("id").(string)})
 	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -93,7 +94,7 @@ func dataSourceSourceRead(ctx context.Context, d *schema.ResourceData, meta inte
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Data source for Source ID %s not found.", d.Get("id").(string))
+			tflog.Debug(ctx, "Source not found in data source", map[string]interface{}{"id": d.Get("id").(string)})
 			return nil
 		}
 		return diag.FromErr(err)

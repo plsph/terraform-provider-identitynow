@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 )
 
 // Flatteners
@@ -33,7 +33,7 @@ func flattenAccountSchema(d *schema.ResourceData, in *AccountSchema) error {
 		d.Set("attributes", flattenAccountSchemaAttributes(in.Attributes, v))
 	}
 
-	log.Printf("d *schema.ResourceData in flatten: %+v", d)
+	// Debug: flattening schema resource data
 	return nil
 }
 

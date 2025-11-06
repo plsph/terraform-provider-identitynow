@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
 )
 
 func resourceAccountSchema() *schema.Resource {
@@ -38,7 +39,7 @@ func resourceAccountSchemaCreate(ctx context.Context, d *schema.ResourceData, m 
 		// Handle NotFoundError and other errors as before
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("Source ID %s not found.", accountSchema.SourceID)
+			tflog.Debug(ctx, "Source not found", map[string]interface{}{"source_id": accountSchema.SourceID})
 			d.SetId("")
 			return nil
 		}
@@ -65,7 +66,7 @@ func resourceAccountSchemaCreate(ctx context.Context, d *schema.ResourceData, m 
 	newAccountSchema.Attributes = result
 	newAccountSchema.ID = accountSchema.ID
 
-	log.Printf("[INFO] Creating Account Schema Attribute for source %+v\n", newAccountSchema.SourceID)
+	tflog.Info(ctx, "Creating Account Schema Attribute", map[string]interface{}{"source_id": newAccountSchema.SourceID})
 
 	accountSchemaResponse, err := client.UpdateAccountSchema(ctx, newAccountSchema)
 	if err != nil {
@@ -86,7 +87,7 @@ func resourceAccountSchemaRead(ctx context.Context, d *schema.ResourceData, m in
 	sourceId := d.Get("source_id").(string)
 	schemaId := d.Get("schema_id").(string)
 	attrName := d.Get("name").(string)
-	log.Printf("[INFO] Refreshing Account Schema for Source %s", sourceId)
+	tflog.Info(ctx, "Refreshing Account Schema", map[string]interface{}{"source_id": sourceId})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -97,14 +98,14 @@ func resourceAccountSchemaRead(ctx context.Context, d *schema.ResourceData, m in
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("Source ID %s not found.", sourceId)
+			tflog.Debug(ctx, "Source not found", map[string]interface{}{"source_id": sourceId})
 			d.SetId("")
 			return nil
 		}
 		return diag.FromErr(err)
 	}
 	if accountSchema.Attributes == nil {
-		log.Printf("Attribute %s not found in Account Schema.", attrName)
+		tflog.Debug(ctx, "Attribute not found in Account Schema", map[string]interface{}{"attribute": attrName})
 		d.SetId("")
 	}
 
@@ -123,7 +124,7 @@ func resourceAccountSchemaUpdate(ctx context.Context, d *schema.ResourceData, m 
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Updating %s for Account Schema for source ID %s", d.Get("name").(string), d.Get("source_id").(string))
+	tflog.Info(ctx, "Updating Account Schema attribute", map[string]interface{}{"attribute": d.Get("name").(string), "source_id": d.Get("source_id").(string)})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -141,7 +142,7 @@ func resourceAccountSchemaDelete(ctx context.Context, d *schema.ResourceData, m 
 	sourceId := d.Get("source_id").(string)
 	schemaId := d.Get("schema_id").(string)
 	name := d.Get("name").(string)
-	log.Printf("[INFO] Deleting %s from Account Schema for source ID %s", name, sourceId)
+	tflog.Info(ctx, "Deleting Account Schema attribute", map[string]interface{}{"attribute": name, "source_id": sourceId})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -153,7 +154,7 @@ func resourceAccountSchemaDelete(ctx context.Context, d *schema.ResourceData, m 
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("Source ID %s not found.", sourceId)
+			tflog.Debug(ctx, "Source not found", map[string]interface{}{"source_id": sourceId})
 			d.SetId("")
 			return nil
 		}
@@ -161,7 +162,7 @@ func resourceAccountSchemaDelete(ctx context.Context, d *schema.ResourceData, m 
 	}
 
 	if accountSchema.Attributes == nil {
-		log.Printf("Attribute %s not found in Account Schema.", name)
+		tflog.Debug(ctx, "Attribute not found in Account Schema", map[string]interface{}{"attribute": name})
 		d.SetId("")
 	}
 

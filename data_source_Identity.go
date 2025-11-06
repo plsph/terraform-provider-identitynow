@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func dataSourceIdentity() *schema.Resource {
@@ -30,7 +31,7 @@ func dataSourceIdentityRead(ctx context.Context, d *schema.ResourceData, meta in
 	}
 
 	if alias != "" {
-		log.Printf("[INFO] Getting Data source for Identity. Identity alias %s", alias)
+		tflog.Info(ctx, "Getting Identity data source by alias", map[string]interface{}{"alias": alias})
 		client, err := meta.(*Config).IdentityNowClient(ctx)
 		if err != nil {
 			return diag.FromErr(err)
@@ -41,7 +42,7 @@ func dataSourceIdentityRead(ctx context.Context, d *schema.ResourceData, meta in
 			// non-panicking type assertion, 2nd arg is boolean indicating type match
 			_, notFound := err.(*NotFoundError)
 			if notFound {
-				log.Printf("[INFO] Data source for Identity alias %s not found.", alias)
+				tflog.Debug(ctx, "Identity not found by alias", map[string]interface{}{"alias": alias})
 				return nil
 			}
 			return diag.FromErr(err)
@@ -53,13 +54,13 @@ func dataSourceIdentityRead(ctx context.Context, d *schema.ResourceData, meta in
 			}
 			return nil
 		} else {
-			log.Printf("[INFO] Data source for Identity alias %s not found.", alias)
+			tflog.Debug(ctx, "Identity not found by alias", map[string]interface{}{"alias": alias})
 			return nil
 		}
 	}
 
 	if email != "" {
-		log.Printf("[INFO] Getting Data source for Identity. Identity email %s", email)
+		tflog.Info(ctx, "Getting Identity data source by email", map[string]interface{}{"email": email})
 		client, err := meta.(*Config).IdentityNowClient(ctx)
 		if err != nil {
 			return diag.FromErr(err)
@@ -70,7 +71,7 @@ func dataSourceIdentityRead(ctx context.Context, d *schema.ResourceData, meta in
 			// non-panicking type assertion, 2nd arg is boolean indicating type match
 			_, notFound := err.(*NotFoundError)
 			if notFound {
-				log.Printf("[INFO] Data source for Identity email %s not found.", email)
+				tflog.Debug(ctx, "Identity not found by email", map[string]interface{}{"email": email})
 				return nil
 			}
 			return diag.FromErr(err)
@@ -82,10 +83,10 @@ func dataSourceIdentityRead(ctx context.Context, d *schema.ResourceData, meta in
 			}
 			return nil
 		} else {
-			log.Printf("[INFO] Data source for Identity email %s not found.", email)
+			tflog.Debug(ctx, "Identity not found by email", map[string]interface{}{"email": email})
 			return nil
 		}
 	}
-	log.Printf("[INFO] Data source for Identity not found. No email nor alias match.")
+	tflog.Debug(ctx, "Identity not found - no email nor alias match")
 	return nil
 }

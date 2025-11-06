@@ -5,7 +5,8 @@ import (
 	"fmt"
 "github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceSourceApp() *schema.Resource {
@@ -29,7 +30,7 @@ func resourceSourceAppCreate(ctx context.Context, d *schema.ResourceData, m inte
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Source App %s", sourceApp.Name)
+	tflog.Info(ctx, "Creating Source App", map[string]interface{}{"name": sourceApp.Name})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -50,7 +51,7 @@ func resourceSourceAppCreate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceSourceAppRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Refreshing Source App ID %s", d.Id())
+	tflog.Info(ctx, "Refreshing Source App", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -61,7 +62,7 @@ func resourceSourceAppRead(ctx context.Context, d *schema.ResourceData, m interf
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Source App ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Source App not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return diag.FromErr(err)
 		}
@@ -77,7 +78,7 @@ func resourceSourceAppRead(ctx context.Context, d *schema.ResourceData, m interf
 }
 
 func resourceSourceAppUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Updating Source App ID %s", d.Id())
+	tflog.Info(ctx, "Updating Source App", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -97,7 +98,7 @@ func resourceSourceAppUpdate(ctx context.Context, d *schema.ResourceData, m inte
 }
 
 func resourceSourceAppDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Deleting Source App ID %s", d.Id())
+	tflog.Info(ctx, "Deleting Source App", map[string]interface{}{"id": d.Id()})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -109,7 +110,7 @@ func resourceSourceAppDelete(ctx context.Context, d *schema.ResourceData, m inte
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Source App ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Source App not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}

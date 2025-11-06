@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceAccessProfile() *schema.Resource {
@@ -30,7 +31,7 @@ func resourceAccessProfileCreate(ctx context.Context, d *schema.ResourceData, m 
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Access Profile %s", accessProfile.Name)
+	tflog.Info(ctx, "Creating Access Profile", map[string]interface{}{"name": accessProfile.Name})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -51,7 +52,7 @@ func resourceAccessProfileCreate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func resourceAccessProfileRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Refreshing Access Profile ID %s", d.Id())
+	tflog.Info(ctx, "Refreshing Access Profile", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -62,7 +63,7 @@ func resourceAccessProfileRead(ctx context.Context, d *schema.ResourceData, m in
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Access Profile ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Access Profile not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return diag.FromErr(err)
 		}
@@ -78,7 +79,7 @@ func resourceAccessProfileRead(ctx context.Context, d *schema.ResourceData, m in
 }
 
 func resourceAccessProfileUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Updating Access Profile ID %s", d.Id())
+	tflog.Info(ctx, "Updating Access Profile", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -98,7 +99,7 @@ func resourceAccessProfileUpdate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func resourceAccessProfileDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Deleting Access Profile ID %s", d.Id())
+	tflog.Info(ctx, "Deleting Access Profile", map[string]interface{}{"id": d.Id()})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -110,7 +111,7 @@ func resourceAccessProfileDelete(ctx context.Context, d *schema.ResourceData, m 
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Access Profile ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Access Profile not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}

@@ -5,7 +5,8 @@ import (
 	"fmt"
 "github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceGovernanceGroup() *schema.Resource {
@@ -29,7 +30,7 @@ func resourceGovernanceGroupCreate(ctx context.Context, d *schema.ResourceData, 
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Governance Group %s", governanceGroup.Name)
+	tflog.Info(ctx, "Creating Governance Group", map[string]interface{}{"name": governanceGroup.Name})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -50,7 +51,7 @@ func resourceGovernanceGroupCreate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceGovernanceGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Refreshing Governance Group ID %s", d.Id())
+	tflog.Info(ctx, "Refreshing Governance Group", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -61,7 +62,7 @@ func resourceGovernanceGroupRead(ctx context.Context, d *schema.ResourceData, m 
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Governance Group ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Governance Group not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return diag.FromErr(err)
 		}
@@ -77,7 +78,7 @@ func resourceGovernanceGroupRead(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func resourceGovernanceGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Updating Governance Group ID %s", d.Id())
+	tflog.Info(ctx, "Updating Governance Group", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -97,7 +98,7 @@ func resourceGovernanceGroupUpdate(ctx context.Context, d *schema.ResourceData, 
 }
 
 func resourceGovernanceGroupDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Deleting Governance Group ID %s", d.Id())
+	tflog.Info(ctx, "Deleting Governance Group", map[string]interface{}{"id": d.Id()})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -109,7 +110,7 @@ func resourceGovernanceGroupDelete(ctx context.Context, d *schema.ResourceData, 
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Governance Group ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Governance Group not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}

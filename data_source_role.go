@@ -4,7 +4,8 @@ import (
 	"context"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"log"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func dataSourceRole() *schema.Resource {
@@ -51,7 +52,7 @@ func dataSourceRole() *schema.Resource {
 }
 
 func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Getting Data source for Role ID %s", d.Get("id").(string))
+	tflog.Info(ctx, "Getting Role data source", map[string]interface{}{"id": d.Get("id").(string)})
 	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -62,7 +63,7 @@ func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, meta interf
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Data source for Role ID %s not found.", d.Get("id").(string))
+			tflog.Debug(ctx, "Role not found in data source", map[string]interface{}{"id": d.Get("id").(string)})
 			return nil
 		}
 		return diag.FromErr(err)

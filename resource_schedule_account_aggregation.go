@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceScheduleAccountAggregation() *schema.Resource {
@@ -26,7 +27,7 @@ func resourceAccountAggregationScheduleCreateUpdate(ctx context.Context, d *sche
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Performing Account Aggregation Schedule for source ID %s", accountAggregationSchedule.SourceID)
+	tflog.Info(ctx, "Performing Account Aggregation Schedule", map[string]interface{}{"source_id": accountAggregationSchedule.SourceID})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -49,7 +50,7 @@ func resourceAccountAggregationScheduleCreateUpdate(ctx context.Context, d *sche
 }
 
 func resourceAccountAggregationScheduleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Refreshing Account Aggregation Schedule for source ID %s", d.Id())
+	tflog.Info(ctx, "Refreshing Account Aggregation Schedule for source", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -63,7 +64,7 @@ func resourceAccountAggregationScheduleRead(ctx context.Context, d *schema.Resou
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Account Aggregation Schedule for Source ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Account Aggregation Schedule for Source not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
@@ -79,7 +80,7 @@ func resourceAccountAggregationScheduleRead(ctx context.Context, d *schema.Resou
 }
 
 func resourceAccountAggregationScheduleDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Deleting Account Aggregation for Source ID %s", d.Id())
+	tflog.Info(ctx, "Deleting Account Aggregation for Source", map[string]interface{}{"id": d.Id()})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -91,7 +92,7 @@ func resourceAccountAggregationScheduleDelete(ctx context.Context, d *schema.Res
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Account Aggregation Schedule for source ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Account Aggregation Schedule for source not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}

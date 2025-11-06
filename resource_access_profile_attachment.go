@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourceAccessProfileAttachment() *schema.Resource {
@@ -30,7 +31,7 @@ func resourceAccessProfileAttachmentCreate(ctx context.Context, d *schema.Resour
 		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Access Profile Attachment for Source App Id: %s", accessProfileAttachment.SourceAppId)
+	tflog.Info(ctx, "Creating Access Profile Attachment for Source App Id:", map[string]interface{}{"name": accessProfileAttachment.SourceAppId})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -51,7 +52,7 @@ func resourceAccessProfileAttachmentCreate(ctx context.Context, d *schema.Resour
 }
 
 func resourceAccessProfileAttachmentRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Refreshing Access Profile Attachment ID %s", d.Id())
+	tflog.Info(ctx, "Refreshing Access Profile Attachment", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -62,7 +63,7 @@ func resourceAccessProfileAttachmentRead(ctx context.Context, d *schema.Resource
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Access ProfileAttachment ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Access ProfileAttachment not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return diag.FromErr(err)
 		}
@@ -78,7 +79,7 @@ func resourceAccessProfileAttachmentRead(ctx context.Context, d *schema.Resource
 }
 
 func resourceAccessProfileAttachmentUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Updating Access Profile Attachment ID %s", d.Id())
+	tflog.Info(ctx, "Updating Access Profile Attachment", map[string]interface{}{"id": d.Id()})
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -98,7 +99,7 @@ func resourceAccessProfileAttachmentUpdate(ctx context.Context, d *schema.Resour
 }
 
 func resourceAccessProfileAttachmentDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Deleting Access ProfileAttachment ID %s", d.Id())
+	tflog.Info(ctx, "Deleting Access ProfileAttachment", map[string]interface{}{"id": d.Id()})
 
 	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
@@ -110,7 +111,7 @@ func resourceAccessProfileAttachmentDelete(ctx context.Context, d *schema.Resour
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Access ProfileAttachment ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Access ProfileAttachment not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}

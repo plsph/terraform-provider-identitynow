@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -61,7 +61,7 @@ func dataSourceApp() *schema.Resource {
 }
 
 func dataSourceSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Data source for Source App Name %s", d.Get("name").(string))
+	tflog.Info(ctx, "Getting Source App data source", map[string]interface{}{"name": d.Get("name").(string)})
 	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -72,7 +72,7 @@ func dataSourceSourceAppRead(ctx context.Context, d *schema.ResourceData, meta i
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Data source for Source App Name %s not found.", d.Get("name").(string))
+			tflog.Debug(ctx, "Source App not found in data source", map[string]interface{}{"name": d.Get("name").(string)})
 			return nil
 		}
 		return diag.FromErr(err)

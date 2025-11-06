@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"log"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -67,7 +67,7 @@ func dataSourceAccessProfile() *schema.Resource {
 }
 
 func dataSourceAccessProfileRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Data source for Access Profile ID %s", d.Get("id").(string))
+	tflog.Info(ctx, "Getting Access Profile data source", map[string]interface{}{"id": d.Get("id").(string)})
 	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -78,7 +78,7 @@ func dataSourceAccessProfileRead(ctx context.Context, d *schema.ResourceData, me
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Data source for Access Profile ID %s not found.", d.Get("id").(string))
+			tflog.Debug(ctx, "Access Profile not found in data source", map[string]interface{}{"id": d.Get("id").(string)})
 			return nil
 		}
 		return diag.FromErr(err)

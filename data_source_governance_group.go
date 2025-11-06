@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
+
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func dataSourceGovernanceGroup() *schema.Resource {
@@ -42,7 +43,7 @@ func dataSourceGovernanceGroup() *schema.Resource {
 }
 
 func dataSourceGovernanceGroupRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	log.Printf("[INFO] Data source for Governance Group ID %s", d.Get("id").(string))
+	tflog.Info(ctx, "Getting Governance Group data source", map[string]interface{}{"id": d.Get("id").(string)})
 	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
@@ -53,7 +54,7 @@ func dataSourceGovernanceGroupRead(ctx context.Context, d *schema.ResourceData, 
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Data source for Governance Group ID %s not found.", d.Get("id").(string))
+			tflog.Debug(ctx, "Governance Group not found in data source", map[string]interface{}{"id": d.Get("id").(string)})
 			return nil
 		}
 		return diag.FromErr(err)

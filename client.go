@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -56,7 +55,7 @@ func NewClient(ctx context.Context, baseURL string, clientId string, secret stri
 
 func (c *Client) GetToken(ctx context.Context) error {
 
-	tflog.Info(ctx, "Obtaining OAuth token from IdentityNow", map[string]interface{}{
+	tflog.Debug(ctx, "Obtaining OAuth token from IdentityNow", map[string]interface{}{
 		"base_url":  c.BaseURL,
 		"client_id": c.clientId,
 	})
@@ -72,18 +71,67 @@ func (c *Client) GetToken(ctx context.Context) error {
 	}
 
 	req.Header.Set("Accept", "application/json; charset=utf-8")
-
 	req = req.WithContext(ctx)
 
-	res := OauthToken{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("da err:%+v\n", err)
+	// Don't use sendRequest here as it requires an access token
+	res, err := c.HTTPClient.Do(req)
+	if err != nil {
+		tflog.Error(ctx, "Failed to get OAuth token", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
+		var errRes errorResponse
+		err = json.NewDecoder(res.Body).Decode(&errRes)
+		if err == nil && len(errRes.Messages) > 0 {
+			return errors.New(errRes.Messages[0].Text)
+		}
+		tflog.Debug(ctx, "Failed to get OAuth token", map[string]interface{}{
+			"status_code": res.StatusCode,
+		})
+		return fmt.Errorf("failed to get token, status code: %d", res.StatusCode)
+	}
+
+	var tokenRes OauthToken
+	if err := json.NewDecoder(res.Body).Decode(&tokenRes); err != nil {
+		tflog.Error(ctx, "Failed to decode OAuth token response", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return err
 	}
 
-	c.accessToken = res.AccessToken
-	expirationDuration := time.Duration(res.ExpiresIn) * time.Second
-	c.tokenExpiry = time.Now().Add(expirationDuration)
+	tflog.Debug(ctx, "OAuth token response received", map[string]interface{}{
+		"expires_in": tokenRes.ExpiresIn,
+		"token_type": tokenRes.TokenType,
+	})
+
+	c.accessToken = tokenRes.AccessToken
+
+	// Set expiry with a safety margin and better validation
+	if tokenRes.ExpiresIn > 0 {
+		expirationDuration := time.Duration(tokenRes.ExpiresIn) * time.Second
+		// Subtract 5 minutes as safety margin to refresh before actual expiry
+		safetyMargin := 5 * time.Minute
+		if expirationDuration > safetyMargin {
+			expirationDuration -= safetyMargin
+		}
+		c.tokenExpiry = time.Now().Add(expirationDuration)
+
+		tflog.Debug(ctx, "Token expiry set", map[string]interface{}{
+			"expires_in_seconds": tokenRes.ExpiresIn,
+			"token_expiry":       c.tokenExpiry.Format(time.RFC3339),
+		})
+	} else {
+		// Fallback: set a default expiry of 1 hour if expires_in is missing or invalid
+		c.tokenExpiry = time.Now().Add(1 * time.Hour)
+		tflog.Warn(ctx, "expires_in field missing or invalid, using default 1 hour expiry", map[string]interface{}{
+			"expires_in_received": tokenRes.ExpiresIn,
+			"default_expiry":      c.tokenExpiry.Format(time.RFC3339),
+		})
+	}
 
 	return nil
 }
@@ -105,7 +153,7 @@ func (c *Client) GetSource(ctx context.Context, id string) (*Source, error) {
 	req = req.WithContext(ctx)
 
 	res := Source{}
-	if err := c.sendRequest(req, &res); err != nil {
+	if err := c.sendRequest(ctx, req, &res); err != nil {
 		return nil, err
 	}
 
@@ -124,7 +172,9 @@ func (c *Client) CreateSourceRequest(ctx context.Context, source *Source) (*Sour
 	})
 	req, err := http.NewRequest("POST", sourceURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("New request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return nil, err
 	}
 
@@ -134,9 +184,11 @@ func (c *Client) CreateSourceRequest(ctx context.Context, source *Source) (*Sour
 	req = req.WithContext(ctx)
 
 	res := Source{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed source creation response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Failed source creation", map[string]interface{}{
+			"error":    err.Error(),
+			"response": fmt.Sprintf("%+v", res),
+		})
 		return nil, err
 	}
 	return &res, nil
@@ -176,17 +228,21 @@ func (c *Client) AddConnectorAttributesToMicrosoftEntraSource(ctx context.Contex
 	}
 
 	if len(updateSource) == 0 {
-		log.Printf("No attributes to update")
+		tflog.Debug(ctx, "No attributes to update")
 		return source, nil // Return the original source if nothing to update
 	}
 
 	// Marshal the updateSource to JSON
 	body, err := json.MarshalIndent(updateSource, "", "  ")
 	if err != nil {
-		log.Printf("Failed to marshal updateSource: %v\n", err)
+		tflog.Error(ctx, "Failed to marshal updateSource", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return nil, fmt.Errorf("failed to marshal updateSource: %w", err)
 	}
-	log.Printf("updateSource: %s\n", string(body))
+	tflog.Debug(ctx, "UpdateSource request body", map[string]interface{}{
+		"body": string(body),
+	})
 
 	// Create the HTTP PATCH request
 	patchURL := fmt.Sprintf("%s/v3/sources/%s", c.BaseURL, source.ID)
@@ -197,7 +253,9 @@ func (c *Client) AddConnectorAttributesToMicrosoftEntraSource(ctx context.Contex
 	})
 	req, err := http.NewRequest("PATCH", patchURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Failed to create HTTP request: %v\n", err)
+		tflog.Error(ctx, "Failed to create HTTP request", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
@@ -206,13 +264,17 @@ func (c *Client) AddConnectorAttributesToMicrosoftEntraSource(ctx context.Contex
 
 	// Send the request and handle the response
 	var res Source
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed updating source: %v\n", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Failed updating source", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return nil, fmt.Errorf("failed to update source: %w", err)
 	}
 
 	resBody, _ := json.MarshalIndent(res, "", "  ")
-	log.Printf("Response Body is: %s\n", string(resBody))
+	tflog.Debug(ctx, "Response body received", map[string]interface{}{
+		"response": string(resBody),
+	})
 
 	return &res, nil
 }
@@ -259,7 +321,9 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 	})
 	req, err := http.NewRequest("PUT", updateURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return nil, err
 	}
 
@@ -269,9 +333,11 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 	req = req.WithContext(ctx)
 
 	res := Source{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed source update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Failed source update", map[string]interface{}{
+			"error":    err.Error(),
+			"response": fmt.Sprintf("%+v", res),
+		})
 		return nil, err
 	}
 
@@ -287,7 +353,9 @@ func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
 	})
 	req, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return err
 	}
 
@@ -296,9 +364,11 @@ func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
 	req = req.WithContext(ctx)
 
 	var res interface{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed source update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Failed source deletion", map[string]interface{}{
+			"error":    err.Error(),
+			"response": fmt.Sprintf("%+v", res),
+		})
 		return err
 	}
 
@@ -314,18 +384,27 @@ func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfil
 	})
 	req, err := http.NewRequest("GET", profileURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create HTTP request for access profile", map[string]interface{}{
+			"profile_id": id,
+			"error":      err.Error(),
+		})
 		return nil, err
 	}
 
 	req = req.WithContext(ctx)
 
 	res := AccessProfile{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Access Profile get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Failed to get access profile", map[string]interface{}{
+			"profile_id": id,
+			"error":      err.Error(),
+		})
 		return nil, err
 	}
+
+	tflog.Debug(ctx, "Successfully retrieved access profile", map[string]interface{}{
+		"profile_id": id,
+	})
 
 	return &res, nil
 }
@@ -339,16 +418,16 @@ func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*Sourc
 	})
 	req, err := http.NewRequest("GET", entitlementsURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
 	req = req.WithContext(ctx)
 
 	var res []*SourceEntitlement
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Source Entitlements get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 	return res, nil
@@ -365,16 +444,16 @@ func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter
 	})
 	req, err := http.NewRequest("GET", entitlementURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
 	req = req.WithContext(ctx)
 
 	var res []*SourceEntitlement
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Source Entitlements get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 	return res, nil
@@ -393,7 +472,7 @@ func (c *Client) CreateAccessProfile(ctx context.Context, accessProfile *AccessP
 	})
 	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -403,9 +482,9 @@ func (c *Client) CreateAccessProfile(ctx context.Context, accessProfile *AccessP
 	req = req.WithContext(ctx)
 
 	res := AccessProfile{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Access Profile creation response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -425,7 +504,7 @@ func (c *Client) UpdateAccessProfile(ctx context.Context, accessProfile []*Updat
 	})
 	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -435,9 +514,9 @@ func (c *Client) UpdateAccessProfile(ctx context.Context, accessProfile []*Updat
 	req = req.WithContext(ctx)
 
 	res := AccessProfile{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Access Profile update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -453,7 +532,7 @@ func (c *Client) DeleteAccessProfile(ctx context.Context, accessProfile *AccessP
 	})
 	req, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return err
 	}
 
@@ -462,9 +541,9 @@ func (c *Client) DeleteAccessProfile(ctx context.Context, accessProfile *AccessP
 	req = req.WithContext(ctx)
 
 	var res interface{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed access profile update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return err
 	}
 
@@ -480,7 +559,7 @@ func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
 	})
 	req, err := http.NewRequest("GET", roleURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -489,9 +568,9 @@ func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
 	req = req.WithContext(ctx)
 
 	res := Role{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Role get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -511,10 +590,12 @@ func (c *Client) CreateRole(ctx context.Context, role *Role) (*Role, error) {
 	})
 	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("New request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
-	log.Printf("Request role is: %v\n", req)
+	tflog.Debug(ctx, "Role request details", map[string]interface{}{
+		"request": fmt.Sprintf("%v", req),
+	})
 
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Accept", "application/json; charset=utf-8")
@@ -522,9 +603,9 @@ func (c *Client) CreateRole(ctx context.Context, role *Role) (*Role, error) {
 	req = req.WithContext(ctx)
 
 	res := Role{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed role creation response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -544,7 +625,7 @@ func (c *Client) UpdateRole(ctx context.Context, role []*UpdateRole, id interfac
 	})
 	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -554,9 +635,9 @@ func (c *Client) UpdateRole(ctx context.Context, role []*UpdateRole, id interfac
 	req = req.WithContext(ctx)
 
 	res := Role{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Role updating response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -576,7 +657,7 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 	})
 	req, err := http.NewRequest("DELETE", deleteURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -585,9 +666,9 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 	req = req.WithContext(ctx)
 
 	res := Role{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Role deletion response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -604,23 +685,23 @@ func (c *Client) GetIdentityByAlias(ctx context.Context, alias string) ([]*Ident
 	req, err := http.NewRequest("GET", identityURL, nil)
 
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
-	log.Printf("GetIdentity Request is: %+v\n", req)
+	tflog.Debug(ctx, "GetIdentity request details", map[string]interface{}{"request": fmt.Sprintf("%+v", req)})
 
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 
 	req = req.WithContext(ctx)
 
 	var res []*Identity
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Identity get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
-	log.Printf("GetIdentity Response is: %+v\n", res)
+	tflog.Debug(ctx, "GetIdentity response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
 
 	return res, nil
 }
@@ -635,23 +716,23 @@ func (c *Client) GetIdentityByEmail(ctx context.Context, email string) ([]*Ident
 	req, err := http.NewRequest("GET", identityURL, nil)
 
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
-	log.Printf("GetIdentity Request is: %+v\n", req)
+	tflog.Debug(ctx, "GetIdentity request details", map[string]interface{}{"request": fmt.Sprintf("%+v", req)})
 
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 
 	req = req.WithContext(ctx)
 
 	var res []*Identity
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Identity get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
-	log.Printf("GetIdentity Response is: %+v\n", res)
+	tflog.Debug(ctx, "GetIdentity response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
 
 	return res, nil
 }
@@ -665,16 +746,16 @@ func (c *Client) GetAccountAggregationSchedule(ctx context.Context, id string) (
 	})
 	req, err := http.NewRequest("GET", scheduleURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
 	req = req.WithContext(ctx)
 
 	res := []AccountAggregationSchedule{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Schedule Account Aggregation get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -694,7 +775,7 @@ func (c *Client) ManageAccountAggregationSchedule(ctx context.Context, scheduleA
 	})
 	req, err := http.NewRequest("POST", endpoint, strings.NewReader(data.Encode()))
 	if err != nil {
-		log.Printf("New request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -703,9 +784,9 @@ func (c *Client) ManageAccountAggregationSchedule(ctx context.Context, scheduleA
 	req = req.WithContext(ctx)
 
 	res := AccountAggregationSchedule{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed schedule account aggregation response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -722,16 +803,16 @@ func (c *Client) GetAccountSchema(ctx context.Context, sourceId string, id strin
 	})
 	req, err := http.NewRequest("GET", schemaURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
 	req = req.WithContext(ctx)
 
 	res := AccountSchema{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Account Schema get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 	res.SourceID = sourceId
@@ -752,7 +833,7 @@ func (c *Client) GetAccountSchema(ctx context.Context, sourceId string, id strin
 //}
 //req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v3/sources/%s/schemas/%s", c.BaseURL, sourceId, schemaId), bytes.NewBuffer(body))
 //if err != nil {
-//	log.Printf("New request failed:%+v\n", err)
+//	tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 //	return nil, err
 //}
 //
@@ -761,11 +842,11 @@ func (c *Client) GetAccountSchema(ctx context.Context, sourceId string, id strin
 //
 //req = req.WithContext(ctx)
 //res := AccountSchema{}
-//if err := c.sendRequest(req, &res); err != nil {
+//if err := c.sendRequest(ctx, req, &res); err != nil {
 //	log.Printf("get body: %+v\n", req.GetBody)
 //
-//	log.Printf("Failed Account Schema Attribute creation. response:%+v\n", res)
-//	log.Printf("Error: %s", err)
+//	tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+//	// Error already logged above
 //	return nil, err
 //}
 //for _, value := range updateAccountSchema {
@@ -788,7 +869,7 @@ func (c *Client) UpdateAccountSchema(ctx context.Context, accountSchema *Account
 	})
 	req, err := http.NewRequest("PUT", schemaURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("New request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -797,9 +878,9 @@ func (c *Client) UpdateAccountSchema(ctx context.Context, accountSchema *Account
 
 	req = req.WithContext(ctx)
 	res := AccountSchema{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Account Schema Attribute updating. response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -830,8 +911,8 @@ func (c *Client) DeleteAccountSchema(ctx context.Context, accountSchema *Account
 	res, err := client.Do(req)
 
 	if err != nil {
-		log.Printf("Failed Account Schema Attribute deletion. response:%+v\n", res)
-		log.Printf("Error: %s", err)
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return err
 	}
 
@@ -860,9 +941,9 @@ func (c *Client) CreatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	req = req.WithContext(ctx)
 
 	res := PasswordPolicy{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Password Policy creation. response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -891,9 +972,9 @@ func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	req = req.WithContext(ctx)
 
 	res := PasswordPolicy{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed to update Password Policy. response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -909,16 +990,16 @@ func (c *Client) GetPasswordPolicy(ctx context.Context, passwordPolicyId string)
 	})
 	req, err := http.NewRequest("GET", policyURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
 	req = req.WithContext(ctx)
 
 	res := PasswordPolicy{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed to get Password Policy. response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -946,7 +1027,7 @@ func (c *Client) DeletePasswordPolicy(ctx context.Context, passwordPolicyId stri
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		log.Printf("Error After httpclient.do:%+v\n", err)
+		tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
 		return err
 	}
 
@@ -982,7 +1063,7 @@ func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *Gov
 	})
 	req, err := http.NewRequest("POST", workgroupURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -993,9 +1074,9 @@ func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *Gov
 	req = req.WithContext(ctx)
 
 	res := GovernanceGroup{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Governance Group creation response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -1011,7 +1092,7 @@ func (c *Client) GetGovernanceGroup(ctx context.Context, id string) (*Governance
 	})
 	req, err := http.NewRequest("GET", workgroupURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -1021,9 +1102,9 @@ func (c *Client) GetGovernanceGroup(ctx context.Context, id string) (*Governance
 	req = req.WithContext(ctx)
 
 	res := GovernanceGroup{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Governance Group get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -1043,7 +1124,7 @@ func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*U
 	})
 	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -1054,9 +1135,9 @@ func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*U
 	req = req.WithContext(ctx)
 
 	res := GovernanceGroup{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Governance Group update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -1072,7 +1153,7 @@ func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *Gov
 	})
 	req, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return err
 	}
 
@@ -1082,9 +1163,9 @@ func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *Gov
 	req = req.WithContext(ctx)
 
 	var res interface{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed access profile update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return err
 	}
 
@@ -1101,7 +1182,7 @@ func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*Source
 	})
 	req, err := http.NewRequest("GET", sourceAppURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -1110,9 +1191,9 @@ func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*Source
 	req = req.WithContext(ctx)
 
 	var res []*SourceApp
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Source App get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -1128,7 +1209,7 @@ func (c *Client) GetSourceApp(ctx context.Context, id string) (*SourceApp, error
 	})
 	req, err := http.NewRequest("GET", sourceAppURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -1137,9 +1218,9 @@ func (c *Client) GetSourceApp(ctx context.Context, id string) (*SourceApp, error
 	req = req.WithContext(ctx)
 
 	res := SourceApp{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Source App get response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -1159,7 +1240,7 @@ func (c *Client) CreateSourceApp(ctx context.Context, sourceApp *SourceApp) (*So
 	})
 	req, err := http.NewRequest("POST", sourceAppURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed: %+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -1170,9 +1251,9 @@ func (c *Client) CreateSourceApp(ctx context.Context, sourceApp *SourceApp) (*So
 	req = req.WithContext(ctx)
 
 	res := SourceApp{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Source App creation response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -1192,7 +1273,7 @@ func (c *Client) UpdateSourceApp(ctx context.Context, sourceApp []*UpdateSourceA
 	})
 	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -1203,9 +1284,9 @@ func (c *Client) UpdateSourceApp(ctx context.Context, sourceApp []*UpdateSourceA
 	req = req.WithContext(ctx)
 
 	res := SourceApp{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Source App update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -1221,7 +1302,7 @@ func (c *Client) DeleteSourceApp(ctx context.Context, sourceApp *SourceApp) erro
 	})
 	req, err := http.NewRequest("DELETE", deleteURL, nil)
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return err
 	}
 
@@ -1231,9 +1312,9 @@ func (c *Client) DeleteSourceApp(ctx context.Context, sourceApp *SourceApp) erro
 	req = req.WithContext(ctx)
 
 	var res interface{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Source App delete response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return err
 	}
 
@@ -1248,7 +1329,7 @@ func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*Ac
 		url := fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			log.Printf("Creation of new http request failed: %+v\n", err)
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 			return nil, err
 		}
 
@@ -1257,9 +1338,9 @@ func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*Ac
 		req = req.WithContext(ctx)
 
 		var res []AccessProfileFromSourceApp
-		if err := c.sendRequest(req, &res); err != nil {
-			log.Printf("Failed Access Profile Attachment get response:%+v\n", res)
-			log.Printf("Error: %s", err)
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			// Error already logged above
 			return nil, err
 		}
 
@@ -1309,7 +1390,7 @@ func (c *Client) UpdateAccessProfileAttachment(ctx context.Context, accessProfil
 	})
 	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
@@ -1320,9 +1401,9 @@ func (c *Client) UpdateAccessProfileAttachment(ctx context.Context, accessProfil
 	req = req.WithContext(ctx)
 
 	res := AccessProfileAttachment{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Access Profile Attachment update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return nil, err
 	}
 
@@ -1343,7 +1424,7 @@ func (c *Client) DeleteAccessProfileAttachment(ctx context.Context, accessProfil
 	})
 	req, err := http.NewRequest("POST", deleteURL, bytes.NewBuffer(body))
 	if err != nil {
-		log.Printf("Creation of new http request failed:%+v\n", err)
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return err
 	}
 
@@ -1354,20 +1435,20 @@ func (c *Client) DeleteAccessProfileAttachment(ctx context.Context, accessProfil
 	req = req.WithContext(ctx)
 
 	var res interface{}
-	if err := c.sendRequest(req, &res); err != nil {
-		log.Printf("Failed Access Profile Attachment update response:%+v\n", res)
-		log.Printf("Error: %s", err)
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
 		return err
 	}
 
 	return nil
 }
 
-func (c *Client) sendRequest(req *http.Request, v interface{}) error {
+func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
-		log.Printf("Error After httpclient.do:%+v\n", err)
+		tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
 		return err
 	}
 
@@ -1391,12 +1472,14 @@ func (c *Client) sendRequest(req *http.Request, v interface{}) error {
 	}
 
 	if res.StatusCode == 204 && req.Method == "DELETE" {
-		log.Printf("Resource deleted successfully.")
+		tflog.Debug(ctx, "Resource deleted successfully")
 		return nil
 	}
 
 	if err = json.NewDecoder(res.Body).Decode(&v); err != nil {
-		log.Printf("Decoder error:%s", err)
+		tflog.Error(ctx, "JSON decoder error", map[string]interface{}{
+			"error": err.Error(),
+		})
 		return err
 	}
 
