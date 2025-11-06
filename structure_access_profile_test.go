@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var (
@@ -38,6 +39,20 @@ func init() {
 				Type: "ENTITLEMENT",
 			},
 		},
+		AccessRequestConfig: &AccessRequestConfigList{
+			CommentsRequired:       true,
+			DenialCommentsRequired: true,
+			ApprovalSchemes: []*ApprovalSchemes{
+				{
+					ApproverType: "MANAGER",
+					ApproverId:   "", // Empty approver_id for MANAGER type
+				},
+				{
+					ApproverType: "GOVERNANCE_GROUP",
+					ApproverId:   "2c9180887412345678948078d29f2e99", // Non-empty for governance group
+				},
+			},
+		},
 		Enabled: &FALSE,
 	}
 	testAccessProfileInterface = map[string]interface{}{
@@ -70,6 +85,22 @@ func init() {
 			},
 		},
 		"enabled": false,
+		"access_request_config": []interface{}{
+			map[string]interface{}{
+				"comments_required":        true,
+				"denial_comments_required": true,
+				"approval_schemes": []interface{}{
+					map[string]interface{}{
+						"approver_type": "MANAGER",
+						"approver_id":   "",
+					},
+					map[string]interface{}{
+						"approver_type": "GOVERNANCE_GROUP",
+						"approver_id":   "2c9180887412345678948078d29f2e99",
+					},
+				},
+			},
+		},
 	}
 }
 

@@ -26,7 +26,7 @@ const (
 	// MaxClientPoolSize defines the maximum number of concurrent clients/tokens
 	MaxClientPoolSize = 10
 	// DefaultClientPoolSize defines the default pool size
-	DefaultClientPoolSize = 3
+	DefaultClientPoolSize = 5
 )
 
 func (c *Client) IsTokenValid(ctx context.Context) bool {
@@ -63,10 +63,10 @@ func (cfg *Config) IdentityNowClient(ctx context.Context) (*Client, error) {
 	defer cfg.clientMux.Unlock()
 
 	cfg.initializeClientPool()
-	
+
 	// Get the next client using round-robin
 	clientIndex := cfg.getNextClientIndex()
-	
+
 	tflog.Debug(ctx, "Selecting client from pool", map[string]interface{}{
 		"client_index": clientIndex,
 		"pool_size":    cfg.clientPoolSize,
@@ -133,14 +133,14 @@ func (cfg *Config) ResetClient() {
 func (cfg *Config) SetClientPoolSize(size int) {
 	cfg.clientMux.Lock()
 	defer cfg.clientMux.Unlock()
-	
+
 	if size > MaxClientPoolSize {
 		size = MaxClientPoolSize
 	}
 	if size < 1 {
 		size = 1
 	}
-	
+
 	cfg.clientPoolSize = size
 	// Reset the pool when size changes
 	cfg.clients = nil
@@ -151,7 +151,7 @@ func (cfg *Config) SetClientPoolSize(size int) {
 func (cfg *Config) GetClientPoolStats(ctx context.Context) map[string]interface{} {
 	cfg.clientMux.Lock()
 	defer cfg.clientMux.Unlock()
-	
+
 	if cfg.clients == nil {
 		return map[string]interface{}{
 			"pool_size":      cfg.clientPoolSize,
@@ -159,10 +159,10 @@ func (cfg *Config) GetClientPoolStats(ctx context.Context) map[string]interface{
 			"valid_tokens":   0,
 		}
 	}
-	
+
 	activeClients := 0
 	validTokens := 0
-	
+
 	for i, client := range cfg.clients {
 		if client != nil {
 			activeClients++
@@ -171,9 +171,9 @@ func (cfg *Config) GetClientPoolStats(ctx context.Context) map[string]interface{
 			}
 		}
 		tflog.Debug(ctx, "Client pool status", map[string]interface{}{
-			"index":        i,
-			"has_client":   client != nil,
-			"valid_token":  client != nil && client.IsTokenValid(ctx),
+			"index":       i,
+			"has_client":  client != nil,
+			"valid_token": client != nil && client.IsTokenValid(ctx),
 			"token_expiry": func() string {
 				if client != nil {
 					return client.tokenExpiry.Format(time.RFC3339)
@@ -182,7 +182,7 @@ func (cfg *Config) GetClientPoolStats(ctx context.Context) map[string]interface{
 			}(),
 		})
 	}
-	
+
 	return map[string]interface{}{
 		"pool_size":      len(cfg.clients),
 		"active_clients": activeClients,

@@ -123,10 +123,7 @@ func accessProfileApprovalSchemesFields() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Id of approver",
-			DiffSuppressFunc: func(k, old, new string, d *schema.ResourceData) bool {
-				// Suppress diff when new value is empty string
-				return new == ""
-			},
+			Default:     "",
 		},
 	}
 

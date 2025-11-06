@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"golang.org/x/time/rate"
 )
 
 type Client struct {
@@ -23,6 +24,7 @@ type Client struct {
 	HTTPClient   *http.Client
 	tokenExpiry  time.Time
 	loggerCtx    context.Context
+	rateLimiter  *rate.Limiter
 }
 
 type errorResponse struct {
@@ -42,11 +44,15 @@ func NewClient(ctx context.Context, baseURL string, clientId string, secret stri
 	// Normalize baseURL by removing trailing slash
 	baseURL = strings.TrimSuffix(baseURL, "/")
 
+	// Create rate limiter: 5 requests per second with burst of 1
+	limiter := rate.NewLimiter(5, 1)
+
 	return &Client{
 		BaseURL:      baseURL,
 		clientId:     clientId,
 		clientSecret: secret,
 		loggerCtx:    subctx,
+		rateLimiter:  limiter,
 		HTTPClient: &http.Client{
 			Timeout: time.Minute,
 		},
@@ -54,6 +60,13 @@ func NewClient(ctx context.Context, baseURL string, clientId string, secret stri
 }
 
 func (c *Client) GetToken(ctx context.Context) error {
+	// Apply rate limiting before making any API requests
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		tflog.Debug(ctx, "Rate limiting wait failed", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return fmt.Errorf("rate limiting failed: %w", err)
+	}
 
 	tflog.Debug(ctx, "Obtaining OAuth token from IdentityNow", map[string]interface{}{
 		"base_url":  c.BaseURL,
@@ -1445,6 +1458,14 @@ func (c *Client) DeleteAccessProfileAttachment(ctx context.Context, accessProfil
 }
 
 func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
+	// Apply rate limiting before making any API requests
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		tflog.Debug(ctx, "Rate limiting wait failed", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return fmt.Errorf("rate limiting failed: %w", err)
+	}
+
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -1459,7 +1480,17 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 		err = json.NewDecoder(res.Body).Decode(&errRes)
 		if err == nil {
 			if len(errRes.Messages) == 0 {
-				return fmt.Errorf("unknown error, status code: %d", res.StatusCode)
+				tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
+					"status_code": res.StatusCode,
+				})
+				return errors.New("unknown error")
+			}
+			if res.StatusCode == http.StatusTooManyRequests {
+				tflog.Error(ctx, "API Rate limit exceeded", map[string]interface{}{
+					"status_code": res.StatusCode,
+					"message":     errRes.Messages[0].Text,
+				})
+				return errors.New("rate limit exceeded (429): " + errRes.Messages[0].Text)
 			}
 			if res.StatusCode == http.StatusNotFound {
 				// on the return statement, an interface value of type error is created by the compiler and bound to the pointer to satisfy the return argument.
@@ -1468,7 +1499,18 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 			return errors.New(errRes.Messages[0].Text)
 		}
 
-		return fmt.Errorf("unknown error, status code: %d", res.StatusCode)
+		// Handle 429 without error response body
+		if res.StatusCode == http.StatusTooManyRequests {
+			tflog.Error(ctx, "Rate limit exceeded", map[string]interface{}{
+				"status_code": res.StatusCode,
+			})
+			return errors.New("rate limit exceeded (429)")
+		}
+
+		tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
+			"status_code": res.StatusCode,
+		})
+		return errors.New("unknown error")
 	}
 
 	if res.StatusCode == 204 && req.Method == "DELETE" {

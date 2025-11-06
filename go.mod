@@ -1,12 +1,13 @@
 module github.com/plsph/terraform-provider-identitynow
 
-go 1.21
+go 1.24.0
 
-toolchain go1.22.3
+toolchain go1.24.10
 
 require (
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.33.0
+	golang.org/x/time v0.8.0
 )
 
 require (

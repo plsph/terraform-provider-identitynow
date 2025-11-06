@@ -11,16 +11,12 @@ func flattenIdentity(d *schema.ResourceData, in *Identity) error {
 	d.Set("name", in.Name)
 	d.Set("description", in.Description)
 	d.Set("enabled", in.Enabled)
-	d.Set("isManager", in.IsManager)
-	d.Set("emailAddress", in.EmailAddress)
-	d.Set("identityStatus", in.IdentityStatus)
+	d.Set("is_manager", in.IsManager)
+	d.Set("email_address", in.EmailAddress)
+	d.Set("identity_status", in.IdentityStatus)
 
 	if in.IdentityAttributes != nil {
-		v, ok := d.Get("attributes").(interface{})
-		if !ok {
-			v = []interface{}{}
-		}
-		d.Set("attributes", flattenIdentityAttributes(in.IdentityAttributes, v))
+		d.Set("attributes", []interface{}{flattenIdentityAttributes(in.IdentityAttributes, nil)})
 	}
 
 	return nil
@@ -28,17 +24,17 @@ func flattenIdentity(d *schema.ResourceData, in *Identity) error {
 
 func flattenIdentityAttributes(in *IdentityAttributes, p interface{}) interface{} {
 	if in == nil {
-		return []interface{}{}
+		return nil
 	}
 	var obj = make(map[string]interface{})
-	obj["adpId"] = in.AdpID
+	obj["adp_id"] = in.AdpID
 	obj["lastname"] = in.LastName
 	obj["firstname"] = in.FirstName
 	obj["phone"] = in.Phone
-	obj["userType"] = in.UserType
+	obj["user_type"] = in.UserType
 	obj["uid"] = in.UID
 	obj["email"] = in.Email
-	obj["workdayId"] = in.WorkdayId
+	obj["workday_id"] = in.WorkdayId
 
 	return obj
 }

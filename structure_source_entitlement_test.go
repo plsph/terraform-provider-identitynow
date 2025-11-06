@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var (
@@ -21,6 +22,7 @@ func init() {
 			Attribute:              "memberOf",
 			Created:                nil,
 			Description:            "test description",
+			DirectPermissions:      []interface{}{"permission1", "permission2"},
 			Name:                   "test name",
 			Modified:               "06/20/2020",
 			Owner:                  nil,
@@ -35,6 +37,7 @@ func init() {
 			"source_id":                 "2c9180887412345678948078d29f2e46",
 			"attribute":                 "memberOf",
 			"description":               "test description",
+			"direct_permissions":        []interface{}{"permission1", "permission2"},
 			"name":                      "test name",
 			"modified":                  "06/20/2020",
 			"privileged":                false,

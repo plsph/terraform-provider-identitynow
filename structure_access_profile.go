@@ -102,9 +102,7 @@ func flattenObjectApprovalSchemes(in []*ApprovalSchemes, p []interface{}) []inte
 	for i := range in {
 		var obj = make(map[string]interface{})
 		obj["approver_type"] = in[i].ApproverType
-		if in[i].ApproverId != "" {
-			obj["approver_id"] = in[i].ApproverId
-		}
+		obj["approver_id"] = in[i].ApproverId
 		out = append(out, obj)
 	}
 	return out
