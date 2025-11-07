@@ -1,6 +1,6 @@
 package main
 
-import "github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+import "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 func sourceEntitlementFields() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
@@ -55,6 +55,13 @@ func sourceEntitlementFields() map[string]*schema.Schema {
 		"value": {
 			Type:     schema.TypeString,
 			Computed: true,
+		},
+		"direct_permissions": {
+			Type:     schema.TypeList,
+			Computed: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
 		},
 	}
 

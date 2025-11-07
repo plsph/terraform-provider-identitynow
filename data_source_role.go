@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func dataSourceRole() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceRoleRead,
+		ReadContext: dataSourceRoleRead,
 
 		Schema: map[string]*schema.Schema{
 			"id": {
@@ -49,23 +51,27 @@ func dataSourceRole() *schema.Resource {
 	}
 }
 
-func dataSourceRoleRead(d *schema.ResourceData, meta interface{}) error {
-	log.Printf("[INFO] Getting Data source for Role ID %s", d.Get("id").(string))
-	client, err := meta.(*Config).IdentityNowClient()
+func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Getting Role data source", map[string]interface{}{"id": d.Get("id").(string)})
+	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	role, err := client.GetRole(context.Background(), d.Get("id").(string))
+	role, err := client.GetRole(ctx, d.Get("id").(string))
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Data source for Role ID %s not found.", d.Get("id").(string))
+			tflog.Debug(ctx, "Role not found in data source", map[string]interface{}{"id": d.Get("id").(string)})
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
-	return flattenRole(d, role)
+	err = flattenRole(d, role)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }

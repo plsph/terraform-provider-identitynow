@@ -3,117 +3,119 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
+"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 func resourcePasswordPolicy() *schema.Resource {
 	return &schema.Resource{
-		Create: resourcePasswordPolicyCreate,
-		Read:   resourcePasswordPolicyRead,
-		Update: resourcePasswordPolicyUpdate,
-		Delete: resourcePasswordPolicyDelete,
+		CreateContext: resourcePasswordPolicyCreate,
+		ReadContext:   resourcePasswordPolicyRead,
+		UpdateContext: resourcePasswordPolicyUpdate,
+		DeleteContext: resourcePasswordPolicyDelete,
 
 		Schema: passwordPolicyFields(),
 	}
 
 }
 
-func resourcePasswordPolicyCreate(d *schema.ResourceData, m interface{}) error {
+func resourcePasswordPolicyCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	passwordPolicy, err := expandPasswordPolicy(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Creating Password Policy %s", passwordPolicy.Name)
+	tflog.Info(ctx, "Creating Password Policy", map[string]interface{}{"name": passwordPolicy.Name})
 
-	c, err := m.(*Config).IdentityNowClient()
+	c, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	newPasswordPolicy, err := c.CreatePasswordPolicy(context.Background(), passwordPolicy)
+	newPasswordPolicy, err := c.CreatePasswordPolicy(ctx, passwordPolicy)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenPasswordPolicy(d, newPasswordPolicy)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourcePasswordPolicyRead(d, m)
+	return resourcePasswordPolicyRead(ctx, d, m)
 
 }
 
-func resourcePasswordPolicyRead(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Refreshing Password Policy ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+func resourcePasswordPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Refreshing Password Policy", map[string]interface{}{"id": d.Id()})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	passwordPolicy, err := client.GetPasswordPolicy(context.Background(), d.Id())
+	passwordPolicy, err := client.GetPasswordPolicy(ctx, d.Id())
 	if err != nil {
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Password Policy ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Password Policy not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	err = flattenPasswordPolicy(d, passwordPolicy)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourcePasswordPolicyUpdate(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Updating Password Policy ID %s", d.Id())
-	client, err := m.(*Config).IdentityNowClient()
+func resourcePasswordPolicyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Updating Password Policy", map[string]interface{}{"id": d.Id()})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	updatedPasswordPolicy, err := expandPasswordPolicy(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	_, err = client.UpdatePasswordPolicy(context.Background(), updatedPasswordPolicy)
+	_, err = client.UpdatePasswordPolicy(ctx, updatedPasswordPolicy)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourcePasswordPolicyRead(d, m)
+	return resourcePasswordPolicyRead(ctx, d, m)
 }
 
-func resourcePasswordPolicyDelete(d *schema.ResourceData, m interface{}) error {
-	log.Printf("[INFO] Deleting Password Policy ID %s", d.Id())
+func resourcePasswordPolicyDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Deleting Password Policy", map[string]interface{}{"id": d.Id()})
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	passwordPolicy, err := client.GetPasswordPolicy(context.Background(), d.Id())
+	passwordPolicy, err := client.GetPasswordPolicy(ctx, d.Id())
 	if err != nil {
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Password Policy ID %s not found.", d.Id())
+			tflog.Debug(ctx, "Password Policy not found", map[string]interface{}{"id": d.Id()})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
-	err = client.DeletePasswordPolicy(context.Background(), passwordPolicy.ID)
+	err = client.DeletePasswordPolicy(ctx, passwordPolicy.ID)
 	if err != nil {
-		return fmt.Errorf("error removing Passwprd Policy: %s", err)
+		return diag.FromErr(fmt.Errorf("error removing Passwprd Policy: %s", err))
 	}
 
 	d.SetId("")

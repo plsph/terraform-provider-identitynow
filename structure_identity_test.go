@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	reflect "reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 var (
@@ -44,7 +45,7 @@ func init() {
 				"adp_id":     "12345",
 				"lastname":   "Name",
 				"firstname":  "Test",
-				"phone":      "11234567890",
+				"phone":      "+11234567890",
 				"user_type":  "Employee",
 				"uid":        "tname",
 				"email":      "test@email.com",

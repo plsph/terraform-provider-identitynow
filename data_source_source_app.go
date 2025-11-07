@@ -2,18 +2,20 @@ package main
 
 import (
 	"context"
-	"log"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceApp() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceSourceAppRead,
+		ReadContext: dataSourceSourceAppRead,
 
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,
-				Computed: true,
+				Computed:    true,
 				Description: "Source id",
 			},
 			"name": {
@@ -23,7 +25,7 @@ func dataSourceApp() *schema.Resource {
 			},
 			"description": {
 				Type:        schema.TypeString,
-				Computed: true,
+				Computed:    true,
 				Description: "Source App description",
 			},
 
@@ -40,7 +42,6 @@ func dataSourceApp() *schema.Resource {
 			"source": {
 				Type:     schema.TypeList,
 				Computed: true,
-				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: sourceAppSourceFields(),
 				},
@@ -59,23 +60,27 @@ func dataSourceApp() *schema.Resource {
 	}
 }
 
-func dataSourceSourceAppRead(d *schema.ResourceData, meta interface{}) error {
-	log.Printf("[INFO] Data source for Source App Name %s", d.Get("name").(string))
-	client, err := meta.(*Config).IdentityNowClient()
+func dataSourceSourceAppRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	tflog.Info(ctx, "Getting Source App data source", map[string]interface{}{"name": d.Get("name").(string)})
+	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	sourceApp, err := client.GetSourceAppByName(context.Background(), d.Get("name").(string))
-	if ( err != nil || len(sourceApp) == 0 ) {
+	sourceApp, err := client.GetSourceAppByName(ctx, d.Get("name").(string))
+	if err != nil || len(sourceApp) == 0 {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("[INFO] Data source for Source App Name %s not found.", d.Get("name").(string))
+			tflog.Debug(ctx, "Source App not found in data source", map[string]interface{}{"name": d.Get("name").(string)})
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
-	return flattenSourceApp(d, sourceApp[0])
+	err = flattenSourceApp(d, sourceApp[0])
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	return nil
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func accessProfileFields() map[string]*schema.Schema {
@@ -123,6 +123,7 @@ func accessProfileApprovalSchemesFields() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Id of approver",
+			Default:     "",
 		},
 	}
 

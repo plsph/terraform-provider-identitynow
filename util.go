@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"reflect"
 	"strings"
@@ -53,11 +52,11 @@ func setPasswordPolicyUrlValues(attributes *PasswordPolicy) (url.Values, error) 
 	}
 	if attributes.MinLength != nil {
 		data.Set("minLength", fmt.Sprintf("%v", *attributes.MinLength))
-		log.Printf("minLength: %v", *attributes.MinLength)
+		// Debug: minLength value logged
 	}
 	if attributes.MinAlpha != nil {
 		data.Set("minAlpha", fmt.Sprintf("%v", *attributes.MinAlpha))
-		log.Printf("minAlpha: %v", *attributes.MinAlpha)
+		// Debug: minAlpha value logged
 	}
 	if attributes.MinUpper != nil {
 		data.Set("minUpper", fmt.Sprintf("%v", *attributes.MinUpper))

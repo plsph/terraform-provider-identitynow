@@ -3,45 +3,47 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
-	"log"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func resourceAccountSchema() *schema.Resource {
 	return &schema.Resource{
-		Create: resourceAccountSchemaCreate,
-		Read:   resourceAccountSchemaRead,
-		Update: resourceAccountSchemaUpdate,
-		Delete: resourceAccountSchemaDelete,
+		CreateContext: resourceAccountSchemaCreate,
+		ReadContext:   resourceAccountSchemaRead,
+		UpdateContext: resourceAccountSchemaUpdate,
+		DeleteContext: resourceAccountSchemaDelete,
 		Importer: &schema.ResourceImporter{
-			State: resourceAccountSchemaImport,
+			StateContext: resourceAccountSchemaImport,
 		},
 
 		Schema: accountSchemaFields(),
 	}
 }
 
-func resourceAccountSchemaCreate(d *schema.ResourceData, m interface{}) error {
+func resourceAccountSchemaCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	accountSchema, err := expandAccountSchema(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	newAccountSchema, err := client.GetAccountSchema(context.Background(), accountSchema.SourceID, accountSchema.ID)
+	newAccountSchema, err := client.GetAccountSchema(ctx, accountSchema.SourceID, accountSchema.ID)
 	if err != nil {
 		// Handle NotFoundError and other errors as before
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("Source ID %s not found.", accountSchema.SourceID)
+			tflog.Debug(ctx, "Source not found", map[string]interface{}{"source_id": accountSchema.SourceID})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	newAccountSchema.SourceID = accountSchema.SourceID
@@ -64,111 +66,111 @@ func resourceAccountSchemaCreate(d *schema.ResourceData, m interface{}) error {
 	newAccountSchema.Attributes = result
 	newAccountSchema.ID = accountSchema.ID
 
-	log.Printf("[INFO] Creating Account Schema Attribute for source %+v\n", newAccountSchema.SourceID)
+	tflog.Info(ctx, "Creating Account Schema Attribute", map[string]interface{}{"source_id": newAccountSchema.SourceID})
 
-	accountSchemaResponse, err := client.UpdateAccountSchema(context.Background(), newAccountSchema)
+	accountSchemaResponse, err := client.UpdateAccountSchema(ctx, newAccountSchema)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	accountSchemaResponse.SourceID = accountSchema.SourceID
 
 	err = flattenAccountSchema(d, accountSchemaResponse)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceAccountSchemaRead(d, m)
+	return resourceAccountSchemaRead(ctx, d, m)
 }
 
-func resourceAccountSchemaRead(d *schema.ResourceData, m interface{}) error {
+func resourceAccountSchemaRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	sourceId := d.Get("source_id").(string)
 	schemaId := d.Get("schema_id").(string)
 	attrName := d.Get("name").(string)
-	log.Printf("[INFO] Refreshing Account Schema for Source %s", sourceId)
-	client, err := m.(*Config).IdentityNowClient()
+	tflog.Info(ctx, "Refreshing Account Schema", map[string]interface{}{"source_id": sourceId})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	accountSchema, err := client.GetAccountSchema(context.Background(), sourceId, schemaId)
+	accountSchema, err := client.GetAccountSchema(ctx, sourceId, schemaId)
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("Source ID %s not found.", sourceId)
+			tflog.Debug(ctx, "Source not found", map[string]interface{}{"source_id": sourceId})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 	if accountSchema.Attributes == nil {
-		log.Printf("Attribute %s not found in Account Schema.", attrName)
+		tflog.Debug(ctx, "Attribute not found in Account Schema", map[string]interface{}{"attribute": attrName})
 		d.SetId("")
 	}
 
 	accountSchema.SourceID = sourceId
 	err = flattenAccountSchema(d, accountSchema)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
 }
 
-func resourceAccountSchemaUpdate(d *schema.ResourceData, m interface{}) error {
+func resourceAccountSchemaUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	updatedAccountSchema, err := expandAccountSchema(d)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	log.Printf("[INFO] Updating %s for Account Schema for source ID %s", d.Get("name").(string), d.Get("source_id").(string))
-	client, err := m.(*Config).IdentityNowClient()
+	tflog.Info(ctx, "Updating Account Schema attribute", map[string]interface{}{"attribute": d.Get("name").(string), "source_id": d.Get("source_id").(string)})
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	_, err = client.UpdateAccountSchema(context.Background(), updatedAccountSchema)
+	_, err = client.UpdateAccountSchema(ctx, updatedAccountSchema)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	return resourceAccountSchemaRead(d, m)
+	return resourceAccountSchemaRead(ctx, d, m)
 }
 
-func resourceAccountSchemaDelete(d *schema.ResourceData, m interface{}) error {
+func resourceAccountSchemaDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	sourceId := d.Get("source_id").(string)
 	schemaId := d.Get("schema_id").(string)
 	name := d.Get("name").(string)
-	log.Printf("[INFO] Deleting %s from Account Schema for source ID %s", name, sourceId)
+	tflog.Info(ctx, "Deleting Account Schema attribute", map[string]interface{}{"attribute": name, "source_id": sourceId})
 
-	client, err := m.(*Config).IdentityNowClient()
+	client, err := m.(*Config).IdentityNowClient(ctx)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	accountSchema, err := client.GetAccountSchema(context.Background(), sourceId, schemaId)
+	accountSchema, err := client.GetAccountSchema(ctx, sourceId, schemaId)
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			log.Printf("Source ID %s not found.", sourceId)
+			tflog.Debug(ctx, "Source not found", map[string]interface{}{"source_id": sourceId})
 			d.SetId("")
 			return nil
 		}
-		return err
+		return diag.FromErr(err)
 	}
 
 	if accountSchema.Attributes == nil {
-		log.Printf("Attribute %s not found in Account Schema.", name)
+		tflog.Debug(ctx, "Attribute not found in Account Schema", map[string]interface{}{"attribute": name})
 		d.SetId("")
 	}
 
 	accountSchema.SourceID = sourceId
 
-	err = client.DeleteAccountSchema(context.Background(), accountSchema)
+	err = client.DeleteAccountSchema(ctx, accountSchema)
 	if err != nil {
-		return fmt.Errorf("error removing Account Schema from source %s. Error: %s", sourceId, err)
+		return diag.FromErr(fmt.Errorf("error removing Account Schema from source %s. Error: %s", sourceId, err))
 	}
 
 	d.SetId("")

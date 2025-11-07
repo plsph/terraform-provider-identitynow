@@ -1,11 +1,11 @@
 package main
 
 import (
-	"context"
+"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/acctest"
-	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"log"
 	"os"
 	"testing"
@@ -106,7 +106,7 @@ func testAccIdentitynowRoleDestroy(state *terraform.State) error {
 			continue
 		}
 
-		client, err := testAccProvider.Meta().(*Config).IdentityNowClient()
+		client, err := testAccProvider.Meta().(*Config).IdentityNowClient(context.Background())
 		if err != nil {
 			return err
 		}
@@ -131,7 +131,7 @@ func testAccCheckRoleExist(name string, role Role) resource.TestCheckFunc {
 			return fmt.Errorf("no role ID is set")
 		}
 
-		client, err := testAccProvider.Meta().(*Config).IdentityNowClient()
+		client, err := testAccProvider.Meta().(*Config).IdentityNowClient(context.Background())
 		if err != nil {
 			return err
 		}
