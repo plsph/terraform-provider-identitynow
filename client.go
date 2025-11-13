@@ -455,21 +455,32 @@ func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter
 		"source_id":   id,
 		"name_filter": nameFilter,
 	})
-	req, err := http.NewRequest("GET", entitlementURL, nil)
-	if err != nil {
-		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-		return nil, err
-	}
 
-	req = req.WithContext(ctx)
+	maxRetries := 3
+	retryDelay := 1 * time.Second
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		req, err := http.NewRequest("GET", entitlementURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error(), "attempt": attempt})
+			return nil, err
+		}
 
-	var res []*SourceEntitlement
-	if err := c.sendRequest(ctx, req, &res); err != nil {
-		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-		// Error already logged above
-		return nil, err
+		req = req.WithContext(ctx)
+
+		var res []*SourceEntitlement
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			if ((attempt < maxRetries - 1) &&
+			    (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)")) {
+				backoffDelay := time.Duration(attempt) * retryDelay
+				time.Sleep(backoffDelay)
+				continue
+			}
+			return nil, err
+		}
+		return res, nil
 	}
-	return res, nil
+	return nil, errors.New("dead code")
 }
 
 func (c *Client) CreateAccessProfile(ctx context.Context, accessProfile *AccessProfile) (*AccessProfile, error) {
@@ -1466,7 +1477,15 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 		return fmt.Errorf("rate limiting failed: %w", err)
 	}
 
+	tflog.Trace(ctx, "Sending HTTP Request", map[string]interface{}{
+		"method":        req.Method,
+		"url":           req.URL.String(),
+		"headers":       req.Header,
+		"request_body":  req.Body,
+	})
+
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
+
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
@@ -1474,6 +1493,11 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 	}
 
 	defer res.Body.Close()
+
+	tflog.Trace(ctx, "Received HTTP Response", map[string]interface{}{
+		"status_code":    res.StatusCode,
+		"response_headers": res.Header,
+	})
 
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
 		var errRes errorResponse
@@ -1507,6 +1531,13 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 			return errors.New("rate limit exceeded (429)")
 		}
 
+		if res.StatusCode == http.StatusGatewayTimeout {
+			tflog.Error(ctx, "Gateway Timeout error", map[string]interface{}{
+				"status_code": res.StatusCode,
+			})
+			return errors.New("Gateway Timeout error (504)")
+		}
+
 		tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
 			"status_code": res.StatusCode,
 		})
@@ -1525,5 +1556,8 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 		return err
 	}
 
+	tflog.Trace(ctx, "Parsed HTTP Response", map[string]interface{}{
+		"response_body":  v,
+	})
 	return nil
 }

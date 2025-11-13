@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Config is the configuration parameters for an IdentityNow API
 type Config struct {
-	URL          string `json:"url"`
-	ClientId     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
+	URL                   string `json:"url"`
+	ClientId              string `json:"client_id"`
+	ClientSecret          string `json:"client_secret"`
+	MaxClientPoolSize     int    `json:"max_client_pool_size,omitempty" default:"10"`
+	DefaultClientPoolSize int    `json:"default_client_pool_size,omitempty" default:"5"`
 
 	// Client pool for round-robin token management
 	clients        []*Client
@@ -21,13 +22,6 @@ type Config struct {
 	clientPoolSize int
 	clientMux      sync.Mutex
 }
-
-const (
-	// MaxClientPoolSize defines the maximum number of concurrent clients/tokens
-	MaxClientPoolSize = 10
-	// DefaultClientPoolSize defines the default pool size
-	DefaultClientPoolSize = 5
-)
 
 func (c *Client) IsTokenValid(ctx context.Context) bool {
 	tflog.Debug(ctx, "Checking if token is valid", map[string]interface{}{
@@ -40,10 +34,10 @@ func (c *Client) IsTokenValid(ctx context.Context) bool {
 // initializeClientPool ensures the client pool is properly initialized
 func (cfg *Config) initializeClientPool() {
 	if cfg.clientPoolSize == 0 {
-		cfg.clientPoolSize = DefaultClientPoolSize
+		cfg.clientPoolSize = cfg.DefaultClientPoolSize
 	}
-	if cfg.clientPoolSize > MaxClientPoolSize {
-		cfg.clientPoolSize = MaxClientPoolSize
+	if cfg.clientPoolSize > cfg.MaxClientPoolSize {
+		cfg.clientPoolSize = cfg.MaxClientPoolSize
 	}
 	if cfg.clients == nil {
 		cfg.clients = make([]*Client, cfg.clientPoolSize)
@@ -59,6 +53,7 @@ func (cfg *Config) getNextClientIndex() int {
 
 // IdentityNowClient returns a Client with a valid access token using round-robin selection
 func (cfg *Config) IdentityNowClient(ctx context.Context) (*Client, error) {
+	tflog.Debug(ctx, "Client pool stats", cfg.GetClientPoolStats(ctx))
 	cfg.clientMux.Lock()
 	defer cfg.clientMux.Unlock()
 
@@ -134,8 +129,8 @@ func (cfg *Config) SetClientPoolSize(size int) {
 	cfg.clientMux.Lock()
 	defer cfg.clientMux.Unlock()
 
-	if size > MaxClientPoolSize {
-		size = MaxClientPoolSize
+	if size > cfg.MaxClientPoolSize {
+		size = cfg.MaxClientPoolSize
 	}
 	if size < 1 {
 		size = 1
