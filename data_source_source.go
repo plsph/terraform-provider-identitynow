@@ -16,12 +16,12 @@ func dataSourceSource() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Computed:    true,
 				Description: "Source id",
 			},
 			"name": {
 				Type:        schema.TypeString,
-				Computed:    true,
+				Required:    true,
 				Description: "Source name",
 			},
 			"description": {
@@ -83,18 +83,18 @@ func dataSourceSource() *schema.Resource {
 }
 
 func dataSourceSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	tflog.Info(ctx, "Getting Source data source", map[string]interface{}{"id": d.Get("id").(string)})
+	tflog.Info(ctx, "Getting Source data source", map[string]interface{}{"name": d.Get("name").(string)})
 	client, err := meta.(*Config).IdentityNowClient(ctx)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	source, err := client.GetSource(ctx, d.Get("id").(string))
+	source, err := client.GetSourceByName(ctx, d.Get("name").(string))
 	if err != nil {
 		// non-panicking type assertion, 2nd arg is boolean indicating type match
 		_, notFound := err.(*NotFoundError)
 		if notFound {
-			tflog.Debug(ctx, "Source not found in data source", map[string]interface{}{"id": d.Get("id").(string)})
+			tflog.Debug(ctx, "Source not found in data source", map[string]interface{}{"name": d.Get("name").(string)})
 			return nil
 		}
 		return diag.FromErr(err)

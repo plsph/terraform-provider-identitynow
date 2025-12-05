@@ -149,6 +149,31 @@ func (c *Client) GetToken(ctx context.Context) error {
 	return nil
 }
 
+func (c *Client) GetSourceByName(ctx context.Context, name string) (*Source, error) {
+	filter := fmt.Sprintf("name eq \"%s\"", name)
+	sourceURL := fmt.Sprintf("%s/v2025/sources?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	tflog.Debug(ctx, "Creating HTTP request to get source", map[string]interface{}{
+		"method":    "GET",
+		"url":       sourceURL,
+		"source_name": name,
+	})
+	req, err := http.NewRequest("GET", sourceURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := Source{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
 func (c *Client) GetSource(ctx context.Context, id string) (*Source, error) {
 	sourceURL := fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to get source", map[string]interface{}{
@@ -395,31 +420,41 @@ func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfil
 		"url":        profileURL,
 		"profile_id": id,
 	})
-	req, err := http.NewRequest("GET", profileURL, nil)
-	if err != nil {
-		tflog.Error(ctx, "Failed to create HTTP request for access profile", map[string]interface{}{
+	maxRetries := 3
+	retryDelay := 3 * time.Second
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequest("GET", profileURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create HTTP request for access profile", map[string]interface{}{
+				"profile_id": id,
+				"error":      err.Error(),
+			})
+			return nil, err
+		}
+
+		req = req.WithContext(ctx)
+
+		res := AccessProfile{}
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Failed to get access profile", map[string]interface{}{
+				"profile_id": id,
+				"error":      err.Error(),
+			})
+			if ((attempt < maxRetries) &&
+			    (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)")) {
+				backoffDelay := time.Duration(attempt) * retryDelay
+				time.Sleep(backoffDelay)
+				continue
+			}
+			return nil, err
+		}
+		tflog.Debug(ctx, "Successfully retrieved access profile", map[string]interface{}{
 			"profile_id": id,
-			"error":      err.Error(),
 		})
-		return nil, err
+
+		return &res, nil
 	}
-
-	req = req.WithContext(ctx)
-
-	res := AccessProfile{}
-	if err := c.sendRequest(ctx, req, &res); err != nil {
-		tflog.Error(ctx, "Failed to get access profile", map[string]interface{}{
-			"profile_id": id,
-			"error":      err.Error(),
-		})
-		return nil, err
-	}
-
-	tflog.Debug(ctx, "Successfully retrieved access profile", map[string]interface{}{
-		"profile_id": id,
-	})
-
-	return &res, nil
+	return nil, errors.New("dead code")
 }
 
 func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*SourceEntitlement, error) {
@@ -457,8 +492,8 @@ func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter
 	})
 
 	maxRetries := 3
-	retryDelay := 1 * time.Second
-	for attempt := 0; attempt < maxRetries; attempt++ {
+	retryDelay := 3 * time.Second
+	for attempt := 1; attempt <= maxRetries; attempt++ {
 		req, err := http.NewRequest("GET", entitlementURL, nil)
 		if err != nil {
 			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error(), "attempt": attempt})
@@ -470,7 +505,7 @@ func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter
 		var res []*SourceEntitlement
 		if err := c.sendRequest(ctx, req, &res); err != nil {
 			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-			if ((attempt < maxRetries - 1) &&
+			if ((attempt < maxRetries) &&
 			    (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)")) {
 				backoffDelay := time.Duration(attempt) * retryDelay
 				time.Sleep(backoffDelay)
@@ -1503,22 +1538,21 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 		var errRes errorResponse
 		err = json.NewDecoder(res.Body).Decode(&errRes)
 		if err == nil {
+			if res.StatusCode == http.StatusTooManyRequests {
+				tflog.Error(ctx, "API Rate limit exceeded", map[string]interface{}{
+					"status_code": res.StatusCode,
+				})
+				return errors.New("rate limit exceeded (429)")
+			}
+			if res.StatusCode == http.StatusNotFound {
+				// on the return statement, an interface value of type error is created by the compiler and bound to the pointer to satisfy the return argument.
+				return &NotFoundError{"status not found"}
+			}
 			if len(errRes.Messages) == 0 {
 				tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
 					"status_code": res.StatusCode,
 				})
 				return errors.New("unknown error")
-			}
-			if res.StatusCode == http.StatusTooManyRequests {
-				tflog.Error(ctx, "API Rate limit exceeded", map[string]interface{}{
-					"status_code": res.StatusCode,
-					"message":     errRes.Messages[0].Text,
-				})
-				return errors.New("rate limit exceeded (429): " + errRes.Messages[0].Text)
-			}
-			if res.StatusCode == http.StatusNotFound {
-				// on the return statement, an interface value of type error is created by the compiler and bound to the pointer to satisfy the return argument.
-				return &NotFoundError{errRes.Messages[0].Text}
 			}
 			return errors.New(errRes.Messages[0].Text)
 		}
