@@ -772,28 +772,37 @@ func (c *Client) GetIdentityByEmail(ctx context.Context, email string) ([]*Ident
 		"url":    identityURL,
 		"email":  email,
 	})
-	req, err := http.NewRequest("GET", identityURL, nil)
 
-	if err != nil {
-		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-		return nil, err
+	maxRetries := 3
+	retryDelay := 3 * time.Second
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequest("GET", identityURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+		tflog.Debug(ctx, "GetIdentity request details", map[string]interface{}{"request": fmt.Sprintf("%+v", req)})
+
+		req.Header.Set("Accept", "application/json; charset=utf-8")
+
+		req = req.WithContext(ctx)
+
+		var res []*Identity
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			if ((attempt < maxRetries) &&
+			    (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)")) {
+				backoffDelay := time.Duration(attempt) * retryDelay
+				time.Sleep(backoffDelay)
+				continue
+			}
+			return nil, err
+		}
+		tflog.Debug(ctx, "GetIdentity response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+
+		return res, nil
 	}
-	tflog.Debug(ctx, "GetIdentity request details", map[string]interface{}{"request": fmt.Sprintf("%+v", req)})
-
-	req.Header.Set("Accept", "application/json; charset=utf-8")
-
-	req = req.WithContext(ctx)
-
-	var res []*Identity
-	if err := c.sendRequest(ctx, req, &res); err != nil {
-		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-		// Error already logged above
-		return nil, err
-	}
-
-	tflog.Debug(ctx, "GetIdentity response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-
-	return res, nil
+	return nil, errors.New("dead code")
 }
 
 func (c *Client) GetAccountAggregationSchedule(ctx context.Context, id string) (*AccountAggregationSchedule, error) {
@@ -1149,25 +1158,36 @@ func (c *Client) GetGovernanceGroup(ctx context.Context, id string) (*Governance
 		"url":      workgroupURL,
 		"group_id": id,
 	})
-	req, err := http.NewRequest("GET", workgroupURL, nil)
-	if err != nil {
-		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-		return nil, err
+	maxRetries := 3
+	retryDelay := 3 * time.Second
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequest("GET", workgroupURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+
+		req.Header.Set("Accept", "application/json; charset=utf-8")
+		req.Header.Set("X-SailPoint-Experimental", "true")
+
+		req = req.WithContext(ctx)
+
+		res := GovernanceGroup{}
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			if ((attempt < maxRetries) &&
+			    (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)")) {
+				backoffDelay := time.Duration(attempt) * retryDelay
+				time.Sleep(backoffDelay)
+				continue
+			}
+			return nil, err
+		}
+		tflog.Debug(ctx, "GetGovernanceGroup response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+
+		return &res, nil
 	}
-
-	req.Header.Set("Accept", "application/json; charset=utf-8")
-	req.Header.Set("X-SailPoint-Experimental", "true")
-
-	req = req.WithContext(ctx)
-
-	res := GovernanceGroup{}
-	if err := c.sendRequest(ctx, req, &res); err != nil {
-		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-		// Error already logged above
-		return nil, err
-	}
-
-	return &res, nil
+	return nil, errors.New("dead code")
 }
 
 func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*UpdateGovernanceGroup, id interface{}) (*GovernanceGroup, error) {
