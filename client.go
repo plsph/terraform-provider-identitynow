@@ -36,7 +36,7 @@ type errorResponse struct {
 	} `json:"messages"`
 }
 
-func NewClient(ctx context.Context, baseURL string, clientId string, secret string) *Client {
+func NewClient(ctx context.Context, baseURL string, clientId string, secret string, rateLimit int) *Client {
 	subctx := tflog.NewSubsystem(ctx, "identitynow")
 	// Mask the client_secret if it ever appears as a field
 	subctx = tflog.MaskFieldValuesWithFieldKeys(subctx, "client_secret")
@@ -44,8 +44,8 @@ func NewClient(ctx context.Context, baseURL string, clientId string, secret stri
 	// Normalize baseURL by removing trailing slash
 	baseURL = strings.TrimSuffix(baseURL, "/")
 
-	// Create rate limiter: 5 requests per second with burst of 1
-	limiter := rate.NewLimiter(5, 1)
+	// Create rate limiter: [rateLimit] requests per second with burst of 1
+	limiter := rate.NewLimiter(rate.Limit(rateLimit), 1)
 
 	return &Client{
 		BaseURL:      baseURL,
@@ -1523,8 +1523,285 @@ func (c *Client) DeleteAccessProfileAttachment(ctx context.Context, accessProfil
 	return nil
 }
 
+func (c *Client) CreateGovernanceGroupMembers(ctx context.Context, governanceGroupMembers *GovernanceGroupMembers, id string) (*GovernanceGroupMembers, error) {
+	body, err := json.Marshal(governanceGroupMembers.GovernanceGroupMembersMembers)
+	if err != nil {
+		return nil, err
+	}
+	createURL := fmt.Sprintf("%s/v2025/workgroups/%s/members/bulk-add", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to create governance group members", map[string]interface{}{
+		"method": "POST",
+		"url":    createURL,
+		"governance_group_id": id,
+	})
+	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := []GovernanceGroupMembersResponse{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
+		return nil, err
+	}
+
+	allSuccessful := true
+	for _, member := range res {
+		if member.Status != 201 {
+			allSuccessful = false
+			break
+		}
+	}
+
+	if !allSuccessful {
+		tflog.Error(ctx, "Creating governance group members failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, fmt.Errorf("not all governance group members were added successfully")
+	}
+	return governanceGroupMembers, nil
+}
+
+func (c *Client) GetGovernanceGroupMembers(ctx context.Context, id string) (*GovernanceGroupMembers, error) {
+	governanceGroupMembersMembers := []*GovernanceGroupMembersMembers{}
+	offset := 0
+	limit := 50
+	for {
+		url := fmt.Sprintf("%s/v2025/workgroups/%s/members?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
+		tflog.Debug(ctx, "Creating HTTP request to get governance group members", map[string]interface{}{
+			"method": "GET",
+			"url":    url,
+			"governance_group_id": id,
+		})
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+
+		req.Header.Set("X-SailPoint-Experimental", "true")
+
+		req = req.WithContext(ctx)
+
+		res := []GovernanceGroupMembersMembers{}
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			// Error already logged above
+			return nil, err
+		}
+
+		for _, govgmem := range res {
+			governanceGroupMembersMembers = append(governanceGroupMembersMembers, &govgmem)
+		}
+
+		if len(res) < limit-1 {
+			break
+		}
+
+		offset += limit
+	}
+
+	governanceGroupMembers := GovernanceGroupMembers{
+		GovernanceGroupId:    id,
+		GovernanceGroupMembersMembers: governanceGroupMembersMembers,
+	}
+
+	return &governanceGroupMembers, nil
+}
+
+func (c *Client) UpdateGovernanceGroupMembers(ctx context.Context, governanceGroupMembers *GovernanceGroupMembers, governanceGroupMembersActual *GovernanceGroupMembers, id string) (*GovernanceGroupMembers, error) {
+	// Create maps for efficient lookup
+	desiredMap := make(map[string]*GovernanceGroupMembersMembers)
+	actualMap := make(map[string]*GovernanceGroupMembersMembers)
+	var onlyInDesired []*GovernanceGroupMembersMembers
+	var onlyInActual []*GovernanceGroupMembersMembers
+
+	// Map desired items by ID
+	for _, item := range governanceGroupMembers.GovernanceGroupMembersMembers {
+		desiredMap[item.ID] = item
+	}
+
+	// Map actual items by ID
+	for _, item := range governanceGroupMembersActual.GovernanceGroupMembersMembers {
+		actualMap[item.ID] = item
+	}
+
+	// Find items only in desired list
+	for _, item := range governanceGroupMembers.GovernanceGroupMembersMembers {
+		if _, exists := actualMap[item.ID]; !exists {
+		    onlyInDesired = append(onlyInDesired, item)
+		}
+	}
+
+	// Find items only in actual list
+	for _, item := range governanceGroupMembersActual.GovernanceGroupMembersMembers {
+		if _, exists := desiredMap[item.ID]; !exists {
+		    onlyInActual = append(onlyInActual, item)
+		}
+	}
+
+	if len(onlyInActual) > 0 {
+		// Delete actual members no longer desired
+		membersOnlyInActual := GovernanceGroupMembers{
+			GovernanceGroupId:    id,
+			GovernanceGroupMembersMembers: onlyInActual,
+		}
+
+		body, err := json.Marshal(membersOnlyInActual.GovernanceGroupMembersMembers)
+		if err != nil {
+			return nil, err
+		}
+
+		deleteURL := fmt.Sprintf("%s/v2025/workgroups/%s/members/bulk-delete", c.BaseURL, governanceGroupMembers.GovernanceGroupId)
+		tflog.Debug(ctx, "Creating HTTP request to update governance group members", map[string]interface{}{
+			"method":        "POST",
+			"url":           deleteURL,
+			"governance_group_id": governanceGroupMembers.GovernanceGroupId,
+		})
+		req, err := http.NewRequest("POST", deleteURL, bytes.NewBuffer(body))
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+
+		req.Header.Set("X-SailPoint-Experimental", "true")
+		req.Header.Set("Accept", "application/json; charset=utf-8")
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+		req = req.WithContext(ctx)
+
+		res := []GovernanceGroupMembersResponse{}
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			// Error already logged above
+			return nil, err
+		}
+
+		allSuccessful := true
+		for _, member := range res {
+			if member.Status != 204 {
+				allSuccessful = false
+				break
+			}
+		}
+
+		if !allSuccessful {
+			tflog.Error(ctx, "Updating governance group members during remove phase failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			return nil, fmt.Errorf("not all governance group members were removed successfully")
+		}
+	}
+
+	if len(onlyInDesired) > 0 {
+		// Create new members
+		membersOnlyInDesired := GovernanceGroupMembers{
+			GovernanceGroupId:    id,
+			GovernanceGroupMembersMembers: onlyInDesired,
+		}
+
+		body, err := json.Marshal(membersOnlyInDesired.GovernanceGroupMembersMembers)
+		if err != nil {
+			return nil, err
+		}
+		createURL := fmt.Sprintf("%s/v2025/workgroups/%s/members/bulk-add", c.BaseURL, id)
+		tflog.Debug(ctx, "Creating HTTP request to update governance group members", map[string]interface{}{
+			"method": "POST",
+			"url":    createURL,
+			"governance_group_id": id,
+		})
+		req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+
+		req.Header.Set("X-SailPoint-Experimental", "true")
+		req.Header.Set("Accept", "application/json; charset=utf-8")
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+		req = req.WithContext(ctx)
+
+		res := []GovernanceGroupMembersResponse{}
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			// Error already logged above
+			return nil, err
+		}
+
+		allSuccessful := true
+		for _, member := range res {
+			if member.Status != 201 {
+				allSuccessful = false
+				break
+			}
+		}
+
+		if !allSuccessful {
+			tflog.Error(ctx, "Updating governance group members during add phase failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			return nil, fmt.Errorf("not all governance group members were added successfully")
+		}
+	}
+
+	return governanceGroupMembers,nil 
+	}
+
+func (c *Client) DeleteGovernanceGroupMembers(ctx context.Context, governanceGroupMembers *GovernanceGroupMembers) error {
+	body, err := json.Marshal(governanceGroupMembers.GovernanceGroupMembersMembers)
+	if err != nil {
+		return err
+	}
+
+	deleteURL := fmt.Sprintf("%s/v2025/workgroups/%s/members/bulk-delete", c.BaseURL, governanceGroupMembers.GovernanceGroupId)
+	tflog.Debug(ctx, "Creating HTTP request to delete governance group members", map[string]interface{}{
+		"method":        "POST",
+		"url":           deleteURL,
+		"governance_group_id": governanceGroupMembers.GovernanceGroupId,
+	})
+	req, err := http.NewRequest("POST", deleteURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := []GovernanceGroupMembersResponse{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		// Error already logged above
+		return err
+	}
+
+	allSuccessful := true
+	for _, member := range res {
+		if member.Status != 204 {
+			allSuccessful = false
+			break
+		}
+	}
+
+	if !allSuccessful {
+		tflog.Error(ctx, "Deleting governance group members during failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return fmt.Errorf("not all governance group members were removed successfully")
+	}
+
+	return nil
+}
+
 func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
 	// Apply rate limiting before making any API requests
+	tflog.Trace(ctx, "Before rate limiter", map[string]interface{}{
+		"url":           req.URL.String(),
+	})
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		tflog.Debug(ctx, "Rate limiting wait failed", map[string]interface{}{
 			"error": err.Error(),

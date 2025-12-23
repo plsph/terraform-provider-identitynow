@@ -51,6 +51,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_DEF_POOL_SIZE", 5),
 				Description: descriptions["default_client_pool_size"],
 			},
+			"client_request_rate_limit": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_CLI_RQ_RATE", 2),
+				Description: descriptions["client_request_rate_limit"],
+			},
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
@@ -63,6 +69,7 @@ func Provider() *schema.Provider {
 			"identitynow_governance_group":             resourceGovernanceGroup(),
 			"identitynow_source_app":                   resourceSourceApp(),
 			"identitynow_access_profile_attachment":    resourceAccessProfileAttachment(),
+			"identitynow_governance_group_members":     resourceGovernanceGroupMembers(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -86,6 +93,7 @@ func init() {
 		"client_secret": "API client secret used to authenticate with the IdentityNow API",
 		"max_client_pool_size": "Max client pool size for communication with the IdentityNow API",
 		"default_client_pool_size": "Defalut client pool size for communication with the IdentityNow API",
+		"client_request_rate_limit": "Client request rate limit for communication with the IdentityNow API",
 	}
 }
 
@@ -97,12 +105,14 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	clientSecret := d.Get("client_secret").(string)
 	maxClientPoolSize := d.Get("max_client_pool_size").(int)
 	defaultClientPoolSize := d.Get("default_client_pool_size").(int)
+	clientRequestRateLimit := d.Get("client_request_rate_limit").(int)
 
 	tflog.Debug(ctx, "Provider configuration", map[string]interface{}{
 		"api_url":   apiURL,
 		"client_id": clientId,
 		"max_client_pool_size": maxClientPoolSize,
 		"default_client_pool_size": defaultClientPoolSize,
+		"client_request_rate_limit": clientRequestRateLimit,
 		// Note: client_secret is intentionally not logged for security
 	})
 
@@ -112,6 +122,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		ClientSecret:          clientSecret,
 		MaxClientPoolSize:     maxClientPoolSize,
 		DefaultClientPoolSize: defaultClientPoolSize,
+		ClientRequestRateLimit: clientRequestRateLimit,
 	}
 
 	tflog.Info(ctx, "Successfully configured IdentityNow provider")

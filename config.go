@@ -15,6 +15,7 @@ type Config struct {
 	ClientSecret          string `json:"client_secret"`
 	MaxClientPoolSize     int    `json:"max_client_pool_size,omitempty" default:"10"`
 	DefaultClientPoolSize int    `json:"default_client_pool_size,omitempty" default:"5"`
+	ClientRequestRateLimit int   `json:"client_request_rate_limit" default:"2"`
 
 	// Client pool for round-robin token management
 	clients        []*Client
@@ -83,7 +84,7 @@ func (cfg *Config) IdentityNowClient(ctx context.Context) (*Client, error) {
 			"base_url":     cfg.URL,
 			"client_id":    cfg.ClientId,
 		})
-		cfg.clients[clientIndex] = NewClient(ctx, cfg.URL, cfg.ClientId, cfg.ClientSecret)
+		cfg.clients[clientIndex] = NewClient(ctx, cfg.URL, cfg.ClientId, cfg.ClientSecret, cfg.ClientRequestRateLimit)
 	} else {
 		tflog.Debug(ctx, "Token expired, refreshing token for client", map[string]interface{}{
 			"client_index": clientIndex,

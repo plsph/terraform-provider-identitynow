@@ -25,18 +25,19 @@ terraform {
   required_providers {
     identitynow = {
       source  = "plsph/identitynow"
-      version = "=0.8.0"
+      version = "=0.9.0"
     }
   }
 }
 
 # Configure the IdentityNow Provider
 provider "identitynow" {
-  api_url                  = "<org_name>.api.identitynow.com"
-  client_id                = "<client_id>"
-  client_secret            = "<clien_secret>"
-  max_client_pool_size     = 10
-  default_client_pool_size = 5
+  api_url                   = "<org_name>.api.identitynow.com"
+  client_id                 = "<client_id>"
+  client_secret             = "<clien_secret>"
+  max_client_pool_size      = 10
+  default_client_pool_size  = 5
+  client_request_rate_limit = 2
 }
 
 # Create a source
@@ -88,3 +89,5 @@ The following arguments are supported:
 * `max_client_pool_size` - (Optional) API client max pool size for communication with the IdentityNow API.
 
 * `default_client_pool_size` - (Optional) API client default pool size for communication with the IdentityNow API.
+
+* `client_request_rate_limit`` - (Optional) API client request limit per second (per client/thread) for communication with the IdentityNow API.
