@@ -1,5 +1,5 @@
 ---
-subcategory: "Governance Group Members"
+subcategory: "Governance Group"
 layout: "identitynow"
 page_title: "IdentityNow: identitynow_governance_group_members"
 description: |-

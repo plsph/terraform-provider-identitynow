@@ -1,5 +1,5 @@
 ---
-subcategory: "Access Profile Attachement"
+subcategory: "Access Profile"
 layout: "identitynow"
 page_title: "IdentityNow: identitynow_access_profile_attachment"
 description: |-
@@ -9,6 +9,7 @@ description: |-
 # identitynow_access_profile_attachment
 
 Manages an IdentityNow Source App's Access Profiles attachment.
+Access Profile attached to Source App cannot be deleted, it must be detached first.
 
 ## Example Usage
 
@@ -23,8 +24,8 @@ resource "identitynow_access_profile_attachment" "example" {
 
 The following arguments are supported:
 
-* source_app_id
-* access_profiles
+* `source_app_id` - Id of source app.
+* `access_profiles`- List of access profiles attached to source app.
 
 ## Timeouts
 

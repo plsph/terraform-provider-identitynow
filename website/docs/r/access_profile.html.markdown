@@ -27,26 +27,26 @@ locals {
 }
 
 resource "identitynow_access_profile" "this" {
-  name        = var.name
-  description = var.description
+  name        = "example"
+  description = "example"
   requestable = true
   enabled     = true
  
   entitlements {
-    id   = var.entitlement_id
-    name = var.entitlement_name
+    id   = "example id"
+    name = "example name"
     type = "ENTITLEMENT"
   }
  
   source {
-    id   = var.src_id
-    name = var.src_name
+    id   = "example id"
+    name = "example source name"
     type = "SOURCE"
   }
  
   owner {
-    id   = var.owner_id
-    name = var.owner_name
+    id   = "example id"
+    name = "example owner name"
     type = "IDENTITY"
   }
  
@@ -70,11 +70,33 @@ The following arguments are supported:
 
 As per developer guide: (https://developer.sailpoint.com/docs/api/v3/create-access-profile)
 
+* `name` - Access profile name.
+
+* `description` - Access profile description.
+
+* `requestable` - Indicates whether the access profile is requestable by access request. Currently, making an access profile non-requestable is only supported for customers enabled with the new Request Center. Otherwise, attempting to create an access profile with a value false in this field results in a 400 error.
+
+* `enabled` - Indicates whether the access profile is enabled. If it's enabled, you must include at least one entitlement.
+
+* `entitlements` - List of entitlements associated with the access profile. If enabled is false, this can be empty. Otherwise, it must contain at least one entitlement.
+
+* `source` - Source associated with the access profile.
+
+* `owner` - Owner of the object.
+
+* `access_request_config` - Access profile request configuration. Contains:
+
+* `comments_required` - Indicates whether the requester of the containing object must provide comments justifying the request.
+
+* `denial_comments_required` - Indicates whether an approver must provide comments when denying the request.
+
+* `approval_schemes` - List describing the steps involved in approving the request.
+
 ## Attributes Reference
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* id
+* `id` - Access profile id.
 
 ## Timeouts
 

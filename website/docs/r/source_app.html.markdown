@@ -15,13 +15,13 @@ Manages an IdentityNow Source App.
 ```hcl
 resource_app "identitynow_source_app" "example" {
   description = "example"
-  enabled = true                                                                                                                                                                        
-  match_all_accounts = true                                                                                                                                                             
-  name = "example"                                                                                                                                                       
-  source {                                                                                                                                                                              
-      id = "some_id"                                                                                                                                                     
-      name = "example"                                                                                                                                                        
-      type = "SOURCE"                                                                                                                                                                   
+  enabled = true
+  match_all_accounts = true
+  name = "example"
+  source {
+      id = "some_id"
+      name = "example"
+      type = "SOURCE"
   } 
 }
 ```
@@ -30,18 +30,23 @@ resource_app "identitynow_source_app" "example" {
 
 The following arguments are supported:
 
-* name
-* description
-* enabled
-* match_all_accounts
-* source
+* `name` - The source app name.
+
+* `description` - The description of the source app.
+
+* `enabled` - True if the source app is enabled.
+
+* `match_all_accounts` - True if the source app match all accounts.
+
+* `source` - The source of the source app.
 
 ## Attributes Reference
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* date_created                                                                                                                                                                          
-* last_updated
+* `date_created` - Time when the source app was created.
+
+* `last_updated` - Time when the source app was last modified.
 
 ## Timeouts
 
