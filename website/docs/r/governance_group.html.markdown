@@ -14,11 +14,11 @@ Manages an IdentityNow Governance Group.
 
 ```hcl
 resource "identitynow_governance_group" "this" {
-    name        = var.name
-    description = var.description
+    name        = "example"
+    description = "example"
     owner {
-      id   = var.owner_id
-      name = var.owner_name
+      id   = "example"
+      name = "example"
       type = "IDENTITY"
     }
 }
@@ -30,11 +30,17 @@ The following arguments are supported:
 
 As described in (https://developer.sailpoint.com/docs/api/v2024/create-workgroup)
 
+* `name` - Governance group name.
+
+* `description` - Governance group description.
+
+* `owner` - Governance group owner.
+
 ## Attributes Reference
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* id
+* `id` - Governance group id.
 
 ## Timeouts
 

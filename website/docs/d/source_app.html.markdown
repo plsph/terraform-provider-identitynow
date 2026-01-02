@@ -18,7 +18,7 @@ data "identitynow_source_app" "example" {
 }
 
 output "identitynow_source_description" {
-  value = data.identitynow_source_app.description
+  value = data.identitynow_source_app.example.description
 }
 ```
 
@@ -26,16 +26,21 @@ output "identitynow_source_description" {
 
 The following arguments are supported:
 
-* name
+* `name` - Name of the source app.
 
 ## Attributes Reference
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* description
-* match_all_accounts
-* enabled
-* source
-* date_created
-* last_updated
+* `description` - The description of the source app.
+
+* `enabled` - True if the source app is enabled.
+
+* `match_all_accounts` - True if the source app match all accounts.
+
+* `source` - The source of the source app.
+
+* `date_created` - Time when the source app was created.
+
+* `last_updated` - Time when the source app was last modified.
 
