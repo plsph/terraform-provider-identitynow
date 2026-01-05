@@ -57,8 +57,8 @@ type ConnectorAttributes struct {
 	HealthCheckTimeout      int         `json:"healthCheckTimeout,omitempty"`
 	SupportsDeltaAgg        string      `json:"supportsDeltaAgg,omitempty"`
 	MsGraphResourceBase     string      `json:"msGraphResourceBase,omitempty"`
-	ClientID                string      `json:"clientID,omitempty"`
-	DeltaAggregationEnabled string      `json:"deltaAggregationEnabled,omitempty"`
+	ClientID                string      `json:"client_id,omitempty"`
+	DeltaAggregationEnabled bool        `json:"deltaAggregationEnabled,omitempty"`
 	AcctAggregationEnd      int64       `json:"acctAggregationEnd,omitempty"`
 	IQServicePort           string      `json:"IQServicePort,omitempty"`
 	AcctAggregationStart    int64       `json:"acctAggregationStart,omitempty"`
@@ -90,7 +90,7 @@ type ConnectorAttributes struct {
 	MsGraphTokenBase            string            `json:"msGraphTokenBase,omitempty"`
 	DeltaAggregation            interface{}       `json:"deltaAggregation,omitempty"`
 	CloudExternalID             string            `json:"cloudExternalId,omitempty"`
-	ClientSecret                string            `json:"clientSecret,omitempty"`
+	ClientSecret                string            `json:"client_secret,omitempty"`
 	SamlRequestBody             interface{}       `json:"samlRequestBody,omitempty"`
 	ManageO365Groups            bool              `json:"manageO365Groups,omitempty"`
 	AccountDeltaLink            string            `json:"accountDeltaLink,omitempty"`

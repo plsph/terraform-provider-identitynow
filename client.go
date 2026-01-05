@@ -166,16 +166,16 @@ func (c *Client) GetSourceByName(ctx context.Context, name string) (*Source, err
 
 	req = req.WithContext(ctx)
 
-	res := Source{}
+	var res []*Source
 	if err := c.sendRequest(ctx, req, &res); err != nil {
 		return nil, err
 	}
 
-	return &res, nil
+	return res[0], nil
 }
 
 func (c *Client) GetSource(ctx context.Context, id string) (*Source, error) {
-	sourceURL := fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, id)
+	sourceURL := fmt.Sprintf("%s/v2025/sources/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to get source", map[string]interface{}{
 		"method":    "GET",
 		"url":       sourceURL,
