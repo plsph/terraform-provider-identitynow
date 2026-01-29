@@ -1253,7 +1253,7 @@ func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *Gov
 
 func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*SourceApp, error) {
 	filter := fmt.Sprintf("name eq \"%s\"", name)
-	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/all?filters=%s", c.BaseURL, url.QueryEscape(filter))
 	tflog.Debug(ctx, "Creating HTTP request to get source app by name", map[string]interface{}{
 		"method":   "GET",
 		"url":      sourceAppURL,
