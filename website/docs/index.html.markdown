@@ -15,6 +15,8 @@ Interested in the provider's latest features, or want to make sure you're up to 
 ## Authenticating to IdentityNow
 
 The IdentityNow Provider follows the [Client Credentials Grant Flow](https://developer.sailpoint.com/idn/api/authentication/#client-credentials-grant-flow), using the Client ID and Client Secret obtained from the personal access token.
+`credentials` value takes precedence over `client_id` and `client_secret` which may be deprecated in the future.
+Due to sailpoint api rate limit consider using multiple users to speedup terraform execution time.
 
 ## Example Usage
 
@@ -25,7 +27,7 @@ terraform {
   required_providers {
     identitynow = {
       source  = "plsph/identitynow"
-      version = "=0.9.0"
+      version = "=0.10.0"
     }
   }
 }
@@ -35,9 +37,17 @@ provider "identitynow" {
   api_url                   = "<org_name>.api.identitynow.com"
   client_id                 = "<client_id>"
   client_secret             = "<clien_secret>"
-  max_client_pool_size      = 10
-  default_client_pool_size  = 5
-  client_request_rate_limit = 2
+  max_client_pool_size      = 1
+  default_client_pool_size  = 1
+  client_request_rate_limit = 10
+}
+
+provider "identitynow" {
+  api_url                   = "<org_name>.api.identitynow.com"
+  credentials               = [{client_id = "<client_id1>", client_secret = "<clien_secret1>"},{client_id = "<client_id2>", client_secret = "<clien_secret2>"}]
+  max_client_pool_size      = 2
+  default_client_pool_size  = 2
+  client_request_rate_limit = 10
 }
 
 # Create a source
@@ -82,9 +92,11 @@ The following arguments are supported:
 
 * `api_url` - (Required) The URL to the IdentityNow API.
 
-* `client_id` - (Required) API client used to authenticate with the IdentityNow API.
+* `client_id` - (Optional) API client used to authenticate with the IdentityNow API.
 
-* `client_secret` - (Required) API client secret used to authenticate with the IdentityNow API.
+* `client_secret` - (Optional) API client secret used to authenticate with the IdentityNow API.
+
+* `credentials` - (Optional) API client id and secret sets used to authenticate with the IdentityNow API.
 
 * `max_client_pool_size` - (Optional) API client max pool size for communication with the IdentityNow API.
 

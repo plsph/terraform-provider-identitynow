@@ -9,10 +9,16 @@ import (
 )
 
 // Config is the configuration parameters for an IdentityNow API
+type ClientCredential struct {
+    ClientId     string `json:"client_id"`
+    ClientSecret string `json:"client_secret"`
+}
+
 type Config struct {
 	URL                   string `json:"url"`
-	ClientId              string `json:"client_id"`
-	ClientSecret          string `json:"client_secret"`
+	ClientId              string `json:"client_id,omitempty"`
+	ClientSecret          string `json:"client_secret,omitempty"`
+        Credentials           []ClientCredential `json:"credentials,omitempty"`
 	MaxClientPoolSize     int    `json:"max_client_pool_size,omitempty" default:"10"`
 	DefaultClientPoolSize int    `json:"default_client_pool_size,omitempty" default:"5"`
 	ClientRequestRateLimit int   `json:"client_request_rate_limit" default:"2"`
@@ -82,9 +88,10 @@ func (cfg *Config) IdentityNowClient(ctx context.Context) (*Client, error) {
 		tflog.Debug(ctx, "Creating new IdentityNow client in pool", map[string]interface{}{
 			"client_index": clientIndex,
 			"base_url":     cfg.URL,
-			"client_id":    cfg.ClientId,
+			"client_id":    cfg.Credentials[clientIndex % len(cfg.Credentials)].ClientId,
 		})
-		cfg.clients[clientIndex] = NewClient(ctx, cfg.URL, cfg.ClientId, cfg.ClientSecret, cfg.ClientRequestRateLimit)
+		cfg.clients[clientIndex] = NewClient(ctx, cfg.URL, cfg.Credentials[clientIndex % len(cfg.Credentials)].ClientId,
+		cfg.Credentials[clientIndex % len(cfg.Credentials)].ClientSecret, cfg.ClientRequestRateLimit)
 	} else {
 		tflog.Debug(ctx, "Token expired, refreshing token for client", map[string]interface{}{
 			"client_index": clientIndex,
