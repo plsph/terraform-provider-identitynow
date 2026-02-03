@@ -100,9 +100,16 @@ func dataSourceSourceRead(ctx context.Context, d *schema.ResourceData, meta inte
 		return diag.FromErr(err)
 	}
 
-	err = flattenSource(d, source)
-	if err != nil {
-		return diag.FromErr(err)
+	if len(source) > 0 {
+		err = flattenSource(d, source[0])
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		return nil
+	} else {
+		tflog.Debug(ctx, "Source not found in data source", map[string]interface{}{"name": d.Get("name").(string)})
+		return nil
 	}
+
 	return nil
 }

@@ -149,7 +149,7 @@ func (c *Client) GetToken(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client) GetSourceByName(ctx context.Context, name string) (*Source, error) {
+func (c *Client) GetSourceByName(ctx context.Context, name string) ([]*Source, error) {
 	filter := fmt.Sprintf("name eq \"%s\"", name)
 	sourceURL := fmt.Sprintf("%s/v2025/sources?filters=%s", c.BaseURL, url.QueryEscape(filter))
 	tflog.Debug(ctx, "Creating HTTP request to get source", map[string]interface{}{
@@ -171,7 +171,7 @@ func (c *Client) GetSourceByName(ctx context.Context, name string) (*Source, err
 		return nil, err
 	}
 
-	return res[0], nil
+	return res, nil
 }
 
 func (c *Client) GetSource(ctx context.Context, id string) (*Source, error) {
