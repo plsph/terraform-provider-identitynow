@@ -62,7 +62,7 @@ type ConnectorAttributes struct {
 	AcctAggregationEnd      int64       `json:"acctAggregationEnd,omitempty"`
 	IQServicePort           string      `json:"IQServicePort,omitempty"`
 	AcctAggregationStart    int64       `json:"acctAggregationStart,omitempty"`
-	PageSize                string      `json:"pageSize,omitempty"`
+	PageSize                int         `json:"pageSize,omitempty"`
 	AuthURL                 interface{} `json:"authURL,omitempty"`
 	SubscribedSkus          []struct {
 		ConsumedUnits float32 `json:"consumedUnits"`
