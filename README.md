@@ -1,4 +1,4 @@
-To find how you can declare resources see [examples folder](./examples/)
+To find how you can declare resources see [documentation](https://registry.terraform.io/providers/plsph/identitynow/latest/docs)
 
 ### Limitations:
 - Sources get created first, but an aggregation has to run before the rest of the plan can complete successfully because the entitlement data lookups will fail until the aggregation has pulled the entitlements from the source into IdentityNow.
@@ -7,9 +7,9 @@ To find how you can declare resources see [examples folder](./examples/)
 
 - Password policies can be created, but there is a bug in Idn that makes the association to the source not work. For now, you have to go into the UI and make the association. Sailpoint ticket: https://support.sailpoint.com/hc/en-us/requests/82917
 
-- Create/enable/disable profiles cannot be managed with Terraform yet. The API for them is highly unusual and not amenable to automation.
-
 - Due to a bug in IdentityNow, Encrypted field in ConnectorAttributes block cannot be left null.
+
+- This is provider in development working on experimental api.
 
 # Development
 Edit the Go files that make up the provider, and rebuild the provider.
