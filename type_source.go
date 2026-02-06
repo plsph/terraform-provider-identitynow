@@ -55,14 +55,12 @@ type Schema struct {
 
 type ConnectorAttributes struct {
 	HealthCheckTimeout      int         `json:"healthCheckTimeout,omitempty"`
-	SupportsDeltaAgg        string      `json:"supportsDeltaAgg,omitempty"`
 	MsGraphResourceBase     string      `json:"msGraphResourceBase,omitempty"`
 	ClientID                string      `json:"client_id,omitempty"`
 	DeltaAggregationEnabled bool        `json:"deltaAggregationEnabled,omitempty"`
 	AcctAggregationEnd      int64       `json:"acctAggregationEnd,omitempty"`
 	IQServicePort           string      `json:"IQServicePort,omitempty"`
 	AcctAggregationStart    int64       `json:"acctAggregationStart,omitempty"`
-	PageSize                int         `json:"pageSize,omitempty"`
 	AuthURL                 interface{} `json:"authURL,omitempty"`
 	SubscribedSkus          []struct {
 		ConsumedUnits float32 `json:"consumedUnits"`
