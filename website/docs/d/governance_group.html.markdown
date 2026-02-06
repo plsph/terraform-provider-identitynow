@@ -26,13 +26,13 @@ output "identitynow_group_description" {
 
 The following arguments are supported:
 
-* `id` - Id of the governance group.
+* `name` - Governance group name.
 
 ## Attributes Reference
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* `name` - Governance group name.
+* `id` - Id of the governance group.
 
 * `description` - Governance group description.
 

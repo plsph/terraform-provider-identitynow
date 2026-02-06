@@ -413,6 +413,51 @@ func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
 	return nil
 }
 
+func (c *Client) GetAccessProfileByName(ctx context.Context, name string) ([]*AccessProfile, error) {
+	filter := fmt.Sprintf("name eq \"%s\"", name)
+	profileURL := fmt.Sprintf("%s/v2025/access-profiles?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	tflog.Debug(ctx, "Creating HTTP request to get access profile", map[string]interface{}{
+		"method":     "GET",
+		"url":        profileURL,
+		"name": name,
+	})
+	maxRetries := 3
+	retryDelay := 3 * time.Second
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequest("GET", profileURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create HTTP request for access profile", map[string]interface{}{
+				"name": name,
+				"error":      err.Error(),
+			})
+			return nil, err
+		}
+
+		req = req.WithContext(ctx)
+
+		res := []*AccessProfile{}
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Failed to get access profile", map[string]interface{}{
+				"name": name,
+				"error":      err.Error(),
+			})
+			if ((attempt < maxRetries) &&
+			    (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)")) {
+				backoffDelay := time.Duration(attempt) * retryDelay
+				time.Sleep(backoffDelay)
+				continue
+			}
+			return nil, err
+		}
+		tflog.Debug(ctx, "Successfully retrieved access profile", map[string]interface{}{
+			"name": name,
+		})
+
+		return res, nil
+	}
+	return nil, errors.New("dead code")
+}
+
 func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfile, error) {
 	profileURL := fmt.Sprintf("%s/v3/access-profiles/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to get access profile", map[string]interface{}{
@@ -1149,6 +1194,46 @@ func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *Gov
 	}
 
 	return &res, nil
+}
+
+func (c *Client) GetGovernanceGroupByName(ctx context.Context, name string) ([]*GovernanceGroup, error) {
+	filter := fmt.Sprintf("name eq \"%s\"", name)
+	workgroupURL := fmt.Sprintf("%s/v2024/workgroups?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	tflog.Debug(ctx, "Creating HTTP request to get governance group by name", map[string]interface{}{
+		"method":   "GET",
+		"url":      workgroupURL,
+		"name": name,
+	})
+	maxRetries := 3
+	retryDelay := 3 * time.Second
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequest("GET", workgroupURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+
+		req.Header.Set("Accept", "application/json; charset=utf-8")
+		req.Header.Set("X-SailPoint-Experimental", "true")
+
+		req = req.WithContext(ctx)
+
+		res := []*GovernanceGroup{}
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			if ((attempt < maxRetries) &&
+			    (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)")) {
+				backoffDelay := time.Duration(attempt) * retryDelay
+				time.Sleep(backoffDelay)
+				continue
+			}
+			return nil, err
+		}
+		tflog.Debug(ctx, "GetGovernanceGroup response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+
+		return res, nil
+	}
+	return nil, errors.New("dead code")
 }
 
 func (c *Client) GetGovernanceGroup(ctx context.Context, id string) (*GovernanceGroup, error) {

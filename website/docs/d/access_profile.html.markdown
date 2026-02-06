@@ -26,13 +26,13 @@ output "identitynow_ap_desc" {
 
 The following arguments are supported:
 
-* `id` - Id of the access profile.
+* `name` - Name of the access profile.
 
 ## Attributes Reference
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* `name` - Access profile name.
+* `id` - Access profile id.
 
 * `description` - Access profile description.
 
