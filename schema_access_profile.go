@@ -55,7 +55,7 @@ func accessProfileFields() map[string]*schema.Schema {
 
 		"access_request_config": {
 			Type:     schema.TypeList,
-			Required: true,
+			Optional: true,
 			MaxItems: 1,
 			Elem: &schema.Resource{
 				Schema: accessProfileAccessRequestConfigFields(),
@@ -92,19 +92,40 @@ func accessProfileAccessRequestConfigFields() map[string]*schema.Schema {
 	s := map[string]*schema.Schema{
 		"comments_required": {
 			Type:        schema.TypeBool,
-			Required:    true,
+			Optional:    true,
 			Description: "If comment is required",
+			Default:     false,
 		},
 		"denial_comments_required": {
 			Type:        schema.TypeBool,
-			Required:    true,
+			Optional:    true,
 			Description: "If denial comment is required",
+			Default:     false,
+		},
+		"reauthorization_required": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "Indicates whether reauthorization is required for the request.",
+			Default:     false,
 		},
 		"approval_schemes": {
 			Type:     schema.TypeList,
-			Required: true,
+			Optional:    true,
 			Elem: &schema.Resource{
 				Schema: accessProfileApprovalSchemesFields(),
+			},
+		},
+		"require_end_date": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "If denial comment is required",
+			Default:     false,
+		},
+		"max_permitted_access_duration": {
+			Type:     schema.TypeList,
+			Optional:    true,
+			Elem: &schema.Resource{
+				Schema: accessProfileMaxPermittedAccessDuration(),
 			},
 		},
 	}
@@ -124,6 +145,23 @@ func accessProfileApprovalSchemesFields() map[string]*schema.Schema {
 			Optional:    true,
 			Description: "Id of approver",
 			Default:     "",
+		},
+	}
+
+	return s
+}
+
+func accessProfileMaxPermittedAccessDuration() map[string]*schema.Schema {
+	s := map[string]*schema.Schema{
+		"value": {
+			Type:        schema.TypeInt,
+			Required:    true,
+			Description: "The numeric value representing the amount of time, which is defined in the timeUnit.",
+		},
+		"time_unit": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The unit of time that corresponds to the value. It defines the scale of the time period.",
 		},
 	}
 

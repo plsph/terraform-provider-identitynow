@@ -61,19 +61,19 @@ func Provider() *schema.Provider {
 			"max_client_pool_size": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_MAX_POOL_SIZE", 10),
+				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_MAX_POOL_SIZE", 1),
 				Description: descriptions["max_client_pool_size"],
 			},
 			"default_client_pool_size": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_DEF_POOL_SIZE", 5),
+				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_DEF_POOL_SIZE", 1),
 				Description: descriptions["default_client_pool_size"],
 			},
 			"client_request_rate_limit": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_CLI_RQ_RATE", 2),
+				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_CLI_RQ_RATE", 10),
 				Description: descriptions["client_request_rate_limit"],
 			},
 		},

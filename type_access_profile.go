@@ -13,10 +13,12 @@ type AccessProfile struct {
 }
 
 type AccessRequestConfigList struct {
-	CommentsRequired        bool       `json:"commentsRequired,omitempty"`
-	DenialCommentsRequired  bool       `json:"denialCommentsRequired,omitempty"`
-	ApprovalSchemes         []*ApprovalSchemes `json:"approvalSchemes,omitempty"`
-	ReauthorizationRequired *bool       `json:"reauthorizationRequired,omitempty"`
+	CommentsRequired           bool                        `json:"commentsRequired,omitempty"`
+	DenialCommentsRequired     bool                        `json:"denialCommentsRequired,omitempty"`
+	ApprovalSchemes            []*ApprovalSchemes          `json:"approvalSchemes,omitempty"`
+	ReauthorizationRequired    bool                       `json:"reauthorizationRequired,omitempty"`
+	RequireEndDate             bool                       `json:"requireEndDate,omitempty"`
+	MaxPermittedAccessDuration *MaxPermittedAccessDuration `json:"maxPermittedAccessDuration,omitempty"`
 }
 
 type UpdateAccessProfile struct {
@@ -28,4 +30,9 @@ type UpdateAccessProfile struct {
 type ApprovalSchemes struct {
 	ApproverType    string        `json:"approverType"`
 	ApproverId	string        `json:"approverId,omitempty"`
+}
+
+type MaxPermittedAccessDuration struct {
+	Value    int        `json:"value"`
+	TimeUnit string     `json:"timeUnit"`
 }

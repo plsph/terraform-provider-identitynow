@@ -19,9 +19,9 @@ type Config struct {
 	ClientId              string `json:"client_id,omitempty"`
 	ClientSecret          string `json:"client_secret,omitempty"`
         Credentials           []ClientCredential `json:"credentials,omitempty"`
-	MaxClientPoolSize     int    `json:"max_client_pool_size,omitempty" default:"10"`
-	DefaultClientPoolSize int    `json:"default_client_pool_size,omitempty" default:"5"`
-	ClientRequestRateLimit int   `json:"client_request_rate_limit" default:"2"`
+	MaxClientPoolSize     int    `json:"max_client_pool_size,omitempty" default:"1"`
+	DefaultClientPoolSize int    `json:"default_client_pool_size,omitempty" default:"1"`
+	ClientRequestRateLimit int   `json:"client_request_rate_limit" default:"10"`
 
 	// Client pool for round-robin token management
 	clients        []*Client

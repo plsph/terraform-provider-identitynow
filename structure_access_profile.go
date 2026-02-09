@@ -81,12 +81,21 @@ func flattenObjectAccessRequestConfig(in []*AccessRequestConfigList, p []interfa
 		var obj = make(map[string]interface{})
 		obj["comments_required"] = in[i].CommentsRequired
 		obj["denial_comments_required"] = in[i].DenialCommentsRequired
+		obj["reauthorization_required"] = in[i].ReauthorizationRequired
 		if in[i].ApprovalSchemes != nil {
 			v, ok := obj["approval_schemes"].([]interface{})
 			if !ok {
 				v = []interface{}{}
 			}
 			obj["approval_schemes"] = flattenObjectApprovalSchemes(in[i].ApprovalSchemes, v)
+		}
+		obj["require_end_date"] = in[i].RequireEndDate
+		if in[i].MaxPermittedAccessDuration != nil {
+			v, ok := obj["max_permitted_access_duration"].([]interface{})
+			if !ok {
+				v = []interface{}{}
+			}
+			obj["max_permitted_access_duration"] = flattenObjectMaxPermittedAccessDuration(in[i].MaxPermittedAccessDuration, v)
 		}
 		out = append(out, obj)
 	}
@@ -106,6 +115,24 @@ func flattenObjectApprovalSchemes(in []*ApprovalSchemes, p []interface{}) []inte
 		out = append(out, obj)
 	}
 	return out
+}
+
+func flattenObjectMaxPermittedAccessDuration(in *MaxPermittedAccessDuration, p []interface{}) []interface{} {
+	var obj map[string]interface{}
+        if len(p) == 0 || p[0] == nil {
+                obj = make(map[string]interface{})
+        } else {
+                obj = p[0].(map[string]interface{})
+        }
+
+        if in == nil {
+                return []interface{}{}
+        }
+
+	obj["value"] = in.Value
+	obj["time_unit"] = in.TimeUnit
+
+        return []interface{}{obj}
 }
 
 // Expanders
@@ -188,6 +215,12 @@ func helperUpdateAccessProfileRegex(s string) string {
 			return "approverType"
 		case "approver_id":
 			return "approverId"
+		case "require_end_date":
+			return "requireEndDate"
+		case "max_permitted_access_duration":
+			return "maxPermittedAccessDuration"
+		case "time_unit":
+			return "timeUnit"
 		default:
 			return match
 		}
@@ -281,8 +314,17 @@ func expandObjectAccessRequestConfig(p []interface{}) []*AccessRequestConfigList
 		if v, ok := in["denial_comments_required"].(bool); ok {
 			obj.DenialCommentsRequired = v
 		}
+		if v, ok := in["reauthorization_required"].(bool); ok {
+			obj.ReauthorizationRequired = v
+		}
 		if v, ok := in["approval_schemes"].([]interface{}); ok && len(v) > 0 {
 			obj.ApprovalSchemes = expandObjectApprovalSchemes(v)
+		}
+		if v, ok := in["require_end_date"].(bool); ok {
+			obj.RequireEndDate = v
+		}
+		if v, ok := in["max_permitted_access_duration"].([]interface{}); ok && len(v) > 0 {
+			obj.MaxPermittedAccessDuration = expandObjectMaxPermittedAccessDuration(v)
 		}
 		out = append(out, &obj)
 	}
@@ -304,4 +346,18 @@ func expandObjectApprovalSchemes(p []interface{}) []*ApprovalSchemes {
 		out = append(out, &obj)
 	}
 	return out
+}
+
+func expandObjectMaxPermittedAccessDuration(p []interface{}) *MaxPermittedAccessDuration {
+	obj := MaxPermittedAccessDuration{}
+
+	if len(p) == 0 || p[0] == nil {
+		return &obj
+	}
+	in := p[0].(map[string]interface{})
+
+	obj.Value = in["value"].(int)
+	obj.TimeUnit = in["time_unit"].(string)
+
+	return &obj
 }
