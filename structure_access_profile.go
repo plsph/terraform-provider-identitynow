@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"regexp"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -117,8 +116,8 @@ func flattenObjectApprovalSchemes(in []*ApprovalSchemes, p []interface{}) []inte
 	return out
 }
 
-func flattenObjectMaxPermittedAccessDuration(in *MaxPermittedAccessDuration, p []interface{}) []interface{} {
-	var obj map[string]interface{}
+func flattenObjectMaxPermittedAccessDuration(in *MaxPermittedAccessDuration, p []interface{}) map[string]interface{} {
+        var obj map[string]interface{}
         if len(p) == 0 || p[0] == nil {
                 obj = make(map[string]interface{})
         } else {
@@ -126,13 +125,13 @@ func flattenObjectMaxPermittedAccessDuration(in *MaxPermittedAccessDuration, p [
         }
 
         if in == nil {
-                return []interface{}{}
+                return nil
         }
 
-	obj["value"] = in.Value
-	obj["time_unit"] = in.TimeUnit
+        obj["value"] = in.Value
+        obj["time_unit"] = in.TimeUnit
 
-        return []interface{}{obj}
+        return obj
 }
 
 // Expanders
@@ -180,7 +179,13 @@ func helperUpdateAccessProfileChangeKeys(input interface{}) interface{} {
 
 		for key, value := range v {
 			newKey := helperUpdateAccessProfileRegex(key)
-			output[newKey] = helperUpdateAccessProfileChangeKeys(value)
+			if newKey == "maxPermittedAccessDuration" {
+				if slice, ok := value.([]interface{}); ok && len(slice) > 0 {
+					output[newKey] = helperUpdateAccessProfileChangeKeys(slice[0])
+				}
+			} else {
+				output[newKey] = helperUpdateAccessProfileChangeKeys(value)
+			}
 		}
 
 		return output
@@ -199,7 +204,7 @@ func helperUpdateAccessProfileChangeKeys(input interface{}) interface{} {
 }
 
 func helperUpdateAccessProfileRegex(s string) string {
-	re := regexp.MustCompile(`comments_required|denial_comments_required|approval_schemes|reauthorization_required|approver_type|approver_id`)
+	re := regexp.MustCompile(`comments_required|denial_comments_required|approval_schemes|reauthorization_required|approver_type|approver_id|max_permitted_access_duration|time_unit|require_end_date`)
 
 	output := re.ReplaceAllStringFunc(s, func(match string) string {
 		switch match {

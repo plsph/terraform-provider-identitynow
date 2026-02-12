@@ -118,12 +118,13 @@ func accessProfileAccessRequestConfigFields() map[string]*schema.Schema {
 		"require_end_date": {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: "If denial comment is required",
-			Default:     false,
+			Computed:    true,
+			Description: "Indicates whether the requester of the containing object must provide access end date.",
 		},
 		"max_permitted_access_duration": {
 			Type:     schema.TypeList,
 			Optional:    true,
+			MaxItems: 1,
 			Elem: &schema.Resource{
 				Schema: accessProfileMaxPermittedAccessDuration(),
 			},
