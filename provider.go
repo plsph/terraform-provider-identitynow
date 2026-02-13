@@ -230,30 +230,15 @@ func (p *IdentityNowProvider) Configure(ctx context.Context, req provider.Config
 // Resources returns the list of resources for this provider
 func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		// Resources will be migrated in the next step
-		// NewSourceResource,
-		// NewAccessProfileResource,
-		// NewRoleResource,
-		// NewAccountAggregationScheduleResource,
-		// NewAccountSchemaResource,
-		// NewPasswordPolicyResource,
-		// NewGovernanceGroupResource,
-		// NewSourceAppResource,
-		// NewAccessProfileAttachmentResource,
-		// NewGovernanceGroupMembersResource,
+		NewSourceResource,
+		NewAccessProfileResource,
+		NewRoleResource,
 	}
 }
 
 // DataSources returns the list of data sources for this provider
 func (p *IdentityNowProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		// Data sources will be migrated in the next step
-		// NewSourceDataSource,
-		// NewAccessProfileDataSource,
-		// NewSourceEntitlementDataSource,
-		// NewIdentityDataSource,
-		// NewRoleDataSource,
-		// NewGovernanceGroupDataSource,
-		// NewSourceAppDataSource,
+		NewRoleDataSource,
 	}
 }
