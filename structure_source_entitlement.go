@@ -17,7 +17,14 @@ func flattenSourceEntitlement(d *schema.ResourceData, in *SourceEntitlement) err
 	d.Set("direct_permissions", toArrayString(in.DirectPermissions))
 	d.Set("name", in.Name)
 	d.Set("modified", in.Modified)
-	d.Set("owner", in.Owner)
+	if in.Owner != nil {
+		v, ok := d.Get("owner").([]interface{})
+		if !ok {
+			v = []interface{}{}
+		}
+
+		d.Set("owner", flattenSourceOwner(in.Owner, v))
+	}
 	d.Set("privileged", in.Privileged)
 	d.Set("source_schema_object_type", in.SourceSchemaObjectType)
 	d.Set("value", in.Value)
@@ -33,3 +40,4 @@ func getEntitlement(entitlements []*SourceEntitlement, name string) *SourceEntit
 	}
 	return nil
 }
+

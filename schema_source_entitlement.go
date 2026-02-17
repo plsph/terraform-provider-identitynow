@@ -41,8 +41,11 @@ func sourceEntitlementFields() map[string]*schema.Schema {
 			Computed: true,
 		},
 		"owner": {
-			Type:     schema.TypeString,
+			Type:     schema.TypeList,
 			Computed: true,
+			Elem: &schema.Resource{
+				Schema: sourceOwnerFields(),
+			},
 		},
 		"privileged": {
 			Type:     schema.TypeBool,

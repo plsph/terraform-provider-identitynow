@@ -10,7 +10,7 @@ type SourceEntitlement struct {
 	Requestable            bool          `json:"requestable,omitempty"`
 	Attributes             *Attributes   `json:"attributes,omitempty"`
 	Source                 *SourceInfo   `json:"source,omitempty"`
-	Owner                  interface{}   `json:"owner,omitempty"`
+	Owner                  *Owner        `json:"owner,omitempty"`
 	DirectPermissions      []interface{} `json:"directPermissions,omitempty"`
 	Segments               []interface{} `json:"segments,omitempty"`
 	Modified               interface{}   `json:"modified,omitempty"`
