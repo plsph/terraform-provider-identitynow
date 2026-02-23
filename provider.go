@@ -2,168 +2,243 @@ package main
 
 import (
 	"context"
+	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const (
 	providerDefaultEmptyString = "nil"
 )
 
-var (
-	descriptions map[string]string
-)
+// Ensure IdentityNowProvider implements provider.Provider
+var _ provider.Provider = &IdentityNowProvider{}
 
-func Provider() *schema.Provider {
-	return &schema.Provider{
-		Schema: map[string]*schema.Schema{
-			"api_url": {
-				Type:        schema.TypeString,
+// IdentityNowProvider defines the provider implementation
+type IdentityNowProvider struct {
+	version string
+}
+
+// IdentityNowProviderModel describes the provider data model
+type IdentityNowProviderModel struct {
+	ApiUrl                 types.String `tfsdk:"api_url"`
+	ClientId               types.String `tfsdk:"client_id"`
+	ClientSecret           types.String `tfsdk:"client_secret"`
+	Credentials            types.List   `tfsdk:"credentials"`
+	MaxClientPoolSize      types.Int64  `tfsdk:"max_client_pool_size"`
+	DefaultClientPoolSize  types.Int64  `tfsdk:"default_client_pool_size"`
+	ClientRequestRateLimit types.Int64  `tfsdk:"client_request_rate_limit"`
+}
+
+// CredentialModel describes a single credential
+type CredentialModel struct {
+	ClientId     types.String `tfsdk:"client_id"`
+	ClientSecret types.String `tfsdk:"client_secret"`
+}
+
+// New returns a new provider instance
+func New(version string) func() provider.Provider {
+	return func() provider.Provider {
+		return &IdentityNowProvider{
+			version: version,
+		}
+	}
+}
+
+// Metadata returns the provider type name
+func (p *IdentityNowProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "identitynow"
+	resp.Version = p.version
+}
+
+// Schema defines the provider schema
+func (p *IdentityNowProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: "Terraform provider for SailPoint IdentityNow",
+		Attributes: map[string]schema.Attribute{
+			"api_url": schema.StringAttribute{
+				Description: "The URL to the IdentityNow API",
 				Required:    true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_URL", providerDefaultEmptyString),
-				Description: descriptions["api_url"],
 			},
-			"client_id": {
-				Type:        schema.TypeString,
+			"client_id": schema.StringAttribute{
+				Description: "API client used to authenticate with the IdentityNow API",
 				Optional:    true,
 				Sensitive:   true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_CLIENT_ID", providerDefaultEmptyString),
-				Description: descriptions["client_id"],
 			},
-			"client_secret": {
-				Type:        schema.TypeString,
+			"client_secret": schema.StringAttribute{
+				Description: "API client secret used to authenticate with the IdentityNow API",
 				Optional:    true,
 				Sensitive:   true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_CLIENT_SECRET", providerDefaultEmptyString),
-				Description: descriptions["client_secret"],
 			},
-			"credentials": {
-				Type:     schema.TypeList,
-				Optional: true,
-				ConfigMode:  schema.SchemaConfigModeAttr,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"client_id": {
-							Type:     schema.TypeString,
-							Required: true,
+			"credentials": schema.ListNestedAttribute{
+				Description: "API client id and secret sets used to authenticate with the IdentityNow API",
+				Optional:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"client_id": schema.StringAttribute{
+							Description: "Client ID",
+							Required:    true,
 						},
-						"client_secret": {
-							Type:      schema.TypeString,
-							Required:  true,
-							Sensitive: true,
+						"client_secret": schema.StringAttribute{
+							Description: "Client Secret",
+							Required:    true,
+							Sensitive:   true,
 						},
 					},
 				},
-				Description: descriptions["credentials"],
 			},
-			"max_client_pool_size": {
-				Type:        schema.TypeInt,
+			"max_client_pool_size": schema.Int64Attribute{
+				Description: "Max client pool size for communication with the IdentityNow API",
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_MAX_POOL_SIZE", 1),
-				Description: descriptions["max_client_pool_size"],
 			},
-			"default_client_pool_size": {
-				Type:        schema.TypeInt,
+			"default_client_pool_size": schema.Int64Attribute{
+				Description: "Default client pool size for communication with the IdentityNow API",
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_DEF_POOL_SIZE", 1),
-				Description: descriptions["default_client_pool_size"],
 			},
-			"client_request_rate_limit": {
-				Type:        schema.TypeInt,
+			"client_request_rate_limit": schema.Int64Attribute{
+				Description: "Client request rate limit for communication with the IdentityNow API",
 				Optional:    true,
-				DefaultFunc: schema.EnvDefaultFunc("IDENTITYNOW_CLI_RQ_RATE", 10),
-				Description: descriptions["client_request_rate_limit"],
 			},
 		},
-
-		ResourcesMap: map[string]*schema.Resource{
-			"identitynow_source":                       resourceSource(),
-			"identitynow_access_profile":               resourceAccessProfile(),
-			"identitynow_role":                         resourceRole(),
-			"identitynow_account_aggregation_schedule": resourceScheduleAccountAggregation(),
-			"identitynow_account_schema_attribute":     resourceAccountSchema(),
-			"identitynow_password_policy":              resourcePasswordPolicy(),
-			"identitynow_governance_group":             resourceGovernanceGroup(),
-			"identitynow_source_app":                   resourceSourceApp(),
-			"identitynow_access_profile_attachment":    resourceAccessProfileAttachment(),
-			"identitynow_governance_group_members":     resourceGovernanceGroupMembers(),
-		},
-
-		DataSourcesMap: map[string]*schema.Resource{
-			"identitynow_source":             dataSourceSource(),
-			"identitynow_access_profile":     dataSourceAccessProfile(),
-			"identitynow_source_entitlement": dataSourceSourceEntitlement(),
-			"identitynow_identity":           dataSourceIdentity(),
-			"identitynow_role":               dataSourceRole(),
-			"identitynow_governance_group":   dataSourceGovernanceGroup(),
-			"identitynow_source_app":         dataSourceApp(),
-		},
-
-		ConfigureContextFunc: providerConfigure,
 	}
 }
 
-func init() {
-	descriptions = map[string]string{
-		"api_url":       "The URL to the IdentityNow API",
-		"client_id":     "API client used to authenticate with the IdentityNow API",
-		"client_secret": "API client secret used to authenticate with the IdentityNow API",
-		"credentials": "API client id and secret sets used to authenticate with the IdentityNow API",
-		"max_client_pool_size": "Max client pool size for communication with the IdentityNow API",
-		"default_client_pool_size": "Defalut client pool size for communication with the IdentityNow API",
-		"client_request_rate_limit": "Client request rate limit for communication with the IdentityNow API",
-	}
-}
-
-func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+// Configure configures the provider with the given configuration
+func (p *IdentityNowProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Info(ctx, "Configuring IdentityNow provider")
 
-	apiURL := d.Get("api_url").(string)
-	clientId := d.Get("client_id").(string)
-	clientSecret := d.Get("client_secret").(string)
-	credentials := []ClientCredential{}
-	if v, ok := d.Get("credentials").([]interface{}); ok && len(v) > 0 && v[0] != nil{
-		credentials = providerConfigureCredentials(v)
-        } else {
-		credentials = []ClientCredential{{ClientId: clientId, ClientSecret: clientSecret}}
+	var data IdentityNowProviderModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
-	maxClientPoolSize := d.Get("max_client_pool_size").(int)
-	defaultClientPoolSize := d.Get("default_client_pool_size").(int)
-	clientRequestRateLimit := d.Get("client_request_rate_limit").(int)
+
+	// Set default values from environment variables
+	if data.ApiUrl.IsNull() {
+		apiUrl := os.Getenv("IDENTITYNOW_URL")
+		if apiUrl == "" {
+			apiUrl = providerDefaultEmptyString
+		}
+		data.ApiUrl = types.StringValue(apiUrl)
+	}
+
+	if data.ClientId.IsNull() {
+		clientId := os.Getenv("IDENTITYNOW_CLIENT_ID")
+		if clientId == "" {
+			clientId = providerDefaultEmptyString
+		}
+		data.ClientId = types.StringValue(clientId)
+	}
+
+	if data.ClientSecret.IsNull() {
+		clientSecret := os.Getenv("IDENTITYNOW_CLIENT_SECRET")
+		if clientSecret == "" {
+			clientSecret = providerDefaultEmptyString
+		}
+		data.ClientSecret = types.StringValue(clientSecret)
+	}
+
+	if data.MaxClientPoolSize.IsNull() {
+		maxPoolSize := os.Getenv("IDENTITYNOW_MAX_POOL_SIZE")
+		if maxPoolSize == "" {
+			data.MaxClientPoolSize = types.Int64Value(1)
+		}
+	}
+
+	if data.DefaultClientPoolSize.IsNull() {
+		defPoolSize := os.Getenv("IDENTITYNOW_DEF_POOL_SIZE")
+		if defPoolSize == "" {
+			data.DefaultClientPoolSize = types.Int64Value(1)
+		}
+	}
+
+	if data.ClientRequestRateLimit.IsNull() {
+		rateLimit := os.Getenv("IDENTITYNOW_CLI_RQ_RATE")
+		if rateLimit == "" {
+			data.ClientRequestRateLimit = types.Int64Value(10)
+		}
+	}
+
+	// Validate required fields
+	if data.ApiUrl.ValueString() == providerDefaultEmptyString {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_url"),
+			"Missing IdentityNow API URL",
+			"The provider cannot create the IdentityNow API client as there is a missing or empty value for the IdentityNow API URL. "+
+				"Set the api_url value in the configuration or use the IDENTITYNOW_URL environment variable. ",
+		)
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Parse credentials
+	credentials := []ClientCredential{}
+	if !data.Credentials.IsNull() && len(data.Credentials.Elements()) > 0 {
+		var credsList []CredentialModel
+		resp.Diagnostics.Append(data.Credentials.ElementsAs(ctx, &credsList, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		for _, cred := range credsList {
+			credentials = append(credentials, ClientCredential{
+				ClientId:     cred.ClientId.ValueString(),
+				ClientSecret: cred.ClientSecret.ValueString(),
+			})
+		}
+	} else {
+		credentials = []ClientCredential{{
+			ClientId:     data.ClientId.ValueString(),
+			ClientSecret: data.ClientSecret.ValueString(),
+		}}
+	}
 
 	tflog.Debug(ctx, "Provider configuration", map[string]interface{}{
-		"api_url":   apiURL,
-		"credentials pool size": len(credentials),
-		"max_client_pool_size": maxClientPoolSize,
-		"default_client_pool_size": defaultClientPoolSize,
-		"client_request_rate_limit": clientRequestRateLimit,
-		// Note: client_secret is intentionally not logged for security
+		"api_url":                    data.ApiUrl.ValueString(),
+		"credentials_pool_size":      len(credentials),
+		"max_client_pool_size":       data.MaxClientPoolSize.ValueInt64(),
+		"default_client_pool_size":   data.DefaultClientPoolSize.ValueInt64(),
+		"client_request_rate_limit":  data.ClientRequestRateLimit.ValueInt64(),
 	})
 
 	config := &Config{
-		URL:                   apiURL,
-		ClientId:              clientId,
-		ClientSecret:          clientSecret,
-		Credentials:           credentials,
-		MaxClientPoolSize:     maxClientPoolSize,
-		DefaultClientPoolSize: defaultClientPoolSize,
-		ClientRequestRateLimit: clientRequestRateLimit,
+		URL:                    data.ApiUrl.ValueString(),
+		ClientId:               data.ClientId.ValueString(),
+		ClientSecret:           data.ClientSecret.ValueString(),
+		Credentials:            credentials,
+		MaxClientPoolSize:      int(data.MaxClientPoolSize.ValueInt64()),
+		DefaultClientPoolSize:  int(data.DefaultClientPoolSize.ValueInt64()),
+		ClientRequestRateLimit: int(data.ClientRequestRateLimit.ValueInt64()),
 	}
 
+	resp.DataSourceData = config
+	resp.ResourceData = config
+
 	tflog.Info(ctx, "Successfully configured IdentityNow provider")
-	return config, nil
 }
 
-func providerConfigureCredentials(p []interface{}) []ClientCredential {
-        out := make([]ClientCredential, 0, len(p))
-        for i := range p {
-                obj := ClientCredential{}
-                in := p[i].(map[string]interface{})
-                obj.ClientId = in["client_id"].(string)
-                obj.ClientSecret = in["client_secret"].(string)
-                out = append(out, obj)
-        }
-        return out
+// Resources returns the list of resources for this provider
+func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		NewSourceResource,
+		NewAccessProfileResource,
+		NewRoleResource,
+	}
+}
+
+// DataSources returns the list of data sources for this provider
+func (p *IdentityNowProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{
+		NewRoleDataSource,
+	}
 }
