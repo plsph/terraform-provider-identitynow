@@ -25,13 +25,40 @@ type AccessProfileResource struct {
 }
 
 type AccessProfileResourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	Owner       types.List   `tfsdk:"owner"`
-	Source      types.List   `tfsdk:"source"`
-	Enabled     types.Bool   `tfsdk:"enabled"`
-	Requestable types.Bool   `tfsdk:"requestable"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	Owner               types.List   `tfsdk:"owner"`
+	Source              types.List   `tfsdk:"source"`
+	Entitlements        types.List   `tfsdk:"entitlements"`
+	AccessRequestConfig types.List   `tfsdk:"access_request_config"`
+	Enabled             types.Bool   `tfsdk:"enabled"`
+	Requestable         types.Bool   `tfsdk:"requestable"`
+}
+
+type EntitlementRefModel struct {
+	ID   types.String `tfsdk:"id"`
+	Name types.String `tfsdk:"name"`
+	Type types.String `tfsdk:"type"`
+}
+
+type AccessRequestConfigModel struct {
+	CommentsRequired       types.Bool `tfsdk:"comments_required"`
+	DenialCommentsRequired types.Bool `tfsdk:"denial_comments_required"`
+	ReauthorizationRequired types.Bool `tfsdk:"reauthorization_required"`
+	RequireEndDate         types.Bool `tfsdk:"require_end_date"`
+	ApprovalSchemes        types.List `tfsdk:"approval_schemes"`
+	MaxPermittedAccessDuration types.List `tfsdk:"max_permitted_access_duration"`
+}
+
+type ApprovalSchemeModel struct {
+	ApproverType types.String `tfsdk:"approver_type"`
+	ApproverID   types.String `tfsdk:"approver_id"`
+}
+
+type MaxPermittedAccessDurationModel struct {
+	Value    types.Int64  `tfsdk:"value"`
+	TimeUnit types.String `tfsdk:"time_unit"`
 }
 
 func (r *AccessProfileResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -54,26 +81,6 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 			"description": schema.StringAttribute{
 				Required: true,
 			},
-			"owner": schema.ListNestedAttribute{
-				Required: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
-					},
-				},
-			},
-			"source": schema.ListNestedAttribute{
-				Required: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
-					},
-				},
-			},
 			"enabled": schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
@@ -81,6 +88,102 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 			"requestable": schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"owner": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id":   schema.StringAttribute{Required: true},
+						"type": schema.StringAttribute{Required: true},
+						"name": schema.StringAttribute{Required: true},
+					},
+				},
+			},
+			"source": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id":   schema.StringAttribute{Required: true},
+						"type": schema.StringAttribute{Required: true},
+						"name": schema.StringAttribute{Required: true},
+					},
+				},
+			},
+			"entitlements": schema.ListNestedBlock{
+				MarkdownDescription: "Entitlements assigned to this access profile",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							Required:            true,
+							MarkdownDescription: "Entitlement ID",
+						},
+						"name": schema.StringAttribute{
+							Required:            true,
+							MarkdownDescription: "Entitlement name",
+						},
+						"type": schema.StringAttribute{
+							Optional:            true,
+							Computed:            true,
+							MarkdownDescription: "Entitlement type",
+						},
+					},
+				},
+			},
+			"access_request_config": schema.ListNestedBlock{
+				MarkdownDescription: "Access request configuration",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"comments_required": schema.BoolAttribute{
+							Optional:            true,
+							MarkdownDescription: "If comment is required",
+						},
+						"denial_comments_required": schema.BoolAttribute{
+							Optional:            true,
+							MarkdownDescription: "If denial comment is required",
+						},
+						"reauthorization_required": schema.BoolAttribute{
+							Optional:            true,
+							MarkdownDescription: "Indicates whether reauthorization is required",
+						},
+						"require_end_date": schema.BoolAttribute{
+							Optional:            true,
+							Computed:            true,
+							MarkdownDescription: "Indicates whether the requester must provide access end date",
+						},
+					},
+					Blocks: map[string]schema.Block{
+						"approval_schemes": schema.ListNestedBlock{
+							MarkdownDescription: "Approval schemes",
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"approver_type": schema.StringAttribute{
+										Required:            true,
+										MarkdownDescription: "Type of approver",
+									},
+									"approver_id": schema.StringAttribute{
+										Optional:            true,
+										MarkdownDescription: "Id of approver",
+									},
+								},
+							},
+						},
+						"max_permitted_access_duration": schema.ListNestedBlock{
+							MarkdownDescription: "Max permitted access duration",
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"value": schema.Int64Attribute{
+										Required:            true,
+										MarkdownDescription: "The numeric value representing the amount of time",
+									},
+									"time_unit": schema.StringAttribute{
+										Required:            true,
+										MarkdownDescription: "The unit of time",
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -144,6 +247,79 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 	if !data.Requestable.IsNull() {
 		requestable := data.Requestable.ValueBool()
 		ap.Requestable = &requestable
+	}
+
+	// Entitlements
+	if !data.Entitlements.IsNull() && len(data.Entitlements.Elements()) > 0 {
+		var entModels []EntitlementRefModel
+		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &entModels, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		for _, em := range entModels {
+			ent := &ObjectInfo{
+				ID:   em.ID.ValueString(),
+				Name: em.Name.ValueString(),
+			}
+			if !em.Type.IsNull() && em.Type.ValueString() != "" {
+				ent.Type = em.Type.ValueString()
+			} else {
+				ent.Type = "ENTITLEMENT"
+			}
+			ap.Entitlements = append(ap.Entitlements, ent)
+		}
+	}
+
+	// Access Request Config
+	if !data.AccessRequestConfig.IsNull() && len(data.AccessRequestConfig.Elements()) > 0 {
+		var arcModels []AccessRequestConfigModel
+		resp.Diagnostics.Append(data.AccessRequestConfig.ElementsAs(ctx, &arcModels, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if len(arcModels) > 0 {
+			arc := arcModels[0]
+			config := &AccessRequestConfigList{}
+			if !arc.CommentsRequired.IsNull() {
+				config.CommentsRequired = arc.CommentsRequired.ValueBool()
+			}
+			if !arc.DenialCommentsRequired.IsNull() {
+				config.DenialCommentsRequired = arc.DenialCommentsRequired.ValueBool()
+			}
+			if !arc.ReauthorizationRequired.IsNull() {
+				config.ReauthorizationRequired = arc.ReauthorizationRequired.ValueBool()
+			}
+			if !arc.RequireEndDate.IsNull() {
+				config.RequireEndDate = arc.RequireEndDate.ValueBool()
+			}
+			if !arc.ApprovalSchemes.IsNull() && len(arc.ApprovalSchemes.Elements()) > 0 {
+				var schemes []ApprovalSchemeModel
+				resp.Diagnostics.Append(arc.ApprovalSchemes.ElementsAs(ctx, &schemes, false)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				for _, s := range schemes {
+					config.ApprovalSchemes = append(config.ApprovalSchemes, &ApprovalSchemes{
+						ApproverType: s.ApproverType.ValueString(),
+						ApproverId:   s.ApproverID.ValueString(),
+					})
+				}
+			}
+			if !arc.MaxPermittedAccessDuration.IsNull() && len(arc.MaxPermittedAccessDuration.Elements()) > 0 {
+				var durModels []MaxPermittedAccessDurationModel
+				resp.Diagnostics.Append(arc.MaxPermittedAccessDuration.ElementsAs(ctx, &durModels, false)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				if len(durModels) > 0 {
+					config.MaxPermittedAccessDuration = &MaxPermittedAccessDuration{
+						Value:    int(durModels[0].Value.ValueInt64()),
+						TimeUnit: durModels[0].TimeUnit.ValueString(),
+					}
+				}
+			}
+			ap.AccessRequestConfig = config
+		}
 	}
 
 	tflog.Info(ctx, "Creating Access Profile", map[string]interface{}{"name": ap.Name})

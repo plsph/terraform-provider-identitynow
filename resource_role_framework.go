@@ -75,10 +75,27 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				MarkdownDescription: "Role description",
 				Required:            true,
 			},
-			"owner": schema.ListNestedAttribute{
+			"requestable": schema.BoolAttribute{
+				MarkdownDescription: "Whether this role is requestable",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"enabled": schema.BoolAttribute{
+				MarkdownDescription: "Whether this role is enabled",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"owner": schema.ListNestedBlock{
 				MarkdownDescription: "Role owner",
-				Required:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							MarkdownDescription: "Owner ID",
@@ -95,10 +112,9 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 					},
 				},
 			},
-			"access_profiles": schema.ListNestedAttribute{
+			"access_profiles": schema.ListNestedBlock{
 				MarkdownDescription: "Access profiles assigned to this role",
-				Optional:            true,
-				NestedObject: schema.NestedAttributeObject{
+				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							MarkdownDescription: "Access profile ID",
@@ -113,22 +129,6 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 							Required:            true,
 						},
 					},
-				},
-			},
-			"requestable": schema.BoolAttribute{
-				MarkdownDescription: "Whether this role is requestable",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether this role is enabled",
-				Optional:            true,
-				Computed:            true,
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},

@@ -71,26 +71,6 @@ func (r *SourceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			"description": schema.StringAttribute{
 				Required: true,
 			},
-			"owner": schema.ListNestedAttribute{
-				Required: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
-					},
-				},
-			},
-			"cluster": schema.ListNestedAttribute{
-				Optional: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
-					},
-				},
-			},
 			"connector": schema.StringAttribute{
 				Required: true,
 			},
@@ -102,6 +82,26 @@ func (r *SourceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 			"authoritative": schema.BoolAttribute{
 				Required: true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"owner": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id":   schema.StringAttribute{Required: true},
+						"type": schema.StringAttribute{Required: true},
+						"name": schema.StringAttribute{Required: true},
+					},
+				},
+			},
+			"cluster": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id":   schema.StringAttribute{Required: true},
+						"type": schema.StringAttribute{Required: true},
+						"name": schema.StringAttribute{Required: true},
+					},
+				},
 			},
 		},
 	}

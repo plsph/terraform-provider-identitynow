@@ -233,6 +233,13 @@ func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.R
 		NewSourceResource,
 		NewAccessProfileResource,
 		NewRoleResource,
+		NewGovernanceGroupResource,
+		NewSourceAppResource,
+		NewAccessProfileAttachmentResource,
+		NewGovernanceGroupMembersResource,
+		NewAccountSchemaResource,
+		NewPasswordPolicyResource,
+		NewScheduleAccountAggregationResource,
 	}
 }
 
@@ -240,5 +247,11 @@ func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.R
 func (p *IdentityNowProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewRoleDataSource,
+		NewSourceDataSource,
+		NewAccessProfileDataSource,
+		NewIdentityDataSource,
+		NewGovernanceGroupDataSource,
+		NewSourceAppDataSource,
+		NewSourceEntitlementDataSource,
 	}
 }

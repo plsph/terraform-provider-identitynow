@@ -88,28 +88,28 @@ Comprehensive guide covering:
 
 ## 📋 Remaining Work
 
-### Resources to Migrate (10 total)
-Each resource needs conversion from SDK v2 to Framework pattern:
+### Resources to Migrate (10 total) - ALL COMPLETE ✅
+Each resource has been converted from SDK v2 to Framework pattern:
 
-- [ ] `resource_source.go`
-- [ ] `resource_access_profile.go`
-- [ ] `resource_role.go`
-- [ ] `resource_account_schema.go`
-- [ ] `resource_password_policy.go`
-- [ ] `resource_governance_group.go`
-- [ ] `resource_source_app.go`
-- [ ] `resource_access_profile_attachment.go`
-- [ ] `resource_governance_group_members.go`
-- [ ] `resource_schedule_account_aggregation.go`
+- [x] `resource_source.go` → `resource_source_framework.go`
+- [x] `resource_access_profile.go` → `resource_access_profile_framework.go`
+- [x] `resource_role.go` → `resource_role_framework.go`
+- [x] `resource_account_schema.go` → `resource_account_schema_framework.go`
+- [x] `resource_password_policy.go` → `resource_password_policy_framework.go`
+- [x] `resource_governance_group.go` → `resource_governance_group_framework.go`
+- [x] `resource_source_app.go` → `resource_source_app_framework.go`
+- [x] `resource_access_profile_attachment.go` → `resource_access_profile_attachment_framework.go`
+- [x] `resource_governance_group_members.go` → `resource_governance_group_members_framework.go`
+- [x] `resource_schedule_account_aggregation.go` → `resource_schedule_account_aggregation_framework.go`
 
-### Data Sources to Migrate (7 total)
-- [ ] `data_source_source.go`
-- [ ] `data_source_access_profile.go`
-- [ ] `data_source_source_entitlements.go`
-- [ ] `data_source_Identity.go`
-- [ ] `data_source_role.go`
-- [ ] `data_source_governance_group.go`
-- [ ] `data_source_source_app.go`
+### Data Sources to Migrate (7 total) - ALL COMPLETE ✅
+- [x] `data_source_source.go` → `data_source_source_framework.go`
+- [x] `data_source_access_profile.go` → `data_source_access_profile_framework.go`
+- [x] `data_source_source_entitlements.go` → `data_source_source_entitlement_framework.go`
+- [x] `data_source_Identity.go` → `data_source_identity_framework.go`
+- [x] `data_source_role.go` → `data_source_role_framework.go`
+- [x] `data_source_governance_group.go` → `data_source_governance_group_framework.go`
+- [x] `data_source_source_app.go` → `data_source_source_app_framework.go`
 
 ### Supporting Files to Update
 - [ ] Convert `schema_*.go` files to Framework schema definitions
