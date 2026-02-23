@@ -1,21 +1,30 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"log"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
-func main() {
-	var debugMode bool
+// version is set via -ldflags during build
+var version string = "dev"
 
-	flag.BoolVar(&debugMode, "debug", false, "set to true to run the provider with support for debuggers like delve")
+func main() {
+	var debug bool
+
+	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	opts := &plugin.ServeOpts{
-		ProviderFunc: Provider,
-		Debug:        debugMode,
+	opts := providerserver.ServeOpts{
+		Address: "registry.terraform.io/plsph/identitynow",
+		Debug:   debug,
 	}
 
-	plugin.Serve(opts)
+	err := providerserver.Serve(context.Background(), New(version), opts)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }
