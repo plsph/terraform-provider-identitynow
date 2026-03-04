@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -169,6 +170,26 @@ func (r *GovernanceGroupResource) Read(ctx context.Context, req resource.ReadReq
 
 	data.Name = types.StringValue(gg.Name)
 	data.Description = types.StringValue(gg.Description)
+
+	ownerObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":   types.StringType,
+		"name": types.StringType,
+		"type": types.StringType,
+	}}
+	if gg.GovernanceGroupOwner != nil {
+		ownerModels := []GovernanceGroupOwnerModel{
+			{
+				ID:   types.StringValue(gg.GovernanceGroupOwner.ID),
+				Name: types.StringValue(gg.GovernanceGroupOwner.Name),
+				Type: types.StringValue(gg.GovernanceGroupOwner.Type),
+			},
+		}
+		ownerList, diags := types.ListValueFrom(ctx, ownerObjType, ownerModels)
+		resp.Diagnostics.Append(diags...)
+		data.Owner = ownerList
+	} else {
+		data.Owner, _ = types.ListValue(ownerObjType, []attr.Value{})
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

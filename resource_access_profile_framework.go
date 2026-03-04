@@ -4,9 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -84,10 +89,16 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 			"enabled": schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"requestable": schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -124,6 +135,7 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
+							Default:             stringdefault.StaticString("ENTITLEMENT"),
 							MarkdownDescription: "Entitlement type",
 						},
 					},
@@ -135,19 +147,26 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 					Attributes: map[string]schema.Attribute{
 						"comments_required": schema.BoolAttribute{
 							Optional:            true,
+							Computed:            true,
+							Default:             booldefault.StaticBool(false),
 							MarkdownDescription: "If comment is required",
 						},
 						"denial_comments_required": schema.BoolAttribute{
 							Optional:            true,
+							Computed:            true,
+							Default:             booldefault.StaticBool(false),
 							MarkdownDescription: "If denial comment is required",
 						},
 						"reauthorization_required": schema.BoolAttribute{
 							Optional:            true,
+							Computed:            true,
+							Default:             booldefault.StaticBool(false),
 							MarkdownDescription: "Indicates whether reauthorization is required",
 						},
 						"require_end_date": schema.BoolAttribute{
 							Optional:            true,
 							Computed:            true,
+							Default:             booldefault.StaticBool(false),
 							MarkdownDescription: "Indicates whether the requester must provide access end date",
 						},
 					},
@@ -162,6 +181,8 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 									},
 									"approver_id": schema.StringAttribute{
 										Optional:            true,
+										Computed:            true,
+										Default:             stringdefault.StaticString(""),
 										MarkdownDescription: "Id of approver",
 									},
 								},
@@ -370,14 +391,7 @@ func (r *AccessProfileResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	data.Name = types.StringValue(ap.Name)
-	data.Description = types.StringValue(ap.Description)
-	if ap.Enabled != nil {
-		data.Enabled = types.BoolValue(*ap.Enabled)
-	}
-	if ap.Requestable != nil {
-		data.Requestable = types.BoolValue(*ap.Requestable)
-	}
+	r.setStateFromAPI(ctx, &data, ap, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -400,11 +414,130 @@ func (r *AccessProfileResource) Update(ctx context.Context, req resource.UpdateR
 		{Op: "replace", Path: "/description", Value: data.Description.ValueString()},
 	}
 
+	// Owner
+	if !data.Owner.IsNull() {
+		var owners []OwnerModel
+		resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if len(owners) > 0 {
+			updatePatches = append(updatePatches, &UpdateAccessProfile{
+				Op:   "replace",
+				Path: "/owner",
+				Value: map[string]interface{}{
+					"id":   owners[0].ID.ValueString(),
+					"type": owners[0].Type.ValueString(),
+					"name": owners[0].Name.ValueString(),
+				},
+			})
+		}
+	}
+
+	// Enabled
+	if !data.Enabled.IsNull() {
+		updatePatches = append(updatePatches, &UpdateAccessProfile{
+			Op: "replace", Path: "/enabled", Value: data.Enabled.ValueBool(),
+		})
+	}
+
+	// Requestable
+	if !data.Requestable.IsNull() {
+		updatePatches = append(updatePatches, &UpdateAccessProfile{
+			Op: "replace", Path: "/requestable", Value: data.Requestable.ValueBool(),
+		})
+	}
+
+	// Entitlements
+	if !data.Entitlements.IsNull() {
+		var entModels []EntitlementRefModel
+		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &entModels, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		var ents []map[string]interface{}
+		for _, em := range entModels {
+			entType := em.Type.ValueString()
+			if entType == "" {
+				entType = "ENTITLEMENT"
+			}
+			ents = append(ents, map[string]interface{}{
+				"id":   em.ID.ValueString(),
+				"name": em.Name.ValueString(),
+				"type": entType,
+			})
+		}
+		updatePatches = append(updatePatches, &UpdateAccessProfile{
+			Op: "replace", Path: "/entitlements", Value: ents,
+		})
+	}
+
+	// Access Request Config
+	if !data.AccessRequestConfig.IsNull() {
+		var arcModels []AccessRequestConfigModel
+		resp.Diagnostics.Append(data.AccessRequestConfig.ElementsAs(ctx, &arcModels, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if len(arcModels) > 0 {
+			arc := arcModels[0]
+			arcValue := map[string]interface{}{
+				"commentsRequired":       arc.CommentsRequired.ValueBool(),
+				"denialCommentsRequired": arc.DenialCommentsRequired.ValueBool(),
+				"reauthorizationRequired": arc.ReauthorizationRequired.ValueBool(),
+				"requireEndDate":         arc.RequireEndDate.ValueBool(),
+			}
+
+			if !arc.ApprovalSchemes.IsNull() {
+				var schemes []ApprovalSchemeModel
+				resp.Diagnostics.Append(arc.ApprovalSchemes.ElementsAs(ctx, &schemes, false)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				var schemeValues []map[string]interface{}
+				for _, s := range schemes {
+					schemeValues = append(schemeValues, map[string]interface{}{
+						"approverType": s.ApproverType.ValueString(),
+						"approverId":   s.ApproverID.ValueString(),
+					})
+				}
+				arcValue["approvalSchemes"] = schemeValues
+			}
+
+			if !arc.MaxPermittedAccessDuration.IsNull() {
+				var durModels []MaxPermittedAccessDurationModel
+				resp.Diagnostics.Append(arc.MaxPermittedAccessDuration.ElementsAs(ctx, &durModels, false)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				if len(durModels) > 0 {
+					arcValue["maxPermittedAccessDuration"] = map[string]interface{}{
+						"value":    durModels[0].Value.ValueInt64(),
+						"timeUnit": durModels[0].TimeUnit.ValueString(),
+					}
+				}
+			}
+
+			updatePatches = append(updatePatches, &UpdateAccessProfile{
+				Op: "replace", Path: "/accessRequestConfig", Value: arcValue,
+			})
+		}
+	}
+
 	_, err = client.UpdateAccessProfile(ctx, updatePatches, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", err.Error())
 		return
 	}
+
+	// Read back from API to ensure state matches actual values
+	ap, err := client.GetAccessProfile(ctx, data.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read access profile after update: %s", err))
+		return
+	}
+
+	r.setStateFromAPI(ctx, &data, ap, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -440,4 +573,143 @@ func (r *AccessProfileResource) Delete(ctx context.Context, req resource.DeleteR
 
 func (r *AccessProfileResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *AccessProfileResourceModel, ap *AccessProfile, diags *diag.Diagnostics) {
+	data.Name = types.StringValue(ap.Name)
+	data.Description = types.StringValue(ap.Description)
+	if ap.Enabled != nil {
+		data.Enabled = types.BoolValue(*ap.Enabled)
+	}
+	if ap.Requestable != nil {
+		data.Requestable = types.BoolValue(*ap.Requestable)
+	}
+
+	objType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":   types.StringType,
+		"type": types.StringType,
+		"name": types.StringType,
+	}}
+
+	// Owner
+	if ap.AccessProfileOwner != nil {
+		ownerModels := []OwnerModel{
+			{
+				ID:   types.StringValue(fmt.Sprintf("%v", ap.AccessProfileOwner.ID)),
+				Type: types.StringValue(ap.AccessProfileOwner.Type),
+				Name: types.StringValue(ap.AccessProfileOwner.Name),
+			},
+		}
+		ownerList, d := types.ListValueFrom(ctx, objType, ownerModels)
+		diags.Append(d...)
+		data.Owner = ownerList
+	} else {
+		data.Owner, _ = types.ListValue(objType, []attr.Value{})
+	}
+
+	// Source
+	if ap.AccessProfileSource != nil {
+		sourceModels := []OwnerModel{
+			{
+				ID:   types.StringValue(fmt.Sprintf("%v", ap.AccessProfileSource.ID)),
+				Type: types.StringValue(ap.AccessProfileSource.Type),
+				Name: types.StringValue(ap.AccessProfileSource.Name),
+			},
+		}
+		sourceList, d := types.ListValueFrom(ctx, objType, sourceModels)
+		diags.Append(d...)
+		data.Source = sourceList
+	} else {
+		data.Source, _ = types.ListValue(objType, []attr.Value{})
+	}
+
+	// Entitlements
+	entObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":   types.StringType,
+		"name": types.StringType,
+		"type": types.StringType,
+	}}
+	if ap.Entitlements != nil {
+		entModels := make([]EntitlementRefModel, len(ap.Entitlements))
+		for i, e := range ap.Entitlements {
+			entModels[i] = EntitlementRefModel{
+				ID:   types.StringValue(fmt.Sprintf("%v", e.ID)),
+				Name: types.StringValue(e.Name),
+				Type: types.StringValue(e.Type),
+			}
+		}
+		entList, d := types.ListValueFrom(ctx, entObjType, entModels)
+		diags.Append(d...)
+		data.Entitlements = entList
+	} else {
+		data.Entitlements, _ = types.ListValue(entObjType, []attr.Value{})
+	}
+
+	// Access Request Config
+	approvalSchemeObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"approver_type": types.StringType,
+		"approver_id":   types.StringType,
+	}}
+	maxDurationObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"value":     types.Int64Type,
+		"time_unit": types.StringType,
+	}}
+	arcObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"comments_required":             types.BoolType,
+		"denial_comments_required":      types.BoolType,
+		"reauthorization_required":      types.BoolType,
+		"require_end_date":              types.BoolType,
+		"approval_schemes":              types.ListType{ElemType: approvalSchemeObjType},
+		"max_permitted_access_duration": types.ListType{ElemType: maxDurationObjType},
+	}}
+	if ap.AccessRequestConfig != nil {
+		arc := ap.AccessRequestConfig
+
+		var approvalSchemesList types.List
+		if arc.ApprovalSchemes != nil {
+			schemeModels := make([]ApprovalSchemeModel, len(arc.ApprovalSchemes))
+			for i, s := range arc.ApprovalSchemes {
+				schemeModels[i] = ApprovalSchemeModel{
+					ApproverType: types.StringValue(s.ApproverType),
+					ApproverID:   types.StringValue(s.ApproverId),
+				}
+			}
+			sl, d := types.ListValueFrom(ctx, approvalSchemeObjType, schemeModels)
+			diags.Append(d...)
+			approvalSchemesList = sl
+		} else {
+			approvalSchemesList, _ = types.ListValue(approvalSchemeObjType, []attr.Value{})
+		}
+
+		var maxDurationList types.List
+		if arc.MaxPermittedAccessDuration != nil {
+			durModels := []MaxPermittedAccessDurationModel{
+				{
+					Value:    types.Int64Value(int64(arc.MaxPermittedAccessDuration.Value)),
+					TimeUnit: types.StringValue(arc.MaxPermittedAccessDuration.TimeUnit),
+				},
+			}
+			dl, d := types.ListValueFrom(ctx, maxDurationObjType, durModels)
+			diags.Append(d...)
+			maxDurationList = dl
+		} else {
+			maxDurationList, _ = types.ListValue(maxDurationObjType, []attr.Value{})
+		}
+
+		arcModels := []AccessRequestConfigModel{
+			{
+				CommentsRequired:           types.BoolValue(arc.CommentsRequired),
+				DenialCommentsRequired:     types.BoolValue(arc.DenialCommentsRequired),
+				ReauthorizationRequired:    types.BoolValue(arc.ReauthorizationRequired),
+				RequireEndDate:             types.BoolValue(arc.RequireEndDate),
+				ApprovalSchemes:            approvalSchemesList,
+				MaxPermittedAccessDuration: maxDurationList,
+			},
+		}
+		arcList, d := types.ListValueFrom(ctx, arcObjType, arcModels)
+		diags.Append(d...)
+		data.AccessRequestConfig = arcList
+	} else {
+		data.AccessRequestConfig, _ = types.ListValue(arcObjType, []attr.Value{})
+	}
 }

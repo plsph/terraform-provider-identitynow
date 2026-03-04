@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -194,6 +195,26 @@ func (r *SourceAppResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 	if sa.MatchAllAccounts != nil {
 		data.MatchAllAccounts = types.BoolValue(*sa.MatchAllAccounts)
+	}
+
+	sourceObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":   types.StringType,
+		"name": types.StringType,
+		"type": types.StringType,
+	}}
+	if sa.SourceAppSource != nil {
+		sourceModels := []SourceAppSourceModel{
+			{
+				ID:   types.StringValue(fmt.Sprintf("%v", sa.SourceAppSource.ID)),
+				Name: types.StringValue(sa.SourceAppSource.Name),
+				Type: types.StringValue(sa.SourceAppSource.Type),
+			},
+		}
+		sourceList, diags := types.ListValueFrom(ctx, sourceObjType, sourceModels)
+		resp.Diagnostics.Append(diags...)
+		data.Source = sourceList
+	} else {
+		data.Source, _ = types.ListValue(sourceObjType, []attr.Value{})
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -237,7 +238,7 @@ func (r *AccountSchemaResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	accountSchemaResponse.SourceID = sourceID
-	r.setStateFromAPI(ctx, &data, accountSchemaResponse)
+	r.setStateFromAPI(ctx, &data, accountSchemaResponse, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -276,7 +277,7 @@ func (r *AccountSchemaResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	accountSchema.SourceID = sourceID
-	r.setStateFromAPI(ctx, &data, accountSchema)
+	r.setStateFromAPI(ctx, &data, accountSchema, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -405,7 +406,7 @@ func (r *AccountSchemaResource) buildAttributes(ctx context.Context, data Accoun
 	return attrs
 }
 
-func (r *AccountSchemaResource) setStateFromAPI(ctx context.Context, data *AccountSchemaResourceModel, as *AccountSchema) {
+func (r *AccountSchemaResource) setStateFromAPI(ctx context.Context, data *AccountSchemaResourceModel, as *AccountSchema, diags *diag.Diagnostics) {
 	data.ID = types.StringValue(as.ID)
 	data.Name = types.StringValue(as.Name)
 	data.SourceID = types.StringValue(as.SourceID)
@@ -417,4 +418,55 @@ func (r *AccountSchemaResource) setStateFromAPI(ctx context.Context, data *Accou
 	data.IncludePermissions = types.BoolValue(as.IncludePermissions)
 	data.Modified = types.StringValue(as.Modified)
 	data.Created = types.StringValue(as.Created)
+
+	schemaObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":   types.StringType,
+		"name": types.StringType,
+		"type": types.StringType,
+	}}
+	attrObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"name":           types.StringType,
+		"type":           types.StringType,
+		"description":    types.StringType,
+		"is_group":       types.BoolType,
+		"is_multi_valued": types.BoolType,
+		"is_entitlement": types.BoolType,
+		"schema":         types.ListType{ElemType: schemaObjType},
+	}}
+
+	if as.Attributes != nil {
+		attrModels := make([]AccountSchemaAttributeModel, len(as.Attributes))
+		for i, a := range as.Attributes {
+			var schemaList types.List
+			if a.Schema != nil {
+				schemaModels := []AccountSchemaAttributeSchemaModel{
+					{
+						ID:   types.StringValue(a.Schema.ID),
+						Name: types.StringValue(a.Schema.Name),
+						Type: types.StringValue(a.Schema.Type),
+					},
+				}
+				sl, d := types.ListValueFrom(ctx, schemaObjType, schemaModels)
+				diags.Append(d...)
+				schemaList = sl
+			} else {
+				schemaList, _ = types.ListValue(schemaObjType, []attr.Value{})
+			}
+
+			attrModels[i] = AccountSchemaAttributeModel{
+				Name:          types.StringValue(a.Name),
+				Type:          types.StringValue(a.Type),
+				Description:   types.StringValue(a.Description),
+				IsGroup:       types.BoolValue(a.IsGroup),
+				IsMultiValued: types.BoolValue(a.IsMultiValued),
+				IsEntitlement: types.BoolValue(a.IsEntitlement),
+				Schema:        schemaList,
+			}
+		}
+		attrList, d := types.ListValueFrom(ctx, attrObjType, attrModels)
+		diags.Append(d...)
+		data.Attributes = attrList
+	} else {
+		data.Attributes, _ = types.ListValue(attrObjType, []attr.Value{})
+	}
 }

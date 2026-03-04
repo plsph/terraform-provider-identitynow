@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -283,7 +284,7 @@ func (r *PasswordPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	r.setStateFromAPI(&data, newPP)
+	r.setStateFromAPI(ctx, &data, newPP, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -312,7 +313,7 @@ func (r *PasswordPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	r.setStateFromAPI(&data, pp)
+	r.setStateFromAPI(ctx, &data, pp, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -489,7 +490,7 @@ func (r *PasswordPolicyResource) buildPasswordPolicy(ctx context.Context, data P
 	return pp
 }
 
-func (r *PasswordPolicyResource) setStateFromAPI(data *PasswordPolicyResourceModel, pp *PasswordPolicy) {
+func (r *PasswordPolicyResource) setStateFromAPI(ctx context.Context, data *PasswordPolicyResourceModel, pp *PasswordPolicy, diags *diag.Diagnostics) {
 	data.ID = types.StringValue(pp.ID)
 	data.Name = types.StringValue(pp.Name)
 	data.Description = types.StringValue(pp.Description)
@@ -565,5 +566,56 @@ func (r *PasswordPolicyResource) setStateFromAPI(data *PasswordPolicyResourceMod
 	}
 	if pp.ValidateAgainstAccountName != nil {
 		data.ValidateAgainstAccountName = types.BoolValue(*pp.ValidateAgainstAccountName)
+	}
+
+	// Source IDs
+	if pp.SourceIDs != nil {
+		sourceIDValues := make([]attr.Value, len(pp.SourceIDs))
+		for i, sid := range pp.SourceIDs {
+			sourceIDValues[i] = types.StringValue(sid)
+		}
+		sourceIDList, d := types.ListValue(types.StringType, sourceIDValues)
+		diags.Append(d...)
+		data.SourceIDs = sourceIDList
+	} else {
+		data.SourceIDs = types.ListNull(types.StringType)
+	}
+
+	// Connected Services
+	connSvcObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":                        types.StringType,
+		"external_id":               types.StringType,
+		"name":                      types.StringType,
+		"supports_password_set_date": types.BoolType,
+		"app_count":                 types.Int64Type,
+	}}
+	if pp.ConnectedServices != nil {
+		csModels := make([]ConnectedServiceModel, len(pp.ConnectedServices))
+		for i, cs := range pp.ConnectedServices {
+			csModels[i] = ConnectedServiceModel{
+				ID:                      types.StringValue(cs.ID),
+				ExternalID:              types.StringValue(cs.ExternalID),
+				Name:                    types.StringValue(cs.Name),
+				SupportsPasswordSetDate: types.BoolValue(cs.SupportsPasswordSetDate),
+				AppCount:                types.Int64Value(int64(cs.AppCount)),
+			}
+		}
+		csList, d := types.ListValueFrom(ctx, connSvcObjType, csModels)
+		diags.Append(d...)
+		data.ConnectedServices = csList
+	} else {
+		data.ConnectedServices = types.ListNull(connSvcObjType)
+	}
+
+	// Date Created and Last Updated (interface{} fields)
+	if pp.DateCreated != nil {
+		if dateStr, ok := pp.DateCreated.(string); ok {
+			data.DateCreated = types.StringValue(dateStr)
+		}
+	}
+	if pp.LastUpdated != nil {
+		if dateStr, ok := pp.LastUpdated.(string); ok {
+			data.LastUpdated = types.StringValue(dateStr)
+		}
 	}
 }

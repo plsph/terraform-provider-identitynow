@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -162,6 +163,27 @@ func (r *GovernanceGroupMembersResource) Read(ctx context.Context, req resource.
 	}
 
 	data.GovernanceGroupID = types.StringValue(ggMembers.GovernanceGroupId)
+
+	memberObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":   types.StringType,
+		"name": types.StringType,
+		"type": types.StringType,
+	}}
+	if ggMembers.GovernanceGroupMembersMembers != nil {
+		memberModels := make([]GovernanceGroupMemberModel, len(ggMembers.GovernanceGroupMembersMembers))
+		for i, m := range ggMembers.GovernanceGroupMembersMembers {
+			memberModels[i] = GovernanceGroupMemberModel{
+				ID:   types.StringValue(m.ID),
+				Name: types.StringValue(m.Name),
+				Type: types.StringValue(m.Type),
+			}
+		}
+		memberList, diags := types.ListValueFrom(ctx, memberObjType, memberModels)
+		resp.Diagnostics.Append(diags...)
+		data.Members = memberList
+	} else {
+		data.Members, _ = types.ListValue(memberObjType, []attr.Value{})
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

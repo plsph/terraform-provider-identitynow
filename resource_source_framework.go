@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -208,6 +209,42 @@ func (r *SourceResource) Read(ctx context.Context, req resource.ReadRequest, res
 	data.Connector = types.StringValue(source.Connector)
 	data.DeleteThreshold = types.Int64Value(int64(source.DeleteThreshold))
 	data.Authoritative = types.BoolValue(source.Authoritative)
+
+	objType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":   types.StringType,
+		"type": types.StringType,
+		"name": types.StringType,
+	}}
+
+	if source.Owner != nil {
+		ownerModels := []SourceOwnerModel{
+			{
+				ID:   types.StringValue(source.Owner.ID),
+				Type: types.StringValue(source.Owner.Type),
+				Name: types.StringValue(source.Owner.Name),
+			},
+		}
+		ownerList, diags := types.ListValueFrom(ctx, objType, ownerModels)
+		resp.Diagnostics.Append(diags...)
+		data.Owner = ownerList
+	} else {
+		data.Owner, _ = types.ListValue(objType, []attr.Value{})
+	}
+
+	if source.Cluster != nil {
+		clusterModels := []ClusterModel{
+			{
+				ID:   types.StringValue(source.Cluster.ID),
+				Type: types.StringValue(source.Cluster.Type),
+				Name: types.StringValue(source.Cluster.Name),
+			},
+		}
+		clusterList, diags := types.ListValueFrom(ctx, objType, clusterModels)
+		resp.Diagnostics.Append(diags...)
+		data.Cluster = clusterList
+	} else {
+		data.Cluster, _ = types.ListValue(objType, []attr.Value{})
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -269,6 +270,43 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 	if role.Enabled != nil {
 		data.Enabled = types.BoolValue(*role.Enabled)
+	}
+
+	objType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"id":   types.StringType,
+		"type": types.StringType,
+		"name": types.StringType,
+	}}
+
+	if role.RoleOwner != nil {
+		ownerModels := []OwnerModel{
+			{
+				ID:   types.StringValue(fmt.Sprintf("%v", role.RoleOwner.ID)),
+				Type: types.StringValue(role.RoleOwner.Type),
+				Name: types.StringValue(role.RoleOwner.Name),
+			},
+		}
+		ownerList, diags := types.ListValueFrom(ctx, objType, ownerModels)
+		resp.Diagnostics.Append(diags...)
+		data.Owner = ownerList
+	} else {
+		data.Owner, _ = types.ListValue(objType, []attr.Value{})
+	}
+
+	if role.AccessProfiles != nil {
+		apModels := make([]AccessProfileRefModel, len(role.AccessProfiles))
+		for i, ap := range role.AccessProfiles {
+			apModels[i] = AccessProfileRefModel{
+				ID:   types.StringValue(fmt.Sprintf("%v", ap.ID)),
+				Type: types.StringValue(ap.Type),
+				Name: types.StringValue(ap.Name),
+			}
+		}
+		apList, diags := types.ListValueFrom(ctx, objType, apModels)
+		resp.Diagnostics.Append(diags...)
+		data.AccessProfiles = apList
+	} else {
+		data.AccessProfiles, _ = types.ListValue(objType, []attr.Value{})
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

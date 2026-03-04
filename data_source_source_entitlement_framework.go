@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,7 +34,7 @@ type SourceEntitlementDataSourceModel struct {
 	Requestable            types.Bool   `tfsdk:"requestable"`
 	Created                types.String `tfsdk:"created"`
 	Modified               types.String `tfsdk:"modified"`
-	Owner                  types.String `tfsdk:"owner"`
+	Owner                  types.List   `tfsdk:"owner"`
 	DirectPermissions      types.List   `tfsdk:"direct_permissions"`
 }
 
@@ -93,9 +94,16 @@ func (d *SourceEntitlementDataSource) Schema(ctx context.Context, req datasource
 				Computed:            true,
 				MarkdownDescription: "Last modified timestamp",
 			},
-			"owner": schema.StringAttribute{
+			"owner": schema.ListNestedAttribute{
 				Computed:            true,
 				MarkdownDescription: "Owner",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id":   schema.StringAttribute{Computed: true},
+						"type": schema.StringAttribute{Computed: true},
+						"name": schema.StringAttribute{Computed: true},
+					},
+				},
 			},
 			"direct_permissions": schema.ListAttribute{
 				Computed:            true,
@@ -147,7 +155,8 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	if len(entitlements) == 0 {
-		resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Entitlement with name %s not found in source %s", data.Name.ValueString(), data.SourceID.ValueString()))
+		tflog.Warn(ctx, fmt.Sprintf("Entitlement with name %s not found in source %s, returning null values", data.Name.ValueString(), data.SourceID.ValueString()))
+		setEntitlementNullState(ctx, &data, resp)
 		return
 	}
 
@@ -187,10 +196,44 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 		data.Modified = types.StringNull()
 	}
 
+	// Handle owner
+	ownerObjType := types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"id":   types.StringType,
+			"type": types.StringType,
+			"name": types.StringType,
+		},
+	}
 	if e.Owner != nil {
-		data.Owner = types.StringValue(fmt.Sprintf("%v", e.Owner))
+		if ownerMap, ok := e.Owner.(map[string]interface{}); ok {
+			ownerID := ""
+			ownerType := ""
+			ownerName := ""
+			if v, ok := ownerMap["id"].(string); ok {
+				ownerID = v
+			}
+			if v, ok := ownerMap["type"].(string); ok {
+				ownerType = v
+			}
+			if v, ok := ownerMap["name"].(string); ok {
+				ownerName = v
+			}
+			ownerObj := OwnerModel{
+				ID:   types.StringValue(ownerID),
+				Type: types.StringValue(ownerType),
+				Name: types.StringValue(ownerName),
+			}
+			ownerList, diags := types.ListValueFrom(ctx, ownerObjType, []OwnerModel{ownerObj})
+			resp.Diagnostics.Append(diags...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			data.Owner = ownerList
+		} else {
+			data.Owner = types.ListNull(ownerObjType)
+		}
 	} else {
-		data.Owner = types.StringNull()
+		data.Owner = types.ListNull(ownerObjType)
 	}
 
 	// Handle direct permissions
@@ -210,4 +253,29 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func setEntitlementNullState(ctx context.Context, data *SourceEntitlementDataSourceModel, resp *datasource.ReadResponse) {
+	ownerObjType := types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"id":   types.StringType,
+			"type": types.StringType,
+			"name": types.StringType,
+		},
+	}
+
+	data.ID = types.StringNull()
+	data.Description = types.StringNull()
+	data.SourceName = types.StringNull()
+	data.Attribute = types.StringNull()
+	data.Value = types.StringNull()
+	data.SourceSchemaObjectType = types.StringNull()
+	data.Privileged = types.BoolNull()
+	data.Requestable = types.BoolNull()
+	data.Created = types.StringNull()
+	data.Modified = types.StringNull()
+	data.Owner = types.ListNull(ownerObjType)
+	data.DirectPermissions = types.ListNull(types.StringType)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, data)...)
 }
