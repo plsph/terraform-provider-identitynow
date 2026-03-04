@@ -4,30 +4,20 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
 
-var (
-	testAccProvider               *schema.Provider
-	testAccProviders              map[string]*schema.Provider
-	testAccCheckIdentitynowConfig string
-)
-
-func init() {
-	testAccProvider = Provider()
-	testAccProviders = map[string]*schema.Provider{
-		"identitynow": testAccProvider,
-	}
+var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
+	"identitynow": providerserver.NewProtocol6WithError(New("test")()),
 }
 
 func TestProvider(t *testing.T) {
-	if err := Provider().InternalValidate(); err != nil {
-		t.Fatalf("Error: %s", err)
+	// Verify the provider can be instantiated without error
+	p := New("test")()
+	if p == nil {
+		t.Fatal("Provider returned nil")
 	}
-}
-
-func TestProvider_impl(t *testing.T) {
-	var _ *schema.Provider = Provider()
 }
 
 func testAccPreCheck(t *testing.T) {
