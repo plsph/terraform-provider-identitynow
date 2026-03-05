@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -11,9 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -48,11 +49,11 @@ type EntitlementRefModel struct {
 }
 
 type AccessRequestConfigModel struct {
-	CommentsRequired       types.Bool `tfsdk:"comments_required"`
-	DenialCommentsRequired types.Bool `tfsdk:"denial_comments_required"`
-	ReauthorizationRequired types.Bool `tfsdk:"reauthorization_required"`
-	RequireEndDate         types.Bool `tfsdk:"require_end_date"`
-	ApprovalSchemes        types.List `tfsdk:"approval_schemes"`
+	CommentsRequired           types.Bool `tfsdk:"comments_required"`
+	DenialCommentsRequired     types.Bool `tfsdk:"denial_comments_required"`
+	ReauthorizationRequired    types.Bool `tfsdk:"reauthorization_required"`
+	RequireEndDate             types.Bool `tfsdk:"require_end_date"`
+	ApprovalSchemes            types.List `tfsdk:"approval_schemes"`
 	MaxPermittedAccessDuration types.List `tfsdk:"max_permitted_access_duration"`
 }
 
@@ -482,10 +483,10 @@ func (r *AccessProfileResource) Update(ctx context.Context, req resource.UpdateR
 		if len(arcModels) > 0 {
 			arc := arcModels[0]
 			arcValue := map[string]interface{}{
-				"commentsRequired":       arc.CommentsRequired.ValueBool(),
-				"denialCommentsRequired": arc.DenialCommentsRequired.ValueBool(),
+				"commentsRequired":        arc.CommentsRequired.ValueBool(),
+				"denialCommentsRequired":  arc.DenialCommentsRequired.ValueBool(),
 				"reauthorizationRequired": arc.ReauthorizationRequired.ValueBool(),
-				"requireEndDate":         arc.RequireEndDate.ValueBool(),
+				"requireEndDate":          arc.RequireEndDate.ValueBool(),
 			}
 
 			if !arc.ApprovalSchemes.IsNull() {
@@ -630,11 +631,26 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		"type": types.StringType,
 	}}
 	if ap.Entitlements != nil {
+		// Get existing entitlements from state/plan for case-insensitive name matching
+		var existingEnts []EntitlementRefModel
+		if !data.Entitlements.IsNull() {
+			data.Entitlements.ElementsAs(ctx, &existingEnts, false)
+		}
+
 		entModels := make([]EntitlementRefModel, len(ap.Entitlements))
 		for i, e := range ap.Entitlements {
+			name := e.Name
+			// Preserve state/plan name if it matches case-insensitively (AD is case-insensitive)
+			for _, existing := range existingEnts {
+				if existing.ID.ValueString() == e.ID && strings.EqualFold(existing.Name.ValueString(), name) {
+					tflog.Warn(ctx, fmt.Sprintf("Entitlement name %s differs from config %s", name, existing.Name.ValueString()))
+					name = existing.Name.ValueString()
+					break
+				}
+			}
 			entModels[i] = EntitlementRefModel{
 				ID:   types.StringValue(fmt.Sprintf("%v", e.ID)),
-				Name: types.StringValue(e.Name),
+				Name: types.StringValue(name),
 				Type: types.StringValue(e.Type),
 			}
 		}
