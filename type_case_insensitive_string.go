@@ -260,3 +260,32 @@ func (m useStateForCaseInsensitiveSet) PlanModifySet(ctx context.Context, req pl
 	// Sets are case-insensitively equal; use prior state to prevent drift.
 	resp.PlanValue = req.StateValue
 }
+
+// useStateForCaseInsensitiveString is a plan modifier that prevents drift caused
+// by case differences between config and state for individual string attributes.
+type useStateForCaseInsensitiveString struct{}
+
+func UseStateForCaseInsensitiveString() planmodifier.String {
+	return useStateForCaseInsensitiveString{}
+}
+
+func (m useStateForCaseInsensitiveString) Description(ctx context.Context) string {
+	return "Uses the prior state value when the planned string differs only in case."
+}
+
+func (m useStateForCaseInsensitiveString) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m useStateForCaseInsensitiveString) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.StateValue.IsNull() || req.StateValue.IsUnknown() {
+		return
+	}
+	if resp.PlanValue.IsNull() || resp.PlanValue.IsUnknown() {
+		return
+	}
+
+	if strings.EqualFold(req.StateValue.ValueString(), resp.PlanValue.ValueString()) {
+		resp.PlanValue = req.StateValue
+	}
+}

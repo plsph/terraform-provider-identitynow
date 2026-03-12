@@ -1882,102 +1882,6 @@ func (c *Client) DeleteGovernanceGroupMembers(ctx context.Context, governanceGro
 	return nil
 }
 
-func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
-	// Apply rate limiting before making any API requests
-	tflog.Trace(ctx, "Before rate limiter", map[string]interface{}{
-		"url": req.URL.String(),
-	})
-	if err := c.rateLimiter.Wait(ctx); err != nil {
-		tflog.Debug(ctx, "Rate limiting wait failed", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return fmt.Errorf("rate limiting failed: %w", err)
-	}
-
-	tflog.Trace(ctx, "Sending HTTP Request", map[string]interface{}{
-		"method":       req.Method,
-		"url":          req.URL.String(),
-		"headers":      req.Header,
-		"request_body": req.Body,
-	})
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
-
-	res, err := c.HTTPClient.Do(req)
-	if err != nil {
-		tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
-		return err
-	}
-
-	defer res.Body.Close()
-
-	tflog.Trace(ctx, "Received HTTP Response", map[string]interface{}{
-		"status_code":      res.StatusCode,
-		"response_headers": res.Header,
-	})
-
-	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
-		var errRes errorResponse
-		err = json.NewDecoder(res.Body).Decode(&errRes)
-		if err == nil {
-			if res.StatusCode == http.StatusTooManyRequests {
-				tflog.Error(ctx, "API Rate limit exceeded", map[string]interface{}{
-					"status_code": res.StatusCode,
-				})
-				return errors.New("rate limit exceeded (429)")
-			}
-			if res.StatusCode == http.StatusNotFound {
-				// on the return statement, an interface value of type error is created by the compiler and bound to the pointer to satisfy the return argument.
-				return &NotFoundError{"status not found"}
-			}
-			if len(errRes.Messages) == 0 {
-				tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
-					"status_code": res.StatusCode,
-				})
-				return errors.New("unknown error")
-			}
-			return errors.New(errRes.Messages[0].Text)
-		}
-
-		// Handle 429 without error response body
-		if res.StatusCode == http.StatusTooManyRequests {
-			tflog.Error(ctx, "Rate limit exceeded", map[string]interface{}{
-				"status_code": res.StatusCode,
-			})
-			return errors.New("rate limit exceeded (429)")
-		}
-
-		if res.StatusCode == http.StatusGatewayTimeout {
-			tflog.Error(ctx, "Gateway Timeout error", map[string]interface{}{
-				"status_code": res.StatusCode,
-			})
-			return errors.New("Gateway Timeout error (504)")
-		}
-
-		tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
-			"status_code": res.StatusCode,
-		})
-		return errors.New("unknown error")
-	}
-
-	if res.StatusCode == 204 && req.Method == "DELETE" {
-		tflog.Debug(ctx, "Resource deleted successfully")
-		return nil
-	}
-
-	if err = json.NewDecoder(res.Body).Decode(&v); err != nil {
-		tflog.Error(ctx, "JSON decoder error", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return err
-	}
-
-	tflog.Trace(ctx, "Parsed HTTP Response", map[string]interface{}{
-		"response_body": v,
-	})
-	return nil
-}
-
 func (c *Client) GetTaggedObject(ctx context.Context, objectType string, objectID string) (*TaggedObject, error) {
 	taggedObjectURL := fmt.Sprintf("%s/v2025/tagged-objects/%s/%s", c.BaseURL, url.PathEscape(objectType), url.PathEscape(objectID))
 	tflog.Debug(ctx, "Creating HTTP request to get tagged object", map[string]interface{}{
@@ -2071,5 +1975,101 @@ func (c *Client) DeleteTaggedObject(ctx context.Context, objectType string, obje
 		return err
 	}
 
+	return nil
+}
+
+func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
+	// Apply rate limiting before making any API requests
+	tflog.Trace(ctx, "Before rate limiter", map[string]interface{}{
+		"url": req.URL.String(),
+	})
+	if err := c.rateLimiter.Wait(ctx); err != nil {
+		tflog.Debug(ctx, "Rate limiting wait failed", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return fmt.Errorf("rate limiting failed: %w", err)
+	}
+
+	tflog.Trace(ctx, "Sending HTTP Request", map[string]interface{}{
+		"method":       req.Method,
+		"url":          req.URL.String(),
+		"headers":      req.Header,
+		"request_body": req.Body,
+	})
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
+
+	res, err := c.HTTPClient.Do(req)
+	if err != nil {
+		tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
+		return err
+	}
+
+	defer res.Body.Close()
+
+	tflog.Trace(ctx, "Received HTTP Response", map[string]interface{}{
+		"status_code":      res.StatusCode,
+		"response_headers": res.Header,
+	})
+
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
+		var errRes errorResponse
+		err = json.NewDecoder(res.Body).Decode(&errRes)
+		if err == nil {
+			if res.StatusCode == http.StatusTooManyRequests {
+				tflog.Error(ctx, "API Rate limit exceeded", map[string]interface{}{
+					"status_code": res.StatusCode,
+				})
+				return errors.New("rate limit exceeded (429)")
+			}
+			if res.StatusCode == http.StatusNotFound {
+				// on the return statement, an interface value of type error is created by the compiler and bound to the pointer to satisfy the return argument.
+				return &NotFoundError{"status not found"}
+			}
+			if len(errRes.Messages) == 0 {
+				tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
+					"status_code": res.StatusCode,
+				})
+				return errors.New("unknown error")
+			}
+			return errors.New(errRes.Messages[0].Text)
+		}
+
+		// Handle 429 without error response body
+		if res.StatusCode == http.StatusTooManyRequests {
+			tflog.Error(ctx, "Rate limit exceeded", map[string]interface{}{
+				"status_code": res.StatusCode,
+			})
+			return errors.New("rate limit exceeded (429)")
+		}
+
+		if res.StatusCode == http.StatusGatewayTimeout {
+			tflog.Error(ctx, "Gateway Timeout error", map[string]interface{}{
+				"status_code": res.StatusCode,
+			})
+			return errors.New("Gateway Timeout error (504)")
+		}
+
+		tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
+			"status_code": res.StatusCode,
+		})
+		return errors.New("unknown error")
+	}
+
+	if res.StatusCode == 204 && req.Method == "DELETE" {
+		tflog.Debug(ctx, "Resource deleted successfully")
+		return nil
+	}
+
+	if err = json.NewDecoder(res.Body).Decode(&v); err != nil {
+		tflog.Error(ctx, "JSON decoder error", map[string]interface{}{
+			"error": err.Error(),
+		})
+		return err
+	}
+
+	tflog.Trace(ctx, "Parsed HTTP Response", map[string]interface{}{
+		"response_body": v,
+	})
 	return nil
 }

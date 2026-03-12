@@ -132,6 +132,9 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 						"name": schema.StringAttribute{
 							Required:            true,
 							MarkdownDescription: "Entitlement name",
+							PlanModifiers: []planmodifier.String{
+								UseStateForCaseInsensitiveString(),
+							},
 						},
 						"type": schema.StringAttribute{
 							Optional:            true,
