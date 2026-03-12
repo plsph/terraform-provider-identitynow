@@ -204,11 +204,11 @@ func (p *IdentityNowProvider) Configure(ctx context.Context, req provider.Config
 	}
 
 	tflog.Debug(ctx, "Provider configuration", map[string]interface{}{
-		"api_url":                    data.ApiUrl.ValueString(),
-		"credentials_pool_size":      len(credentials),
-		"max_client_pool_size":       data.MaxClientPoolSize.ValueInt64(),
-		"default_client_pool_size":   data.DefaultClientPoolSize.ValueInt64(),
-		"client_request_rate_limit":  data.ClientRequestRateLimit.ValueInt64(),
+		"api_url":                   data.ApiUrl.ValueString(),
+		"credentials_pool_size":     len(credentials),
+		"max_client_pool_size":      data.MaxClientPoolSize.ValueInt64(),
+		"default_client_pool_size":  data.DefaultClientPoolSize.ValueInt64(),
+		"client_request_rate_limit": data.ClientRequestRateLimit.ValueInt64(),
 	})
 
 	config := &Config{
@@ -240,6 +240,7 @@ func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.R
 		NewAccountSchemaResource,
 		NewPasswordPolicyResource,
 		NewScheduleAccountAggregationResource,
+		NewTaggedObjectResource,
 	}
 }
 
