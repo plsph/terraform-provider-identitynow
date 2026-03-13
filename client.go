@@ -2043,6 +2043,13 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 			return errors.New("rate limit exceeded (429)")
 		}
 
+		if res.StatusCode == http.StatusBadGateway {
+			tflog.Error(ctx, "Bad Gateway error", map[string]interface{}{
+				"status_code": res.StatusCode,
+			})
+			return errors.New("Bad Gateway error (502)")
+		}
+
 		if res.StatusCode == http.StatusGatewayTimeout {
 			tflog.Error(ctx, "Gateway Timeout error", map[string]interface{}{
 				"status_code": res.StatusCode,
@@ -2053,7 +2060,7 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 		tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
 			"status_code": res.StatusCode,
 		})
-		return errors.New("unknown error")
+		return errors.New(fmt.Sprintf("unknown error, code: %d", res.StatusCode))
 	}
 
 	if res.StatusCode == 204 && req.Method == "DELETE" {
