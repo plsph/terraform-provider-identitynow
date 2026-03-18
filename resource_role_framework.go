@@ -39,6 +39,7 @@ type RoleResourceModel struct {
 	Entitlements   types.List   `tfsdk:"entitlements"`
 	Membership     types.List   `tfsdk:"membership"`
 	Requestable    types.Bool   `tfsdk:"requestable"`
+	Dimensional    types.Bool   `tfsdk:"dimensional"`
 	Enabled        types.Bool   `tfsdk:"enabled"`
 }
 
@@ -112,6 +113,14 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			},
 			"requestable": schema.BoolAttribute{
 				MarkdownDescription: "Whether this role is requestable",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"dimensional": schema.BoolAttribute{
+				MarkdownDescription: "Whether this role is dimensional",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Bool{
@@ -349,6 +358,11 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		role.Requestable = &requestable
 	}
 
+	if !data.Dimensional.IsNull() {
+		dimensional := data.Dimensional.ValueBool()
+		role.Dimensional = &dimensional
+	}
+
 	if !data.Enabled.IsNull() {
 		enabled := data.Enabled.ValueBool()
 		role.Enabled = &enabled
@@ -387,6 +401,9 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	data.ID = types.StringValue(newRole.ID)
 	if newRole.Requestable != nil {
 		data.Requestable = types.BoolValue(*newRole.Requestable)
+	}
+	if newRole.Dimensional != nil {
+		data.Dimensional = types.BoolValue(*newRole.Dimensional)
 	}
 	if newRole.Enabled != nil {
 		data.Enabled = types.BoolValue(*newRole.Enabled)
@@ -434,6 +451,9 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	if role.Requestable != nil {
 		data.Requestable = types.BoolValue(*role.Requestable)
+	}
+	if role.Dimensional != nil {
+		data.Dimensional = types.BoolValue(*role.Dimensional)
 	}
 	if role.Enabled != nil {
 		data.Enabled = types.BoolValue(*role.Enabled)
@@ -596,6 +616,15 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			Op:    "replace",
 			Path:  "/requestable",
 			Value: data.Requestable.ValueBool(),
+		})
+	}
+
+	// Patch dimensional
+	if !data.Dimensional.IsNull() {
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/dimensional",
+			Value: data.Dimensional.ValueBool(),
 		})
 	}
 

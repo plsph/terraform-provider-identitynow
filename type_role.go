@@ -9,6 +9,7 @@ type Role struct {
 	AccessProfiles       []*ObjectInfo   `json:"accessProfiles,omitempty"`
 	Entitlements         []*ObjectInfo   `json:"entitlements,omitempty"`
 	LegacyMembershipInfo interface{}     `json:"legacyMembershipInfo,omitempty"`
+	Dimensional          *bool           `json:"dimensional,omitempty"`
 	Enabled              *bool           `json:"enabled,omitempty"`
 	Segments             []interface{}   `json:"segments,omitempty"`
 	Membership           *RoleMembership `json:"membership,omitempty"`

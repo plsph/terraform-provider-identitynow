@@ -355,7 +355,13 @@ func (r *DimensionResource) Read(ctx context.Context, req resource.ReadRequest, 
 	}
 
 	data.Name = types.StringValue(dimension.Name)
-	data.Description = types.StringValue(dimension.Description)
+	if dimension.Description != "" {
+		data.Description = types.StringValue(dimension.Description)
+	} else if data.Description.IsNull() {
+		// API returned null/empty and user didn't set description — keep null
+	} else {
+		data.Description = types.StringValue(dimension.Description)
+	}
 
 	objType := types.ObjectType{AttrTypes: map[string]attr.Type{
 		"id":   types.StringType,
@@ -438,8 +444,14 @@ func (r *DimensionResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	updatePatches := []*UpdateDimension{
-		{Op: "replace", Path: "/description", Value: data.Description.ValueString()},
+	updatePatches := []*UpdateDimension{}
+
+	if !data.Description.IsNull() {
+		updatePatches = append(updatePatches, &UpdateDimension{
+			Op:    "replace",
+			Path:  "/description",
+			Value: data.Description.ValueString(),
+		})
 	}
 
 	// Patch owner
