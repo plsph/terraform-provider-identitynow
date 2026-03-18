@@ -2016,6 +2016,120 @@ func (c *Client) DeleteTaggedObject(ctx context.Context, objectType string, obje
 	return nil
 }
 
+func (c *Client) GetDimension(ctx context.Context, roleId string, dimensionId string) (*Dimension, error) {
+	dimensionURL := fmt.Sprintf("%s/v2025/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
+	tflog.Debug(ctx, "Creating HTTP request to get dimension", map[string]interface{}{
+		"method":       "GET",
+		"url":          dimensionURL,
+		"role_id":      roleId,
+		"dimension_id": dimensionId,
+	})
+	req, err := http.NewRequest("GET", dimensionURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := Dimension{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) CreateDimension(ctx context.Context, roleId string, dimension *Dimension) (*Dimension, error) {
+	body, err := json.Marshal(&dimension)
+	if err != nil {
+		return nil, err
+	}
+
+	createURL := fmt.Sprintf("%s/v2025/roles/%s/dimensions", c.BaseURL, roleId)
+	tflog.Debug(ctx, "Creating HTTP request to create dimension", map[string]interface{}{
+		"method":  "POST",
+		"url":     createURL,
+		"role_id": roleId,
+	})
+	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := Dimension{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) UpdateDimension(ctx context.Context, roleId string, dimensionId string, patches []*UpdateDimension) (*Dimension, error) {
+	body, err := json.Marshal(&patches)
+	if err != nil {
+		return nil, err
+	}
+	updateURL := fmt.Sprintf("%s/v2025/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
+	tflog.Debug(ctx, "Creating HTTP request to update dimension", map[string]interface{}{
+		"method":       "PATCH",
+		"url":          updateURL,
+		"role_id":      roleId,
+		"dimension_id": dimensionId,
+	})
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := Dimension{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) DeleteDimension(ctx context.Context, roleId string, dimensionId string) error {
+	deleteURL := fmt.Sprintf("%s/v2025/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
+	tflog.Debug(ctx, "Creating HTTP request to delete dimension", map[string]interface{}{
+		"method":       "DELETE",
+		"url":          deleteURL,
+		"role_id":      roleId,
+		"dimension_id": dimensionId,
+	})
+	req, err := http.NewRequest("DELETE", deleteURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	var res interface{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
 	// Apply rate limiting before making any API requests
 	tflog.Trace(ctx, "Before rate limiter", map[string]interface{}{
