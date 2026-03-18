@@ -55,14 +55,9 @@ resource "identitynow_role" "advanced" {
     name = "Example Entitlement"
   }
 
-  dimension_refs {
-    id   = "2c91808a7813090a017813b6301f5678"
-    type = "DIMENSION"
-    name = "Example Dimension"
-  }
-
   requestable = true
   enabled     = true
+  dimensional = true
 }
 ```
 
@@ -153,14 +148,14 @@ resource "identitynow_role" "compound_membership" {
 The following arguments are supported:
 
 * `name` - (Required) The name of the role. Changing this forces a new resource to be created.
-* `description` - (Required) A description of the role.
+* `description` - (Optional) A description of the role.
 * `owner` - (Optional) An `owner` block as defined below.
 * `access_profiles` - (Optional) One or more `access_profiles` blocks as defined below.
 * `entitlements` - (Optional) One or more `entitlements` blocks as defined below.
-* `dimension_refs` - (Optional) One or more `dimension_refs` blocks as defined below.
 * `membership` - (Optional) A `membership` block as defined below.
 * `requestable` - (Optional) Whether this role is requestable via access requests.
 * `enabled` - (Optional) Whether this role is enabled.
+* `dimensional` - (Optional) Whether this role is dimensional.
 
 ---
 
@@ -185,14 +180,6 @@ An `entitlements` block supports:
 * `id` - (Required) The entitlement ID.
 * `type` - (Required) The type (e.g. `ENTITLEMENT`).
 * `name` - (Required) The entitlement name.
-
----
-
-A `dimension_refs` block supports:
-
-* `id` - (Required) The dimension ID.
-* `type` - (Required) The type (e.g. `DIMENSION`).
-* `name` - (Required) The dimension name.
 
 ---
 

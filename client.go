@@ -933,41 +933,6 @@ func (c *Client) GetAccountSchema(ctx context.Context, sourceId string, id strin
 	return &res, nil
 }
 
-//func (c *Client) CreateAccountSchema(ctx context.Context, accountSchema *AccountSchema) (*AccountSchema, error) {
-//for _, value := range updateAccountSchema {
-//	log.Printf("arrBody: %+v, value: %+v", value, value.Value)
-//}
-//log.Printf("arrBody type: %+v", reflect.TypeOf(updateAccountSchema))
-//body, err := json.Marshal(&updateAccountSchema)
-//log.Printf("body: %+v", string(body))
-//
-//if err != nil {
-//	return nil, err
-//}
-//req, err := http.NewRequest("PATCH", fmt.Sprintf("%s/v2025/sources/%s/schemas/%s", c.BaseURL, sourceId, schemaId), bytes.NewBuffer(body))
-//if err != nil {
-//	tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-//	return nil, err
-//}
-//
-//req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
-//req.Header.Set("Accept", "application/json; charset=utf-8")
-//
-//req = req.WithContext(ctx)
-//res := AccountSchema{}
-//if err := c.sendRequest(ctx, req, &res); err != nil {
-//	log.Printf("get body: %+v\n", req.GetBody)
-//
-//	tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-//	// Error already logged above
-//	return nil, err
-//}
-//for _, value := range updateAccountSchema {
-//	log.Printf("arrBody: %+v, value: %+v", value, value.Value)
-//}
-//return &res, nil
-//}
-
 func (c *Client) UpdateAccountSchema(ctx context.Context, accountSchema *AccountSchema) (*AccountSchema, error) {
 	body, err := json.Marshal(&accountSchema)
 	if err != nil {

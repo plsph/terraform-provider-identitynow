@@ -27,7 +27,7 @@ terraform {
   required_providers {
     identitynow = {
       source  = "plsph/identitynow"
-      version = "=0.10.0"
+      version = "=0.13.0"
     }
   }
 }
@@ -102,4 +102,4 @@ The following arguments are supported:
 
 * `default_client_pool_size` - (Optional) API client default pool size for communication with the IdentityNow API.
 
-* `client_request_rate_limit`` - (Optional) API client request limit per second (per client/thread) for communication with the IdentityNow API.
+* `client_request_rate_limit` - (Optional) API client request limit per second (per client/thread) for communication with the IdentityNow API.
