@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -30,13 +31,16 @@ type RoleResource struct {
 
 // RoleResourceModel describes the resource data model
 type RoleResourceModel struct {
-	ID              types.String `tfsdk:"id"`
-	Name            types.String `tfsdk:"name"`
-	Description     types.String `tfsdk:"description"`
-	Owner           types.List   `tfsdk:"owner"`
-	AccessProfiles  types.List   `tfsdk:"access_profiles"`
-	Requestable     types.Bool   `tfsdk:"requestable"`
-	Enabled         types.Bool   `tfsdk:"enabled"`
+	ID             types.String `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Description    types.String `tfsdk:"description"`
+	Owner          types.List   `tfsdk:"owner"`
+	AccessProfiles types.List   `tfsdk:"access_profiles"`
+	Entitlements   types.List   `tfsdk:"entitlements"`
+	DimensionRefs  types.List   `tfsdk:"dimension_refs"`
+	Membership     types.List   `tfsdk:"membership"`
+	Requestable    types.Bool   `tfsdk:"requestable"`
+	Enabled        types.Bool   `tfsdk:"enabled"`
 }
 
 type OwnerModel struct {
@@ -49,6 +53,43 @@ type AccessProfileRefModel struct {
 	ID   types.String `tfsdk:"id"`
 	Type types.String `tfsdk:"type"`
 	Name types.String `tfsdk:"name"`
+}
+
+type DimensionRefModel struct {
+	ID   types.String `tfsdk:"id"`
+	Type types.String `tfsdk:"type"`
+	Name types.String `tfsdk:"name"`
+}
+
+type MembershipModel struct {
+	Type     types.String `tfsdk:"type"`
+	Criteria types.List   `tfsdk:"criteria"`
+}
+
+type CriteriaModel struct {
+	Operation   types.String `tfsdk:"operation"`
+	StringValue types.String `tfsdk:"string_value"`
+	Key         types.List   `tfsdk:"key"`
+	Children    types.List   `tfsdk:"children"`
+}
+
+type CriteriaChildModel struct {
+	Operation   types.String `tfsdk:"operation"`
+	StringValue types.String `tfsdk:"string_value"`
+	Key         types.List   `tfsdk:"key"`
+	Children    types.List   `tfsdk:"children"`
+}
+
+type CriteriaLeafModel struct {
+	Operation   types.String `tfsdk:"operation"`
+	StringValue types.String `tfsdk:"string_value"`
+	Key         types.List   `tfsdk:"key"`
+}
+
+type CriteriaKeyModel struct {
+	Type     types.String `tfsdk:"type"`
+	Property types.String `tfsdk:"property"`
+	SourceId types.String `tfsdk:"source_id"`
 }
 
 func (r *RoleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -71,7 +112,7 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-}, 			},
+				}},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Role description",
 				Required:            true,
@@ -128,6 +169,120 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 						"name": schema.StringAttribute{
 							MarkdownDescription: "Access profile name",
 							Required:            true,
+						},
+					},
+				},
+			},
+			"entitlements": schema.ListNestedBlock{
+				MarkdownDescription: "Entitlements assigned to this role",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: "Entitlement ID",
+							Required:            true,
+						},
+						"type": schema.StringAttribute{
+							MarkdownDescription: "Entitlement type",
+							Required:            true,
+						},
+						"name": schema.StringAttribute{
+							MarkdownDescription: "Entitlement name",
+							Required:            true,
+						},
+					},
+				},
+			},
+			"dimension_refs": schema.ListNestedBlock{
+				MarkdownDescription: "Dimension references for this role",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: "Dimension ID",
+							Required:            true,
+						},
+						"type": schema.StringAttribute{
+							MarkdownDescription: "Dimension type",
+							Required:            true,
+						},
+						"name": schema.StringAttribute{
+							MarkdownDescription: "Dimension name",
+							Required:            true,
+						},
+					},
+				},
+			},
+			"membership": schema.ListNestedBlock{
+				MarkdownDescription: "Role membership definition. Defines how identities are assigned to this role.",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{
+							MarkdownDescription: "Membership type (STANDARD or IDENTITY_LIST)",
+							Required:            true,
+						},
+					},
+					Blocks: map[string]schema.Block{
+						"criteria": schema.ListNestedBlock{
+							MarkdownDescription: "Membership criteria",
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"operation": schema.StringAttribute{
+										MarkdownDescription: "Criteria operation (EQUALS, NOT_EQUALS, CONTAINS, AND, OR, etc.)",
+										Required:            true,
+									},
+									"string_value": schema.StringAttribute{
+										MarkdownDescription: "Value to match against",
+										Optional:            true,
+									},
+								},
+								Blocks: map[string]schema.Block{
+									"key": schema.ListNestedBlock{
+										MarkdownDescription: "Criteria key identifying the identity attribute",
+										NestedObject:        criteriaKeyBlockObject(),
+									},
+									"children": schema.ListNestedBlock{
+										MarkdownDescription: "Child criteria (level 2)",
+										NestedObject: schema.NestedBlockObject{
+											Attributes: map[string]schema.Attribute{
+												"operation": schema.StringAttribute{
+													MarkdownDescription: "Criteria operation",
+													Required:            true,
+												},
+												"string_value": schema.StringAttribute{
+													MarkdownDescription: "Value to match against",
+													Optional:            true,
+												},
+											},
+											Blocks: map[string]schema.Block{
+												"key": schema.ListNestedBlock{
+													MarkdownDescription: "Criteria key identifying the identity attribute",
+													NestedObject:        criteriaKeyBlockObject(),
+												},
+												"children": schema.ListNestedBlock{
+													MarkdownDescription: "Child criteria (level 3)",
+													NestedObject: schema.NestedBlockObject{
+														Attributes: map[string]schema.Attribute{
+															"operation": schema.StringAttribute{
+																MarkdownDescription: "Criteria operation",
+																Required:            true,
+															},
+															"string_value": schema.StringAttribute{
+																MarkdownDescription: "Value to match against",
+																Optional:            true,
+															},
+														},
+														Blocks: map[string]schema.Block{
+															"key": schema.ListNestedBlock{
+																MarkdownDescription: "Criteria key identifying the identity attribute",
+																NestedObject:        criteriaKeyBlockObject(),
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -198,6 +353,40 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		}
 	}
 
+	// Parse entitlements
+	if !data.Entitlements.IsNull() {
+		var ents []EntitlementRefModel
+		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &ents, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		role.Entitlements = make([]*ObjectInfo, len(ents))
+		for i, e := range ents {
+			role.Entitlements[i] = &ObjectInfo{
+				ID:   e.ID.ValueString(),
+				Type: e.Type.ValueString(),
+				Name: e.Name.ValueString(),
+			}
+		}
+	}
+
+	// Parse dimension refs
+	if !data.DimensionRefs.IsNull() {
+		var dims []DimensionRefModel
+		resp.Diagnostics.Append(data.DimensionRefs.ElementsAs(ctx, &dims, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		role.DimensionRefs = make([]*ObjectInfo, len(dims))
+		for i, d := range dims {
+			role.DimensionRefs[i] = &ObjectInfo{
+				ID:   d.ID.ValueString(),
+				Type: d.Type.ValueString(),
+				Name: d.Name.ValueString(),
+			}
+		}
+	}
+
 	if !data.Requestable.IsNull() {
 		requestable := data.Requestable.ValueBool()
 		role.Requestable = &requestable
@@ -206,6 +395,21 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	if !data.Enabled.IsNull() {
 		enabled := data.Enabled.ValueBool()
 		role.Enabled = &enabled
+	}
+
+	// Parse membership
+	if !data.Membership.IsNull() {
+		var memberships []MembershipModel
+		resp.Diagnostics.Append(data.Membership.ElementsAs(ctx, &memberships, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if len(memberships) > 0 {
+			role.Membership = membershipModelToAPI(ctx, memberships[0], &resp.Diagnostics)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
 	}
 
 	tflog.Info(ctx, "Creating Role", map[string]interface{}{"name": role.Name})
@@ -309,6 +513,44 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		data.AccessProfiles, _ = types.ListValue(objType, []attr.Value{})
 	}
 
+	if role.Entitlements != nil {
+		entModels := make([]EntitlementRefModel, len(role.Entitlements))
+		for i, e := range role.Entitlements {
+			entModels[i] = EntitlementRefModel{
+				ID:   types.StringValue(fmt.Sprintf("%v", e.ID)),
+				Type: types.StringValue(e.Type),
+				Name: types.StringValue(e.Name),
+			}
+		}
+		entList, diags := types.ListValueFrom(ctx, objType, entModels)
+		resp.Diagnostics.Append(diags...)
+		data.Entitlements = entList
+	} else {
+		data.Entitlements, _ = types.ListValue(objType, []attr.Value{})
+	}
+
+	if role.DimensionRefs != nil {
+		dimModels := make([]DimensionRefModel, len(role.DimensionRefs))
+		for i, d := range role.DimensionRefs {
+			dimModels[i] = DimensionRefModel{
+				ID:   types.StringValue(fmt.Sprintf("%v", d.ID)),
+				Type: types.StringValue(d.Type),
+				Name: types.StringValue(d.Name),
+			}
+		}
+		dimList, diags := types.ListValueFrom(ctx, objType, dimModels)
+		resp.Diagnostics.Append(diags...)
+		data.DimensionRefs = dimList
+	} else {
+		data.DimensionRefs, _ = types.ListValue(objType, []attr.Value{})
+	}
+
+	// Map membership from API response
+	data.Membership = membershipAPIToState(ctx, role.Membership, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -328,9 +570,131 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	// Build update role patches
+	// Build update patches for all mutable fields
 	updatePatches := []*UpdateRole{
-		{Op: "replace", Path: "/description", Value: []interface{}{data.Description.ValueString()}},
+		{Op: "replace", Path: "/description", Value: data.Description.ValueString()},
+	}
+
+	// Patch owner
+	var owners []OwnerModel
+	resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if len(owners) > 0 {
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:   "replace",
+			Path: "/owner",
+			Value: map[string]interface{}{
+				"id":   owners[0].ID.ValueString(),
+				"type": owners[0].Type.ValueString(),
+				"name": owners[0].Name.ValueString(),
+			},
+		})
+	}
+
+	// Patch access profiles
+	if !data.AccessProfiles.IsNull() {
+		var aps []AccessProfileRefModel
+		resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &aps, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		apValues := make([]interface{}, len(aps))
+		for i, ap := range aps {
+			apValues[i] = map[string]interface{}{
+				"id":   ap.ID.ValueString(),
+				"type": ap.Type.ValueString(),
+				"name": ap.Name.ValueString(),
+			}
+		}
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/accessProfiles",
+			Value: apValues,
+		})
+	}
+
+	// Patch entitlements
+	if !data.Entitlements.IsNull() {
+		var ents []EntitlementRefModel
+		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &ents, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		entValues := make([]interface{}, len(ents))
+		for i, e := range ents {
+			entValues[i] = map[string]interface{}{
+				"id":   e.ID.ValueString(),
+				"type": e.Type.ValueString(),
+				"name": e.Name.ValueString(),
+			}
+		}
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/entitlements",
+			Value: entValues,
+		})
+	}
+
+	// Patch dimension refs
+	if !data.DimensionRefs.IsNull() {
+		var dims []DimensionRefModel
+		resp.Diagnostics.Append(data.DimensionRefs.ElementsAs(ctx, &dims, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		dimValues := make([]interface{}, len(dims))
+		for i, d := range dims {
+			dimValues[i] = map[string]interface{}{
+				"id":   d.ID.ValueString(),
+				"type": d.Type.ValueString(),
+				"name": d.Name.ValueString(),
+			}
+		}
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/dimensionRefs",
+			Value: dimValues,
+		})
+	}
+
+	// Patch requestable
+	if !data.Requestable.IsNull() {
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/requestable",
+			Value: data.Requestable.ValueBool(),
+		})
+	}
+
+	// Patch enabled
+	if !data.Enabled.IsNull() {
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/enabled",
+			Value: data.Enabled.ValueBool(),
+		})
+	}
+
+	// Patch membership
+	if !data.Membership.IsNull() {
+		var memberships []MembershipModel
+		resp.Diagnostics.Append(data.Membership.ElementsAs(ctx, &memberships, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if len(memberships) > 0 {
+			membership := membershipModelToAPI(ctx, memberships[0], &resp.Diagnostics)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			updatePatches = append(updatePatches, &UpdateRole{
+				Op:    "replace",
+				Path:  "/membership",
+				Value: membership,
+			})
+		}
 	}
 
 	_, err = client.UpdateRole(ctx, updatePatches, data.ID.ValueString())
@@ -376,4 +740,323 @@ func (r *RoleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 func (r *RoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// criteriaKeyBlockObject returns the reusable schema for a criteria key block.
+func criteriaKeyBlockObject() schema.NestedBlockObject {
+	return schema.NestedBlockObject{
+		Attributes: map[string]schema.Attribute{
+			"type": schema.StringAttribute{
+				MarkdownDescription: "Key type (IDENTITY or ACCOUNT)",
+				Required:            true,
+			},
+			"property": schema.StringAttribute{
+				MarkdownDescription: "Identity or account attribute name (e.g. attribute.department)",
+				Required:            true,
+			},
+			"source_id": schema.StringAttribute{
+				MarkdownDescription: "Source ID (required when type is ACCOUNT)",
+				Optional:            true,
+			},
+		},
+	}
+}
+
+// membershipModelToAPI converts the Terraform MembershipModel to the API RoleMembership struct.
+func membershipModelToAPI(ctx context.Context, m MembershipModel, diags *diag.Diagnostics) *RoleMembership {
+	membership := &RoleMembership{
+		Type: m.Type.ValueString(),
+	}
+
+	if !m.Criteria.IsNull() && len(m.Criteria.Elements()) > 0 {
+		var criteriaModels []CriteriaModel
+		diags.Append(m.Criteria.ElementsAs(ctx, &criteriaModels, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		if len(criteriaModels) > 0 {
+			membership.Criteria = criteriaModelToAPI(ctx, criteriaModels[0], diags)
+			if diags.HasError() {
+				return nil
+			}
+		}
+	}
+
+	return membership
+}
+
+// criteriaModelToAPI converts a top-level CriteriaModel to the API RoleMembershipCriteria.
+func criteriaModelToAPI(ctx context.Context, c CriteriaModel, diags *diag.Diagnostics) *RoleMembershipCriteria {
+	criteria := &RoleMembershipCriteria{
+		Operation:   c.Operation.ValueString(),
+		StringValue: c.StringValue.ValueString(),
+	}
+
+	// Parse key
+	if !c.Key.IsNull() && len(c.Key.Elements()) > 0 {
+		var keys []CriteriaKeyModel
+		diags.Append(c.Key.ElementsAs(ctx, &keys, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		if len(keys) > 0 {
+			criteria.Key = criteriaKeyModelToAPI(keys[0])
+		}
+	}
+
+	// Parse children (level 2)
+	if !c.Children.IsNull() && len(c.Children.Elements()) > 0 {
+		var childModels []CriteriaChildModel
+		diags.Append(c.Children.ElementsAs(ctx, &childModels, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		criteria.Children = make([]*RoleMembershipCriteria, len(childModels))
+		for i, child := range childModels {
+			criteria.Children[i] = criteriaChildModelToAPI(ctx, child, diags)
+			if diags.HasError() {
+				return nil
+			}
+		}
+	}
+
+	return criteria
+}
+
+// criteriaChildModelToAPI converts a level-2 CriteriaChildModel to the API type.
+func criteriaChildModelToAPI(ctx context.Context, c CriteriaChildModel, diags *diag.Diagnostics) *RoleMembershipCriteria {
+	criteria := &RoleMembershipCriteria{
+		Operation:   c.Operation.ValueString(),
+		StringValue: c.StringValue.ValueString(),
+	}
+
+	if !c.Key.IsNull() && len(c.Key.Elements()) > 0 {
+		var keys []CriteriaKeyModel
+		diags.Append(c.Key.ElementsAs(ctx, &keys, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		if len(keys) > 0 {
+			criteria.Key = criteriaKeyModelToAPI(keys[0])
+		}
+	}
+
+	// Parse children (level 3 - leaf)
+	if !c.Children.IsNull() && len(c.Children.Elements()) > 0 {
+		var leafModels []CriteriaLeafModel
+		diags.Append(c.Children.ElementsAs(ctx, &leafModels, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		criteria.Children = make([]*RoleMembershipCriteria, len(leafModels))
+		for i, leaf := range leafModels {
+			criteria.Children[i] = criteriaLeafModelToAPI(ctx, leaf, diags)
+			if diags.HasError() {
+				return nil
+			}
+		}
+	}
+
+	return criteria
+}
+
+// criteriaLeafModelToAPI converts a level-3 CriteriaLeafModel to the API type.
+func criteriaLeafModelToAPI(ctx context.Context, c CriteriaLeafModel, diags *diag.Diagnostics) *RoleMembershipCriteria {
+	criteria := &RoleMembershipCriteria{
+		Operation:   c.Operation.ValueString(),
+		StringValue: c.StringValue.ValueString(),
+	}
+
+	if !c.Key.IsNull() && len(c.Key.Elements()) > 0 {
+		var keys []CriteriaKeyModel
+		diags.Append(c.Key.ElementsAs(ctx, &keys, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		if len(keys) > 0 {
+			criteria.Key = criteriaKeyModelToAPI(keys[0])
+		}
+	}
+
+	return criteria
+}
+
+// criteriaKeyModelToAPI converts a CriteriaKeyModel to the API RoleKey.
+func criteriaKeyModelToAPI(k CriteriaKeyModel) *RoleKey {
+	key := &RoleKey{
+		Type:     k.Type.ValueString(),
+		Property: k.Property.ValueString(),
+	}
+	if !k.SourceId.IsNull() && !k.SourceId.IsUnknown() {
+		key.SourceId = k.SourceId.ValueString()
+	}
+	return key
+}
+
+// membershipAPIToState converts the API RoleMembership to Terraform state list value.
+func membershipAPIToState(ctx context.Context, m *RoleMembership, diags *diag.Diagnostics) types.List {
+	membershipObjType := membershipObjectType()
+
+	if m == nil {
+		val, d := types.ListValue(membershipObjType, []attr.Value{})
+		diags.Append(d...)
+		return val
+	}
+
+	model := MembershipModel{
+		Type: types.StringValue(m.Type),
+	}
+
+	if m.Criteria != nil {
+		model.Criteria = criteriaAPIToState(ctx, m.Criteria, diags)
+	} else {
+		model.Criteria = criteriaEmptyList()
+	}
+
+	list, d := types.ListValueFrom(ctx, membershipObjType, []MembershipModel{model})
+	diags.Append(d...)
+	return list
+}
+
+// criteriaAPIToState converts API RoleMembershipCriteria to a Terraform list of CriteriaModel.
+func criteriaAPIToState(ctx context.Context, c *RoleMembershipCriteria, diags *diag.Diagnostics) types.List {
+	model := CriteriaModel{
+		Operation:   types.StringValue(c.Operation),
+		StringValue: types.StringValue(c.StringValue),
+	}
+
+	// Map key
+	model.Key = criteriaKeyAPIToState(ctx, c.Key, diags)
+
+	// Map children (level 2)
+	if len(c.Children) > 0 {
+		childModels := make([]CriteriaChildModel, len(c.Children))
+		for i, child := range c.Children {
+			childModels[i] = criteriaChildAPIToModel(ctx, child, diags)
+			if diags.HasError() {
+				return types.ListNull(criteriaObjectType())
+			}
+		}
+		childList, d := types.ListValueFrom(ctx, criteriaChildObjectType(), childModels)
+		diags.Append(d...)
+		model.Children = childList
+	} else {
+		model.Children, _ = types.ListValue(criteriaChildObjectType(), []attr.Value{})
+	}
+
+	list, d := types.ListValueFrom(ctx, criteriaObjectType(), []CriteriaModel{model})
+	diags.Append(d...)
+	return list
+}
+
+// criteriaChildAPIToModel converts an API RoleMembershipCriteria (level 2) to CriteriaChildModel.
+func criteriaChildAPIToModel(ctx context.Context, c *RoleMembershipCriteria, diags *diag.Diagnostics) CriteriaChildModel {
+	model := CriteriaChildModel{
+		Operation:   types.StringValue(c.Operation),
+		StringValue: types.StringValue(c.StringValue),
+	}
+
+	model.Key = criteriaKeyAPIToState(ctx, c.Key, diags)
+
+	// Map children (level 3 - leaf)
+	if len(c.Children) > 0 {
+		leafModels := make([]CriteriaLeafModel, len(c.Children))
+		for i, child := range c.Children {
+			leafModels[i] = criteriaLeafAPIToModel(ctx, child, diags)
+			if diags.HasError() {
+				return model
+			}
+		}
+		leafList, d := types.ListValueFrom(ctx, criteriaLeafObjectType(), leafModels)
+		diags.Append(d...)
+		model.Children = leafList
+	} else {
+		model.Children, _ = types.ListValue(criteriaLeafObjectType(), []attr.Value{})
+	}
+
+	return model
+}
+
+// criteriaLeafAPIToModel converts an API RoleMembershipCriteria (level 3) to CriteriaLeafModel.
+func criteriaLeafAPIToModel(ctx context.Context, c *RoleMembershipCriteria, diags *diag.Diagnostics) CriteriaLeafModel {
+	model := CriteriaLeafModel{
+		Operation:   types.StringValue(c.Operation),
+		StringValue: types.StringValue(c.StringValue),
+	}
+	model.Key = criteriaKeyAPIToState(ctx, c.Key, diags)
+	return model
+}
+
+// criteriaKeyAPIToState converts an API RoleKey to a Terraform list value.
+func criteriaKeyAPIToState(ctx context.Context, k *RoleKey, diags *diag.Diagnostics) types.List {
+	keyObjType := criteriaKeyObjectType()
+
+	if k == nil {
+		val, d := types.ListValue(keyObjType, []attr.Value{})
+		diags.Append(d...)
+		return val
+	}
+
+	keyModel := CriteriaKeyModel{
+		Type:     types.StringValue(k.Type),
+		Property: types.StringValue(fmt.Sprintf("%v", k.Property)),
+	}
+	if k.SourceId != nil && fmt.Sprintf("%v", k.SourceId) != "" {
+		keyModel.SourceId = types.StringValue(fmt.Sprintf("%v", k.SourceId))
+	} else {
+		keyModel.SourceId = types.StringNull()
+	}
+
+	list, d := types.ListValueFrom(ctx, keyObjType, []CriteriaKeyModel{keyModel})
+	diags.Append(d...)
+	return list
+}
+
+// criteriaEmptyList returns an empty typed list for criteria.
+func criteriaEmptyList() types.List {
+	val, _ := types.ListValue(criteriaObjectType(), []attr.Value{})
+	return val
+}
+
+// Object type definitions for Terraform Framework list value construction.
+
+func membershipObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"type":     types.StringType,
+		"criteria": types.ListType{ElemType: criteriaObjectType()},
+	}}
+}
+
+func criteriaObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"operation":    types.StringType,
+		"string_value": types.StringType,
+		"key":          types.ListType{ElemType: criteriaKeyObjectType()},
+		"children":     types.ListType{ElemType: criteriaChildObjectType()},
+	}}
+}
+
+func criteriaChildObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"operation":    types.StringType,
+		"string_value": types.StringType,
+		"key":          types.ListType{ElemType: criteriaKeyObjectType()},
+		"children":     types.ListType{ElemType: criteriaLeafObjectType()},
+	}}
+}
+
+func criteriaLeafObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"operation":    types.StringType,
+		"string_value": types.StringType,
+		"key":          types.ListType{ElemType: criteriaKeyObjectType()},
+	}}
+}
+
+func criteriaKeyObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"type":      types.StringType,
+		"property":  types.StringType,
+		"source_id": types.StringType,
+	}}
 }
