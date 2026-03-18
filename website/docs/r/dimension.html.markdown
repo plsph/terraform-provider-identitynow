@@ -52,7 +52,7 @@ The following arguments are supported:
 
 * `role_id` - (Required) The ID of the role this dimension belongs to. Changing this forces a new resource to be created.
 * `name` - (Required) The name of the dimension. Changing this forces a new resource to be created.
-* `description` - (Required) A description for the dimension.
+* `description` - (Optional) A description for the dimension.
 * `owner` - (Optional) An owner block as defined below.
 * `access_profiles` - (Optional) One or more `access_profiles` blocks as defined below.
 * `entitlements` - (Optional) One or more `entitlements` blocks as defined below.
@@ -97,8 +97,8 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 ## Import
 
-Dimensions can be imported using the `id`, e.g.
+Dimensions can be imported using the `role_id/dimension_id`, e.g.
 
 ```shell
-terraform import identitynow_dimension.example <dimension-id>
+terraform import identitynow_dimension.example <role-id>/<dimension-id>
 ```

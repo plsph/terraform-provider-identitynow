@@ -424,7 +424,13 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	// Update state from API response
 	data.Name = types.StringValue(role.Name)
-	data.Description = types.StringValue(role.Description)
+	if role.Description != "" {
+		data.Description = types.StringValue(role.Description)
+	} else if data.Description.IsNull() {
+		// API returned null/empty and user didn't set description — keep null
+	} else {
+		data.Description = types.StringValue(role.Description)
+	}
 
 	if role.Requestable != nil {
 		data.Requestable = types.BoolValue(*role.Requestable)
@@ -512,8 +518,14 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	// Build update patches for all mutable fields
-	updatePatches := []*UpdateRole{
-		{Op: "replace", Path: "/description", Value: data.Description.ValueString()},
+	updatePatches := []*UpdateRole{}
+
+	if !data.Description.IsNull() {
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/description",
+			Value: data.Description.ValueString(),
+		})
 	}
 
 	// Patch owner
@@ -707,8 +719,11 @@ func membershipModelToAPI(ctx context.Context, m MembershipModel, diags *diag.Di
 // criteriaModelToAPI converts a top-level CriteriaModel to the API RoleMembershipCriteria.
 func criteriaModelToAPI(ctx context.Context, c CriteriaModel, diags *diag.Diagnostics) *RoleMembershipCriteria {
 	criteria := &RoleMembershipCriteria{
-		Operation:   c.Operation.ValueString(),
-		StringValue: c.StringValue.ValueString(),
+		Operation: c.Operation.ValueString(),
+	}
+
+	if !c.StringValue.IsNull() {
+		criteria.StringValue = c.StringValue.ValueString()
 	}
 
 	// Parse key
@@ -745,8 +760,11 @@ func criteriaModelToAPI(ctx context.Context, c CriteriaModel, diags *diag.Diagno
 // criteriaChildModelToAPI converts a level-2 CriteriaChildModel to the API type.
 func criteriaChildModelToAPI(ctx context.Context, c CriteriaChildModel, diags *diag.Diagnostics) *RoleMembershipCriteria {
 	criteria := &RoleMembershipCriteria{
-		Operation:   c.Operation.ValueString(),
-		StringValue: c.StringValue.ValueString(),
+		Operation: c.Operation.ValueString(),
+	}
+
+	if !c.StringValue.IsNull() {
+		criteria.StringValue = c.StringValue.ValueString()
 	}
 
 	if !c.Key.IsNull() && len(c.Key.Elements()) > 0 {
@@ -782,8 +800,11 @@ func criteriaChildModelToAPI(ctx context.Context, c CriteriaChildModel, diags *d
 // criteriaLeafModelToAPI converts a level-3 CriteriaLeafModel to the API type.
 func criteriaLeafModelToAPI(ctx context.Context, c CriteriaLeafModel, diags *diag.Diagnostics) *RoleMembershipCriteria {
 	criteria := &RoleMembershipCriteria{
-		Operation:   c.Operation.ValueString(),
-		StringValue: c.StringValue.ValueString(),
+		Operation: c.Operation.ValueString(),
+	}
+
+	if !c.StringValue.IsNull() {
+		criteria.StringValue = c.StringValue.ValueString()
 	}
 
 	if !c.Key.IsNull() && len(c.Key.Elements()) > 0 {
@@ -838,8 +859,13 @@ func membershipAPIToState(ctx context.Context, m *RoleMembership, diags *diag.Di
 // criteriaAPIToState converts API RoleMembershipCriteria to a Terraform list of CriteriaModel.
 func criteriaAPIToState(ctx context.Context, c *RoleMembershipCriteria, diags *diag.Diagnostics) types.List {
 	model := CriteriaModel{
-		Operation:   types.StringValue(c.Operation),
-		StringValue: types.StringValue(c.StringValue),
+		Operation: types.StringValue(c.Operation),
+	}
+
+	if c.StringValue != "" {
+		model.StringValue = types.StringValue(c.StringValue)
+	} else {
+		model.StringValue = types.StringNull()
 	}
 
 	// Map key
@@ -869,8 +895,13 @@ func criteriaAPIToState(ctx context.Context, c *RoleMembershipCriteria, diags *d
 // criteriaChildAPIToModel converts an API RoleMembershipCriteria (level 2) to CriteriaChildModel.
 func criteriaChildAPIToModel(ctx context.Context, c *RoleMembershipCriteria, diags *diag.Diagnostics) CriteriaChildModel {
 	model := CriteriaChildModel{
-		Operation:   types.StringValue(c.Operation),
-		StringValue: types.StringValue(c.StringValue),
+		Operation: types.StringValue(c.Operation),
+	}
+
+	if c.StringValue != "" {
+		model.StringValue = types.StringValue(c.StringValue)
+	} else {
+		model.StringValue = types.StringNull()
 	}
 
 	model.Key = criteriaKeyAPIToState(ctx, c.Key, diags)
@@ -897,8 +928,13 @@ func criteriaChildAPIToModel(ctx context.Context, c *RoleMembershipCriteria, dia
 // criteriaLeafAPIToModel converts an API RoleMembershipCriteria (level 3) to CriteriaLeafModel.
 func criteriaLeafAPIToModel(ctx context.Context, c *RoleMembershipCriteria, diags *diag.Diagnostics) CriteriaLeafModel {
 	model := CriteriaLeafModel{
-		Operation:   types.StringValue(c.Operation),
-		StringValue: types.StringValue(c.StringValue),
+		Operation: types.StringValue(c.Operation),
+	}
+
+	if c.StringValue != "" {
+		model.StringValue = types.StringValue(c.StringValue)
+	} else {
+		model.StringValue = types.StringNull()
 	}
 	model.Key = criteriaKeyAPIToState(ctx, c.Key, diags)
 	return model
@@ -918,7 +954,7 @@ func criteriaKeyAPIToState(ctx context.Context, k *RoleKey, diags *diag.Diagnost
 		Type:     types.StringValue(k.Type),
 		Property: types.StringValue(fmt.Sprintf("%v", k.Property)),
 	}
-	if k.SourceId != nil && fmt.Sprintf("%v", k.SourceId) != "" {
+	if k.SourceId != nil && fmt.Sprintf("%v", k.SourceId) != "" && fmt.Sprintf("%v", k.SourceId) != "<nil>" {
 		keyModel.SourceId = types.StringValue(fmt.Sprintf("%v", k.SourceId))
 	} else {
 		keyModel.SourceId = types.StringNull()

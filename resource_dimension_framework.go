@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -67,7 +68,7 @@ func (r *DimensionResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Dimension description",
-				Required:            true,
+				Optional:            true,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -562,5 +563,15 @@ func (r *DimensionResource) Delete(ctx context.Context, req resource.DeleteReque
 }
 
 func (r *DimensionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	parts := strings.SplitN(req.ID, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID",
+			fmt.Sprintf("Expected import ID in the format 'role_id/dimension_id', got: %s", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("role_id"), parts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), parts[1])...)
 }

@@ -753,7 +753,7 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 	if err != nil {
 		return nil, err
 	}
-	deleteURL := fmt.Sprintf("%s/v2025/role/%s", c.BaseURL, role.ID)
+	deleteURL := fmt.Sprintf("%s/v2025/roles/%s", c.BaseURL, role.ID)
 	tflog.Debug(ctx, "Creating HTTP request to delete role", map[string]interface{}{
 		"method":  "DELETE",
 		"url":     deleteURL,
