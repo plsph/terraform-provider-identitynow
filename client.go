@@ -1336,6 +1336,31 @@ func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *Gov
 	return nil
 }
 
+func (c *Client) GetSourceAppsAll(ctx context.Context) ([]*SourceApp, error) {
+	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/all", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to get source apps", map[string]interface{}{
+		"method":    "GET",
+		"url":       sourceAppURL,
+	})
+	req, err := http.NewRequest("GET", sourceAppURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	req = req.WithContext(ctx)
+
+	var res []*SourceApp
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return res, nil
+}
+
 func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*SourceApp, error) {
 	filter := fmt.Sprintf("name eq \"%s\"", name)
 	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/all?filters=%s", c.BaseURL, url.QueryEscape(filter))

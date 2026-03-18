@@ -568,6 +568,45 @@ func (r *AccessProfileResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
+	// Auto-detach from source apps before deletion
+	if ap.AccessProfileSource != nil && ap.AccessProfileSource.ID != nil {
+		sourceApps, err := client.GetSourceAppsAll(ctx)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error",
+				fmt.Sprintf("Failed to query source apps: %s", err.Error()))
+			return
+		}
+
+		apId := data.ID.ValueString()
+		for _, sa := range sourceApps {
+			attachment, err := client.GetAccessProfileAttachment(ctx, sa.ID)
+			if err != nil {
+				resp.Diagnostics.AddError("Client Error",
+					fmt.Sprintf("Failed to get access profile attachments for source app %s: %s", sa.ID, err.Error()))
+				return
+			}
+
+			for _, attachedId := range attachment.AccessProfiles {
+				if attachedId == apId {
+					detach := &AccessProfileAttachment{
+						SourceAppId:    sa.ID,
+						AccessProfiles: []string{apId},
+					}
+					if err := client.DeleteAccessProfileAttachment(ctx, detach); err != nil {
+						resp.Diagnostics.AddError("Client Error",
+							fmt.Sprintf("Failed to detach access profile %s from source app %s: %s", apId, sa.ID, err.Error()))
+						return
+					}
+					tflog.Info(ctx, "Auto-detached access profile from source app before deletion", map[string]interface{}{
+						"access_profile_id": apId,
+						"source_app_id":     sa.ID,
+					})
+					break
+				}
+			}
+		}
+	}
+
 	err = client.DeleteAccessProfile(ctx, ap)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", err.Error())
