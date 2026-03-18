@@ -1337,28 +1337,41 @@ func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *Gov
 }
 
 func (c *Client) GetSourceAppsAll(ctx context.Context) ([]*SourceApp, error) {
-	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/all", c.BaseURL)
-	tflog.Debug(ctx, "Creating HTTP request to get source apps", map[string]interface{}{
-		"method":    "GET",
-		"url":       sourceAppURL,
-	})
-	req, err := http.NewRequest("GET", sourceAppURL, nil)
-	if err != nil {
-		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-		return nil, err
+	var allApps []*SourceApp
+	offset := 0
+	limit := 250
+	for {
+		sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/all?limit=%d&offset=%d", c.BaseURL, limit, offset)
+		tflog.Debug(ctx, "Creating HTTP request to get source apps", map[string]interface{}{
+			"method": "GET",
+			"url":    sourceAppURL,
+		})
+		req, err := http.NewRequest("GET", sourceAppURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+
+		req.Header.Set("X-SailPoint-Experimental", "true")
+
+		req = req.WithContext(ctx)
+
+		var res []*SourceApp
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+			return nil, err
+		}
+
+		allApps = append(allApps, res...)
+
+		if len(res) < limit-1 {
+			break
+		}
+
+		offset += limit
 	}
 
-	req.Header.Set("X-SailPoint-Experimental", "true")
-
-	req = req.WithContext(ctx)
-
-	var res []*SourceApp
-	if err := c.sendRequest(ctx, req, &res); err != nil {
-		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-		return nil, err
-	}
-
-	return res, nil
+	return allApps, nil
 }
 
 func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*SourceApp, error) {
