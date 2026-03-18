@@ -37,7 +37,6 @@ type RoleResourceModel struct {
 	Owner          types.List   `tfsdk:"owner"`
 	AccessProfiles types.List   `tfsdk:"access_profiles"`
 	Entitlements   types.List   `tfsdk:"entitlements"`
-	DimensionRefs  types.List   `tfsdk:"dimension_refs"`
 	Membership     types.List   `tfsdk:"membership"`
 	Requestable    types.Bool   `tfsdk:"requestable"`
 	Enabled        types.Bool   `tfsdk:"enabled"`
@@ -50,12 +49,6 @@ type OwnerModel struct {
 }
 
 type AccessProfileRefModel struct {
-	ID   types.String `tfsdk:"id"`
-	Type types.String `tfsdk:"type"`
-	Name types.String `tfsdk:"name"`
-}
-
-type DimensionRefModel struct {
 	ID   types.String `tfsdk:"id"`
 	Type types.String `tfsdk:"type"`
 	Name types.String `tfsdk:"name"`
@@ -115,7 +108,7 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				}},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Role description",
-				Required:            true,
+				Optional:            true,
 			},
 			"requestable": schema.BoolAttribute{
 				MarkdownDescription: "Whether this role is requestable",
@@ -187,25 +180,6 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 						},
 						"name": schema.StringAttribute{
 							MarkdownDescription: "Entitlement name",
-							Required:            true,
-						},
-					},
-				},
-			},
-			"dimension_refs": schema.ListNestedBlock{
-				MarkdownDescription: "Dimension references for this role",
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{
-							MarkdownDescription: "Dimension ID",
-							Required:            true,
-						},
-						"type": schema.StringAttribute{
-							MarkdownDescription: "Dimension type",
-							Required:            true,
-						},
-						"name": schema.StringAttribute{
-							MarkdownDescription: "Dimension name",
 							Required:            true,
 						},
 					},
@@ -370,23 +344,6 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		}
 	}
 
-	// Parse dimension refs
-	if !data.DimensionRefs.IsNull() {
-		var dims []DimensionRefModel
-		resp.Diagnostics.Append(data.DimensionRefs.ElementsAs(ctx, &dims, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		role.DimensionRefs = make([]*ObjectInfo, len(dims))
-		for i, d := range dims {
-			role.DimensionRefs[i] = &ObjectInfo{
-				ID:   d.ID.ValueString(),
-				Type: d.Type.ValueString(),
-				Name: d.Name.ValueString(),
-			}
-		}
-	}
-
 	if !data.Requestable.IsNull() {
 		requestable := data.Requestable.ValueBool()
 		role.Requestable = &requestable
@@ -494,7 +451,7 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		resp.Diagnostics.Append(diags...)
 		data.Owner = ownerList
 	} else {
-		data.Owner, _ = types.ListValue(objType, []attr.Value{})
+		data.Owner = types.ListNull(objType)
 	}
 
 	if role.AccessProfiles != nil {
@@ -510,7 +467,7 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		resp.Diagnostics.Append(diags...)
 		data.AccessProfiles = apList
 	} else {
-		data.AccessProfiles, _ = types.ListValue(objType, []attr.Value{})
+		data.AccessProfiles = types.ListNull(objType)
 	}
 
 	if role.Entitlements != nil {
@@ -526,23 +483,7 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		resp.Diagnostics.Append(diags...)
 		data.Entitlements = entList
 	} else {
-		data.Entitlements, _ = types.ListValue(objType, []attr.Value{})
-	}
-
-	if role.DimensionRefs != nil {
-		dimModels := make([]DimensionRefModel, len(role.DimensionRefs))
-		for i, d := range role.DimensionRefs {
-			dimModels[i] = DimensionRefModel{
-				ID:   types.StringValue(fmt.Sprintf("%v", d.ID)),
-				Type: types.StringValue(d.Type),
-				Name: types.StringValue(d.Name),
-			}
-		}
-		dimList, diags := types.ListValueFrom(ctx, objType, dimModels)
-		resp.Diagnostics.Append(diags...)
-		data.DimensionRefs = dimList
-	} else {
-		data.DimensionRefs, _ = types.ListValue(objType, []attr.Value{})
+		data.Entitlements = types.ListNull(objType)
 	}
 
 	// Map membership from API response
@@ -634,28 +575,6 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 			Op:    "replace",
 			Path:  "/entitlements",
 			Value: entValues,
-		})
-	}
-
-	// Patch dimension refs
-	if !data.DimensionRefs.IsNull() {
-		var dims []DimensionRefModel
-		resp.Diagnostics.Append(data.DimensionRefs.ElementsAs(ctx, &dims, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		dimValues := make([]interface{}, len(dims))
-		for i, d := range dims {
-			dimValues[i] = map[string]interface{}{
-				"id":   d.ID.ValueString(),
-				"type": d.Type.ValueString(),
-				"name": d.Name.ValueString(),
-			}
-		}
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/dimensionRefs",
-			Value: dimValues,
 		})
 	}
 
@@ -898,9 +817,7 @@ func membershipAPIToState(ctx context.Context, m *RoleMembership, diags *diag.Di
 	membershipObjType := membershipObjectType()
 
 	if m == nil {
-		val, d := types.ListValue(membershipObjType, []attr.Value{})
-		diags.Append(d...)
-		return val
+		return types.ListNull(membershipObjType)
 	}
 
 	model := MembershipModel{

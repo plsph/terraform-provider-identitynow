@@ -1,19 +1,27 @@
 resource "identitynow_role" "operator_developer_role" {
-  access_profile_ids = [
-    identitynow_access_profile.aad_access_profile_operators.id,
-    identitynow_access_profile.ad_access_profile_developers[count.index].id
-  ]
-  description      = "Developer Operator Role Description"
-  name             = "Developer Operator Role"
-  approval_schemes = "none"
-  disabled         = false
-  requestable      = true
-  owner            = data.identitynow_identity.john_doe.alias
-  lifecycle {
-    ignore_changes = [
-      name,
-      display_name,
-      identity_count
-    ]
+  name        = "Developer Operator Role"
+  description = "Developer Operator Role Description"
+
+  owner {
+    id   = data.identitynow_identity.john_doe.id
+    type = "IDENTITY"
+    name = data.identitynow_identity.john_doe.name
   }
+
+  access_profiles {
+    id   = identitynow_access_profile.aad_access_profile_operators.id
+    type = "ACCESS_PROFILE"
+    name = identitynow_access_profile.aad_access_profile_operators.name
+  }
+
+  requestable = true
+  enabled     = true
+}
+
+data "identitynow_role" "example" {
+  id = "2c91808a7813090a017813b6301f1234"
+}
+
+output "role_name" {
+  value = data.identitynow_role.example.name
 }
