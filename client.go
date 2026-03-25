@@ -203,7 +203,7 @@ func (c *Client) CreateSourceRequest(ctx context.Context, source *Source) (*Sour
 	if err != nil {
 		return nil, err
 	}
-	sourceURL := fmt.Sprintf("%s/beta/sources", c.BaseURL)
+	sourceURL := fmt.Sprintf("%s/v2025/sources", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create source", map[string]interface{}{
 		"method": "POST",
 		"url":    sourceURL,
@@ -351,7 +351,7 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, source.ID)
+	updateURL := fmt.Sprintf("%s/v2025/sources/%s", c.BaseURL, source.ID)
 	tflog.Debug(ctx, "Creating HTTP request to update source", map[string]interface{}{
 		"method":    "PUT",
 		"url":       updateURL,
@@ -383,7 +383,7 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 }
 
 func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
-	deleteURL := fmt.Sprintf("%s/beta/sources/%s", c.BaseURL, source.ID)
+	deleteURL := fmt.Sprintf("%s/v2025/sources/%s", c.BaseURL, source.ID)
 	tflog.Debug(ctx, "Creating HTTP request to delete source", map[string]interface{}{
 		"method":    "DELETE",
 		"url":       deleteURL,
@@ -503,7 +503,7 @@ func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfil
 }
 
 func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*SourceEntitlement, error) {
-	entitlementsURL := fmt.Sprintf("%s/beta/entitlements?filters=source.id", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", id)
+	entitlementsURL := fmt.Sprintf("%s/v2025/entitlements?filters=source.id", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", id)
 	tflog.Debug(ctx, "Creating HTTP request to get source entitlements", map[string]interface{}{
 		"method":    "GET",
 		"url":       entitlementsURL,
@@ -1002,7 +1002,7 @@ func (c *Client) CreatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	if err != nil {
 		return nil, err
 	}
-	policyURL := fmt.Sprintf("%s/beta/password-policies", c.BaseURL)
+	policyURL := fmt.Sprintf("%s/v2025/password-policies", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create password policy", map[string]interface{}{
 		"method": "POST",
 		"url":    policyURL,
@@ -1034,7 +1034,7 @@ func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	if err != nil {
 		return nil, err
 	}
-	policyURL := fmt.Sprintf("%s/beta/password-policies", c.BaseURL)
+	policyURL := fmt.Sprintf("%s/v2025/password-policies", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to update password policy", map[string]interface{}{
 		"method": "PUT",
 		"url":    policyURL,
@@ -1060,7 +1060,7 @@ func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 }
 
 func (c *Client) GetPasswordPolicy(ctx context.Context, passwordPolicyId string) (*PasswordPolicy, error) {
-	policyURL := fmt.Sprintf("%s/beta/password-policies/%s", c.BaseURL, passwordPolicyId)
+	policyURL := fmt.Sprintf("%s/v2025/password-policies/%s", c.BaseURL, passwordPolicyId)
 	tflog.Debug(ctx, "Creating HTTP request to get password policy", map[string]interface{}{
 		"method":    "GET",
 		"url":       policyURL,
@@ -1085,7 +1085,7 @@ func (c *Client) GetPasswordPolicy(ctx context.Context, passwordPolicyId string)
 }
 
 func (c *Client) DeletePasswordPolicy(ctx context.Context, passwordPolicyId string) error {
-	endpoint := fmt.Sprintf("%s/beta/password-policies/%s", c.BaseURL, passwordPolicyId)
+	endpoint := fmt.Sprintf("%s/v2025/password-policies/%s", c.BaseURL, passwordPolicyId)
 
 	tflog.Debug(ctx, "Creating HTTP request to delete password policy", map[string]interface{}{
 		"method":    "DELETE",
