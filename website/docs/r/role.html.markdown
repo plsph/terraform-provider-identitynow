@@ -61,6 +61,117 @@ resource "identitynow_role" "advanced" {
 }
 ```
 
+### Role with Access Model Metadata
+
+```hcl
+resource "identitynow_role" "with_metadata" {
+  name        = "Metadata Role"
+  description = "A role with access model metadata"
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+
+  access_profiles {
+    id   = "2c91808a7813090a017813b6301f0044"
+    type = "ACCESS_PROFILE"
+    name = "Example Access Profile"
+  }
+
+  access_model_metadata {
+    attributes {
+      key  = "iscPrivacy"
+      name = "Privacy"
+
+      values {
+        value  = "public"
+        name   = "Public"
+        status = "active"
+      }
+    }
+  }
+
+  requestable = true
+  enabled     = true
+}
+```
+
+### Role with Access Request Config
+
+```hcl
+resource "identitynow_role" "with_approval" {
+  name        = "Approval Role"
+  description = "A role with access request configuration"
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+
+  access_profiles {
+    id   = "2c91808a7813090a017813b6301f0044"
+    type = "ACCESS_PROFILE"
+    name = "Example Access Profile"
+  }
+
+  access_request_config {
+    comments_required        = true
+    denial_comments_required = true
+
+    approval_schemes {
+      approver_type = "MANAGER"
+    }
+
+    approval_schemes {
+      approver_type = "GOVERNANCE_GROUP"
+      approver_id   = "2c91808a7813090a017813b6301faaaa"
+    }
+  }
+
+  requestable = true
+  enabled     = true
+}
+```
+
+### Dimensional Role with Dimension-Specific Approval Schemas
+
+```hcl
+resource "identitynow_role" "dimensional_approval" {
+  name        = "Dimensional Approval Role"
+  description = "A dimensional role with per-dimension approval schemas"
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+
+  access_request_config {
+    comments_required        = true
+    denial_comments_required = false
+
+    approval_schemes {
+      approver_type = "MANAGER"
+    }
+
+    dimension_schema {
+      dimension_attributes {
+        name         = "eqLocation"
+        display_name = "EQ Location"
+        derived      = true
+      }
+    }
+  }
+
+  requestable = true
+  enabled     = true
+  dimensional = true
+}
+```
+
 ### Role with Standard Membership Criteria
 
 ```hcl
@@ -152,6 +263,8 @@ The following arguments are supported:
 * `owner` - (Optional) An `owner` block as defined below.
 * `access_profiles` - (Optional) One or more `access_profiles` blocks as defined below.
 * `entitlements` - (Optional) One or more `entitlements` blocks as defined below.
+* `access_model_metadata` - (Optional) An `access_model_metadata` block as defined below. Defines access model metadata for this role.
+* `access_request_config` - (Optional) An `access_request_config` block as defined below. Configures the approval process for access requests.
 * `membership` - (Optional) A `membership` block as defined below.
 * `requestable` - (Optional) Whether this role is requestable via access requests.
 * `enabled` - (Optional) Whether this role is enabled.
@@ -180,6 +293,58 @@ An `entitlements` block supports:
 * `id` - (Required) The entitlement ID.
 * `type` - (Required) The type (e.g. `ENTITLEMENT`).
 * `name` - (Required) The entitlement name.
+
+---
+
+An `access_model_metadata` block supports:
+
+* `attributes` - (Optional) One or more `attributes` blocks as defined below.
+
+---
+
+An `attributes` block (within `access_model_metadata`) supports:
+
+* `key` - (Required) The unique identifier for the metadata type (e.g. `iscPrivacy`).
+* `name` - (Required) The human readable name of the metadata attribute.
+* `values` - (Optional) One or more `values` blocks as defined below.
+
+---
+
+A `values` block (within `attributes`) supports:
+
+* `value` - (Required) The metadata value.
+* `name` - (Required) The human readable name of the value.
+* `status` - (Optional) The status of the value (e.g. `active`).
+
+---
+
+An `access_request_config` block supports:
+
+* `comments_required` - (Optional) Whether comments are required when requesting access.
+* `denial_comments_required` - (Optional) Whether comments are required when denying access.
+* `approval_schemes` - (Optional) One or more `approval_schemes` blocks as defined below.
+* `dimension_schema` - (Optional) A `dimension_schema` block for dimension-specific approval configuration.
+
+---
+
+An `approval_schemes` block (within `access_request_config`) supports:
+
+* `approver_type` - (Required) The type of approver (e.g. `APP_OWNER`, `MANAGER`, `GOVERNANCE_GROUP`).
+* `approver_id` - (Optional) The ID of the approver (required when `approver_type` is `GOVERNANCE_GROUP`).
+
+---
+
+A `dimension_schema` block supports:
+
+* `dimension_attributes` - (Optional) One or more `dimension_attributes` blocks as defined below.
+
+---
+
+A `dimension_attributes` block supports:
+
+* `name` - (Required) The attribute name.
+* `display_name` - (Optional) The display name of the attribute.
+* `derived` - (Optional) Whether the attribute is derived.
 
 ---
 

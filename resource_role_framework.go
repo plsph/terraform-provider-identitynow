@@ -31,16 +31,51 @@ type RoleResource struct {
 
 // RoleResourceModel describes the resource data model
 type RoleResourceModel struct {
-	ID             types.String `tfsdk:"id"`
-	Name           types.String `tfsdk:"name"`
-	Description    types.String `tfsdk:"description"`
-	Owner          types.List   `tfsdk:"owner"`
-	AccessProfiles types.List   `tfsdk:"access_profiles"`
-	Entitlements   types.List   `tfsdk:"entitlements"`
-	Membership     types.List   `tfsdk:"membership"`
-	Requestable    types.Bool   `tfsdk:"requestable"`
-	Dimensional    types.Bool   `tfsdk:"dimensional"`
-	Enabled        types.Bool   `tfsdk:"enabled"`
+	ID                  types.String `tfsdk:"id"`
+	Name                types.String `tfsdk:"name"`
+	Description         types.String `tfsdk:"description"`
+	Owner               types.List   `tfsdk:"owner"`
+	AccessProfiles      types.List   `tfsdk:"access_profiles"`
+	Entitlements        types.List   `tfsdk:"entitlements"`
+	Membership          types.List   `tfsdk:"membership"`
+	AccessModelMetadata types.List   `tfsdk:"access_model_metadata"`
+	AccessRequestConfig types.List   `tfsdk:"access_request_config"`
+	Requestable         types.Bool   `tfsdk:"requestable"`
+	Dimensional         types.Bool   `tfsdk:"dimensional"`
+	Enabled             types.Bool   `tfsdk:"enabled"`
+}
+
+type AccessModelMetadataModel struct {
+	Attributes types.List `tfsdk:"attributes"`
+}
+
+type AccessModelMetadataAttributeModel struct {
+	Key    types.String `tfsdk:"key"`
+	Name   types.String `tfsdk:"name"`
+	Values types.List   `tfsdk:"values"`
+}
+
+type AccessModelMetadataValueModel struct {
+	Value  types.String `tfsdk:"value"`
+	Name   types.String `tfsdk:"name"`
+	Status types.String `tfsdk:"status"`
+}
+
+type RoleAccessRequestConfigModel struct {
+	CommentsRequired       types.Bool `tfsdk:"comments_required"`
+	DenialCommentsRequired types.Bool `tfsdk:"denial_comments_required"`
+	ApprovalSchemes        types.List `tfsdk:"approval_schemes"`
+	DimensionSchema        types.List `tfsdk:"dimension_schema"`
+}
+
+type RoleDimensionSchemaModel struct {
+	DimensionAttributes types.List `tfsdk:"dimension_attributes"`
+}
+
+type DimensionAttributeRefModel struct {
+	Name        types.String `tfsdk:"name"`
+	DisplayName types.String `tfsdk:"display_name"`
+	Derived     types.Bool   `tfsdk:"derived"`
 }
 
 type OwnerModel struct {
@@ -190,6 +225,109 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 						"name": schema.StringAttribute{
 							MarkdownDescription: "Entitlement name",
 							Required:            true,
+						},
+					},
+				},
+			},
+			"access_model_metadata": schema.ListNestedBlock{
+				MarkdownDescription: "Access model metadata for this role",
+				NestedObject: schema.NestedBlockObject{
+					Blocks: map[string]schema.Block{
+						"attributes": schema.ListNestedBlock{
+							MarkdownDescription: "Metadata attributes",
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"key": schema.StringAttribute{
+										MarkdownDescription: "Unique identifier for the metadata type (e.g. iscPrivacy)",
+										Required:            true,
+									},
+									"name": schema.StringAttribute{
+										MarkdownDescription: "Human readable name of the metadata attribute",
+										Required:            true,
+									},
+								},
+								Blocks: map[string]schema.Block{
+									"values": schema.ListNestedBlock{
+										MarkdownDescription: "Values assigned to this metadata attribute",
+										NestedObject: schema.NestedBlockObject{
+											Attributes: map[string]schema.Attribute{
+												"value": schema.StringAttribute{
+													MarkdownDescription: "The metadata value",
+													Required:            true,
+												},
+												"name": schema.StringAttribute{
+													MarkdownDescription: "Human readable name of the value",
+													Required:            true,
+												},
+												"status": schema.StringAttribute{
+													MarkdownDescription: "Status of the value (e.g. active)",
+													Optional:            true,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"access_request_config": schema.ListNestedBlock{
+				MarkdownDescription: "Access request configuration for this role",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"comments_required": schema.BoolAttribute{
+							MarkdownDescription: "Whether comments are required when requesting access",
+							Optional:            true,
+						},
+						"denial_comments_required": schema.BoolAttribute{
+							MarkdownDescription: "Whether comments are required when denying access",
+							Optional:            true,
+						},
+					},
+					Blocks: map[string]schema.Block{
+						"approval_schemes": schema.ListNestedBlock{
+							MarkdownDescription: "Approval schemes for this role",
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"approver_type": schema.StringAttribute{
+										MarkdownDescription: "Type of approver (e.g. APP_OWNER, MANAGER, GOVERNANCE_GROUP)",
+										Required:            true,
+									},
+									"approver_id": schema.StringAttribute{
+										MarkdownDescription: "ID of the approver (required for GOVERNANCE_GROUP type)",
+										Optional:            true,
+									},
+								},
+							},
+						},
+						"dimension_schema": schema.ListNestedBlock{
+							MarkdownDescription: "Dimension schema for dimensional roles",
+							NestedObject: schema.NestedBlockObject{
+								Blocks: map[string]schema.Block{
+									"dimension_attributes": schema.ListNestedBlock{
+										MarkdownDescription: "Dimension attributes that define this dimension",
+										NestedObject: schema.NestedBlockObject{
+											Attributes: map[string]schema.Attribute{
+												"name": schema.StringAttribute{
+													MarkdownDescription: "The attribute name",
+													Required:            true,
+												},
+												"display_name": schema.StringAttribute{
+													MarkdownDescription: "The display name of the attribute",
+													Optional:            true,
+													Computed:            true,
+												},
+												"derived": schema.BoolAttribute{
+													MarkdownDescription: "Whether the attribute is derived",
+													Optional:            true,
+													Computed:            true,
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -383,6 +521,22 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		}
 	}
 
+	// Parse access model metadata
+	if !data.AccessModelMetadata.IsNull() {
+		role.AccessModelMetadata = accessModelMetadataModelToAPI(ctx, data.AccessModelMetadata, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	// Parse access request config
+	if !data.AccessRequestConfig.IsNull() {
+		role.AccessRequestConfig = roleAccessRequestConfigModelToAPI(ctx, data.AccessRequestConfig, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
 	tflog.Info(ctx, "Creating Role", map[string]interface{}{"name": role.Name})
 
 	client, err := r.client.IdentityNowClient(ctx)
@@ -510,6 +664,18 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		data.Entitlements = entList
 	} else {
 		data.Entitlements = types.ListNull(objType)
+	}
+
+	// Map access model metadata from API response
+	data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, role.AccessModelMetadata, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Map access request config from API response
+	data.AccessRequestConfig = roleAccessRequestConfigAPIToState(ctx, role.AccessRequestConfig, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	// Map membership from API response
@@ -655,6 +821,32 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 				Value: membership,
 			})
 		}
+	}
+
+	// Patch access model metadata
+	if !data.AccessModelMetadata.IsNull() {
+		metadata := accessModelMetadataModelToAPI(ctx, data.AccessModelMetadata, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/accessModelMetadata",
+			Value: metadata,
+		})
+	}
+
+	// Patch access request config
+	if !data.AccessRequestConfig.IsNull() {
+		arcValue := roleAccessRequestConfigModelToAPI(ctx, data.AccessRequestConfig, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		updatePatches = append(updatePatches, &UpdateRole{
+			Op:    "replace",
+			Path:  "/accessRequestConfig",
+			Value: arcValue,
+		})
 	}
 
 	_, err = client.UpdateRole(ctx, updatePatches, data.ID.ValueString())
@@ -1040,5 +1232,340 @@ func criteriaKeyObjectType() types.ObjectType {
 		"type":      types.StringType,
 		"property":  types.StringType,
 		"source_id": types.StringType,
+	}}
+}
+
+// accessModelMetadataModelToAPI converts the Terraform state list to the API AttributeDTOList.
+func accessModelMetadataModelToAPI(ctx context.Context, metadataList types.List, diags *diag.Diagnostics) *AttributeDTOList {
+	if metadataList.IsNull() || len(metadataList.Elements()) == 0 {
+		return nil
+	}
+
+	var metadataModels []AccessModelMetadataModel
+	diags.Append(metadataList.ElementsAs(ctx, &metadataModels, false)...)
+	if diags.HasError() {
+		return nil
+	}
+
+	if len(metadataModels) == 0 {
+		return nil
+	}
+
+	result := &AttributeDTOList{}
+	m := metadataModels[0]
+
+	if !m.Attributes.IsNull() && len(m.Attributes.Elements()) > 0 {
+		var attrModels []AccessModelMetadataAttributeModel
+		diags.Append(m.Attributes.ElementsAs(ctx, &attrModels, false)...)
+		if diags.HasError() {
+			return nil
+		}
+
+		result.Attributes = make([]*AccessModelMetadataAttribute, len(attrModels))
+		for i, am := range attrModels {
+			apiAttr := &AccessModelMetadataAttribute{
+				Key:  am.Key.ValueString(),
+				Name: am.Name.ValueString(),
+			}
+
+			if !am.Values.IsNull() && len(am.Values.Elements()) > 0 {
+				var valModels []AccessModelMetadataValueModel
+				diags.Append(am.Values.ElementsAs(ctx, &valModels, false)...)
+				if diags.HasError() {
+					return nil
+				}
+
+				apiAttr.Values = make([]*AccessModelMetadataValue, len(valModels))
+				for j, vm := range valModels {
+					apiVal := &AccessModelMetadataValue{
+						Value: vm.Value.ValueString(),
+						Name:  vm.Name.ValueString(),
+					}
+					if !vm.Status.IsNull() {
+						apiVal.Status = vm.Status.ValueString()
+					}
+					apiAttr.Values[j] = apiVal
+				}
+			}
+
+			result.Attributes[i] = apiAttr
+		}
+	}
+
+	return result
+}
+
+// accessModelMetadataAPIToState converts the API AttributeDTOList to a Terraform state list.
+func accessModelMetadataAPIToState(ctx context.Context, metadata *AttributeDTOList, diags *diag.Diagnostics) types.List {
+	metadataObjType := accessModelMetadataObjectType()
+
+	if metadata == nil || len(metadata.Attributes) == 0 {
+		return types.ListNull(metadataObjType)
+	}
+
+	attrModels := make([]AccessModelMetadataAttributeModel, len(metadata.Attributes))
+	for i, a := range metadata.Attributes {
+		attrModel := AccessModelMetadataAttributeModel{
+			Key:  types.StringValue(a.Key),
+			Name: types.StringValue(a.Name),
+		}
+
+		if len(a.Values) > 0 {
+			valModels := make([]AccessModelMetadataValueModel, len(a.Values))
+			for j, v := range a.Values {
+				valModel := AccessModelMetadataValueModel{
+					Value: types.StringValue(v.Value),
+					Name:  types.StringValue(v.Name),
+				}
+				if v.Status != "" {
+					valModel.Status = types.StringValue(v.Status)
+				} else {
+					valModel.Status = types.StringNull()
+				}
+				valModels[j] = valModel
+			}
+			valList, d := types.ListValueFrom(ctx, accessModelMetadataValueObjectType(), valModels)
+			diags.Append(d...)
+			attrModel.Values = valList
+		} else {
+			attrModel.Values = types.ListNull(accessModelMetadataValueObjectType())
+		}
+
+		attrModels[i] = attrModel
+	}
+
+	attrList, d := types.ListValueFrom(ctx, accessModelMetadataAttributeObjectType(), attrModels)
+	diags.Append(d...)
+
+	model := AccessModelMetadataModel{
+		Attributes: attrList,
+	}
+
+	list, d := types.ListValueFrom(ctx, metadataObjType, []AccessModelMetadataModel{model})
+	diags.Append(d...)
+	return list
+}
+
+func accessModelMetadataObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"attributes": types.ListType{ElemType: accessModelMetadataAttributeObjectType()},
+	}}
+}
+
+func accessModelMetadataAttributeObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"key":    types.StringType,
+		"name":   types.StringType,
+		"values": types.ListType{ElemType: accessModelMetadataValueObjectType()},
+	}}
+}
+
+func accessModelMetadataValueObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"value":  types.StringType,
+		"name":   types.StringType,
+		"status": types.StringType,
+	}}
+}
+
+// roleAccessRequestConfigModelToAPI converts the Terraform access_request_config list to the API struct.
+func roleAccessRequestConfigModelToAPI(ctx context.Context, configList types.List, diags *diag.Diagnostics) *RoleAccessRequestConfig {
+	if configList.IsNull() || len(configList.Elements()) == 0 {
+		return nil
+	}
+
+	var configModels []RoleAccessRequestConfigModel
+	diags.Append(configList.ElementsAs(ctx, &configModels, false)...)
+	if diags.HasError() {
+		return nil
+	}
+
+	if len(configModels) == 0 {
+		return nil
+	}
+
+	m := configModels[0]
+	config := &RoleAccessRequestConfig{}
+
+	if !m.CommentsRequired.IsNull() {
+		v := m.CommentsRequired.ValueBool()
+		config.CommentsRequired = &v
+	}
+	if !m.DenialCommentsRequired.IsNull() {
+		v := m.DenialCommentsRequired.ValueBool()
+		config.DenialCommentsRequired = &v
+	}
+
+	if !m.ApprovalSchemes.IsNull() && len(m.ApprovalSchemes.Elements()) > 0 {
+		var schemes []ApprovalSchemeModel
+		diags.Append(m.ApprovalSchemes.ElementsAs(ctx, &schemes, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		config.ApprovalSchemes = make([]*ApprovalSchemes, len(schemes))
+		for i, s := range schemes {
+			scheme := &ApprovalSchemes{
+				ApproverType: s.ApproverType.ValueString(),
+			}
+			if !s.ApproverID.IsNull() {
+				scheme.ApproverId = s.ApproverID.ValueString()
+			}
+			config.ApprovalSchemes[i] = scheme
+		}
+	}
+
+	if !m.DimensionSchema.IsNull() && len(m.DimensionSchema.Elements()) > 0 {
+		var dsModels []RoleDimensionSchemaModel
+		diags.Append(m.DimensionSchema.ElementsAs(ctx, &dsModels, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		if len(dsModels) > 0 {
+			ds := dsModels[0]
+			dimSchema := &RoleDimensionSchema{}
+			if !ds.DimensionAttributes.IsNull() && len(ds.DimensionAttributes.Elements()) > 0 {
+				var daModels []DimensionAttributeRefModel
+				diags.Append(ds.DimensionAttributes.ElementsAs(ctx, &daModels, false)...)
+				if diags.HasError() {
+					return nil
+				}
+				dimSchema.DimensionAttributes = make([]*DimensionAttributeRef, len(daModels))
+				for j, da := range daModels {
+					attrRef := &DimensionAttributeRef{
+						Name: da.Name.ValueString(),
+					}
+					if !da.DisplayName.IsNull() {
+						attrRef.DisplayName = da.DisplayName.ValueString()
+					}
+					if !da.Derived.IsNull() {
+						v := da.Derived.ValueBool()
+						attrRef.Derived = &v
+					}
+					dimSchema.DimensionAttributes[j] = attrRef
+				}
+			}
+			config.DimensionSchema = dimSchema
+		}
+	}
+
+	return config
+}
+
+// roleAccessRequestConfigAPIToState converts the API RoleAccessRequestConfig to a Terraform state list.
+func roleAccessRequestConfigAPIToState(ctx context.Context, config *RoleAccessRequestConfig, diags *diag.Diagnostics) types.List {
+	arcObjType := roleAccessRequestConfigObjectType()
+
+	if config == nil {
+		return types.ListNull(arcObjType)
+	}
+
+	// Treat an empty config (no meaningful fields set) as null to avoid perpetual diffs
+	if config.CommentsRequired == nil && config.DenialCommentsRequired == nil &&
+		len(config.ApprovalSchemes) == 0 && config.DimensionSchema == nil {
+		return types.ListNull(arcObjType)
+	}
+
+	model := RoleAccessRequestConfigModel{}
+
+	if config.CommentsRequired != nil {
+		model.CommentsRequired = types.BoolValue(*config.CommentsRequired)
+	} else {
+		model.CommentsRequired = types.BoolNull()
+	}
+
+	if config.DenialCommentsRequired != nil {
+		model.DenialCommentsRequired = types.BoolValue(*config.DenialCommentsRequired)
+	} else {
+		model.DenialCommentsRequired = types.BoolNull()
+	}
+
+	approvalSchemeObjType := roleApprovalSchemeObjectType()
+	if len(config.ApprovalSchemes) > 0 {
+		schemeModels := make([]ApprovalSchemeModel, len(config.ApprovalSchemes))
+		for i, s := range config.ApprovalSchemes {
+			schemeModels[i] = ApprovalSchemeModel{
+				ApproverType: types.StringValue(s.ApproverType),
+			}
+			if s.ApproverId != "" {
+				schemeModels[i].ApproverID = types.StringValue(s.ApproverId)
+			} else {
+				schemeModels[i].ApproverID = types.StringNull()
+			}
+		}
+		sl, d := types.ListValueFrom(ctx, approvalSchemeObjType, schemeModels)
+		diags.Append(d...)
+		model.ApprovalSchemes = sl
+	} else {
+		model.ApprovalSchemes, _ = types.ListValue(approvalSchemeObjType, []attr.Value{})
+	}
+
+	dimSchemaObjType := roleDimensionSchemaObjectType()
+	if config.DimensionSchema != nil {
+		ds := config.DimensionSchema
+		dsModel := RoleDimensionSchemaModel{}
+		dimAttrObjType := dimensionAttributeRefObjectType()
+		if len(ds.DimensionAttributes) > 0 {
+			daModels := make([]DimensionAttributeRefModel, len(ds.DimensionAttributes))
+			for j, da := range ds.DimensionAttributes {
+				daModel := DimensionAttributeRefModel{
+					Name: types.StringValue(da.Name),
+				}
+				if da.DisplayName != "" {
+					daModel.DisplayName = types.StringValue(da.DisplayName)
+				} else {
+					daModel.DisplayName = types.StringNull()
+				}
+				if da.Derived != nil {
+					daModel.Derived = types.BoolValue(*da.Derived)
+				} else {
+					daModel.Derived = types.BoolNull()
+				}
+				daModels[j] = daModel
+			}
+			dal, d := types.ListValueFrom(ctx, dimAttrObjType, daModels)
+			diags.Append(d...)
+			dsModel.DimensionAttributes = dal
+		} else {
+			dsModel.DimensionAttributes, _ = types.ListValue(dimAttrObjType, []attr.Value{})
+		}
+		dsl, d := types.ListValueFrom(ctx, dimSchemaObjType, []RoleDimensionSchemaModel{dsModel})
+		diags.Append(d...)
+		model.DimensionSchema = dsl
+	} else {
+		model.DimensionSchema, _ = types.ListValue(dimSchemaObjType, []attr.Value{})
+	}
+
+	list, d := types.ListValueFrom(ctx, arcObjType, []RoleAccessRequestConfigModel{model})
+	diags.Append(d...)
+	return list
+}
+
+func roleAccessRequestConfigObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"comments_required":        types.BoolType,
+		"denial_comments_required": types.BoolType,
+		"approval_schemes":         types.ListType{ElemType: roleApprovalSchemeObjectType()},
+		"dimension_schema":         types.ListType{ElemType: roleDimensionSchemaObjectType()},
+	}}
+}
+
+func roleApprovalSchemeObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"approver_type": types.StringType,
+		"approver_id":   types.StringType,
+	}}
+}
+
+func roleDimensionSchemaObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"dimension_attributes": types.ListType{ElemType: dimensionAttributeRefObjectType()},
+	}}
+}
+
+func dimensionAttributeRefObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"name":         types.StringType,
+		"display_name": types.StringType,
+		"derived":      types.BoolType,
 	}}
 }
