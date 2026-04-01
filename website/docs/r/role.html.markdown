@@ -343,8 +343,8 @@ A `dimension_schema` block supports:
 A `dimension_attributes` block supports:
 
 * `name` - (Required) The attribute name.
-* `display_name` - (Optional) The display name of the attribute.
-* `derived` - (Optional) Whether the attribute is derived.
+* `display_name` - (Required) The display name of the attribute.
+* `derived` - (Required) Whether the attribute is derived.
 
 ---
 

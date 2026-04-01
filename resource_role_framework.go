@@ -563,6 +563,18 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		data.Enabled = types.BoolValue(*newRole.Enabled)
 	}
 
+	// Map access request config from API response to resolve computed values
+	data.AccessRequestConfig = roleAccessRequestConfigAPIToState(ctx, newRole.AccessRequestConfig, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Map access model metadata from API response to resolve computed values
+	data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, newRole.AccessModelMetadata, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	tflog.Trace(ctx, "created a role resource")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -853,6 +865,35 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update role: %s", err))
 		return
+	}
+
+	// Re-read the role to resolve computed values
+	updatedRole, err := client.GetRole(ctx, data.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role after update: %s", err))
+		return
+	}
+
+	// Map access request config from API response to resolve computed values
+	data.AccessRequestConfig = roleAccessRequestConfigAPIToState(ctx, updatedRole.AccessRequestConfig, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Map access model metadata from API response to resolve computed values
+	data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, updatedRole.AccessModelMetadata, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if updatedRole.Requestable != nil {
+		data.Requestable = types.BoolValue(*updatedRole.Requestable)
+	}
+	if updatedRole.Dimensional != nil {
+		data.Dimensional = types.BoolValue(*updatedRole.Dimensional)
+	}
+	if updatedRole.Enabled != nil {
+		data.Enabled = types.BoolValue(*updatedRole.Enabled)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -1432,15 +1473,11 @@ func roleAccessRequestConfigModelToAPI(ctx context.Context, configList types.Lis
 				dimSchema.DimensionAttributes = make([]*DimensionAttributeRef, len(daModels))
 				for j, da := range daModels {
 					attrRef := &DimensionAttributeRef{
-						Name: da.Name.ValueString(),
+						Name:        da.Name.ValueString(),
+						DisplayName: da.DisplayName.ValueString(),
 					}
-					if !da.DisplayName.IsNull() {
-						attrRef.DisplayName = da.DisplayName.ValueString()
-					}
-					if !da.Derived.IsNull() {
-						v := da.Derived.ValueBool()
-						attrRef.Derived = &v
-					}
+					v := da.Derived.ValueBool()
+					attrRef.Derived = &v
 					dimSchema.DimensionAttributes[j] = attrRef
 				}
 			}
@@ -1508,17 +1545,13 @@ func roleAccessRequestConfigAPIToState(ctx context.Context, config *RoleAccessRe
 			daModels := make([]DimensionAttributeRefModel, len(ds.DimensionAttributes))
 			for j, da := range ds.DimensionAttributes {
 				daModel := DimensionAttributeRefModel{
-					Name: types.StringValue(da.Name),
-				}
-				if da.DisplayName != "" {
-					daModel.DisplayName = types.StringValue(da.DisplayName)
-				} else {
-					daModel.DisplayName = types.StringNull()
+					Name:        types.StringValue(da.Name),
+					DisplayName: types.StringValue(da.DisplayName),
 				}
 				if da.Derived != nil {
 					daModel.Derived = types.BoolValue(*da.Derived)
 				} else {
-					daModel.Derived = types.BoolNull()
+					daModel.Derived = types.BoolValue(false)
 				}
 				daModels[j] = daModel
 			}
