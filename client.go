@@ -2095,6 +2095,153 @@ func (c *Client) DeleteDimension(ctx context.Context, roleId string, dimensionId
 	return nil
 }
 
+func (c *Client) GetWorkflow(ctx context.Context, id string) (*Workflow, error) {
+	workflowURL := fmt.Sprintf("%s/v2025/workflows/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to get workflow", map[string]interface{}{
+		"method":      "GET",
+		"url":         workflowURL,
+		"workflow_id": id,
+	})
+	req, err := http.NewRequest("GET", workflowURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := Workflow{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) GetWorkflowByName(ctx context.Context, name string) (*Workflow, error) {
+	workflowURL := fmt.Sprintf("%s/v2025/workflows", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to list workflows", map[string]interface{}{
+		"method": "GET",
+		"url":    workflowURL,
+		"name":   name,
+	})
+	req, err := http.NewRequest("GET", workflowURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	var res []*Workflow
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	for _, w := range res {
+		if w.Name == name {
+			return w, nil
+		}
+	}
+
+	return nil, &NotFoundError{fmt.Sprintf("workflow with name %q not found", name)}
+}
+
+func (c *Client) CreateWorkflow(ctx context.Context, workflow *Workflow) (*Workflow, error) {
+	body, err := json.Marshal(workflow)
+	if err != nil {
+		return nil, err
+	}
+
+	createURL := fmt.Sprintf("%s/v2025/workflows", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to create workflow", map[string]interface{}{
+		"method": "POST",
+		"url":    createURL,
+	})
+	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := Workflow{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) UpdateWorkflow(ctx context.Context, id string, workflow *Workflow) (*Workflow, error) {
+	body, err := json.Marshal(workflow)
+	if err != nil {
+		return nil, err
+	}
+
+	updateURL := fmt.Sprintf("%s/v2025/workflows/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to update workflow", map[string]interface{}{
+		"method":      "PUT",
+		"url":         updateURL,
+		"workflow_id": id,
+	})
+	req, err := http.NewRequest("PUT", updateURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	res := Workflow{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) DeleteWorkflow(ctx context.Context, id string) error {
+	deleteURL := fmt.Sprintf("%s/v2025/workflows/%s", c.BaseURL, id)
+	tflog.Debug(ctx, "Creating HTTP request to delete workflow", map[string]interface{}{
+		"method":      "DELETE",
+		"url":         deleteURL,
+		"workflow_id": id,
+	})
+	req, err := http.NewRequest("DELETE", deleteURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	req = req.WithContext(ctx)
+
+	var res interface{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
 	// Apply rate limiting before making any API requests
 	tflog.Trace(ctx, "Before rate limiter", map[string]interface{}{

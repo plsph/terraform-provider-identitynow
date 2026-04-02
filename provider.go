@@ -242,6 +242,7 @@ func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.R
 		NewScheduleAccountAggregationResource,
 		NewTaggedObjectResource,
 		NewDimensionResource,
+		NewWorkflowResource,
 	}
 }
 
@@ -256,5 +257,6 @@ func (p *IdentityNowProvider) DataSources(ctx context.Context) []func() datasour
 		NewSourceAppDataSource,
 		NewSourceEntitlementDataSource,
 		NewDimensionDataSource,
+		NewWorkflowDataSource,
 	}
 }
