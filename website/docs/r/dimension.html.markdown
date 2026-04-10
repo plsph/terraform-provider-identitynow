@@ -12,6 +12,8 @@ Manages an IdentityNow Dimension. A dimension is a sub-division of a role that a
 
 ## Example Usage
 
+### Dimension with Single Value Criteria
+
 ```hcl
 resource "identitynow_dimension" "example" {
   role_id     = identitynow_role.example.id
@@ -40,6 +42,36 @@ resource "identitynow_dimension" "example" {
       key {
         type     = "IDENTITY"
         property = "attribute.department"
+      }
+    }
+  }
+}
+```
+
+### Dimension with Multi-Value Criteria
+
+```hcl
+resource "identitynow_dimension" "multivalue" {
+  role_id     = identitynow_role.example.id
+  name        = "Multi-Value Dimension"
+  description = "A dimension matching multiple job codes"
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+
+  membership {
+    type = "STANDARD"
+
+    criteria {
+      operation = "EQUALS"
+      values    = ["G8244", "G8243", "G8242", "G6644"]
+
+      key {
+        type     = "IDENTITY"
+        property = "attribute.jobcode"
       }
     }
   }
@@ -88,6 +120,24 @@ A `membership` block supports:
 
 * `type` - (Required) The membership type (`STANDARD` or `IDENTITY_LIST`).
 * `criteria` - (Optional) A `criteria` block as defined below.
+
+---
+
+A `criteria` block supports:
+
+* `operation` - (Required) The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).
+* `string_value` - (Optional) A single value to match against.
+* `values` - (Optional) A list of values to match against. Use this when the criteria should match any of multiple values.
+* `key` - (Optional) A `key` block identifying the identity attribute.
+* `children` - (Optional) One or more child `criteria` blocks (supports up to 3 levels of nesting).
+
+---
+
+A `key` block supports:
+
+* `type` - (Required) The key type (`IDENTITY` or `ACCOUNT`).
+* `property` - (Required) The identity or account attribute name (e.g. `attribute.department`).
+* `source_id` - (Optional) The source ID (required when `type` is `ACCOUNT`).
 
 ## Attributes Reference
 

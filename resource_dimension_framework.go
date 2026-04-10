@@ -147,8 +147,13 @@ func (r *DimensionResource) Schema(ctx context.Context, req resource.SchemaReque
 										MarkdownDescription: "Criteria operation (EQUALS, NOT_EQUALS, CONTAINS, AND, OR, etc.)",
 										Required:            true,
 									},
+									"values": schema.ListAttribute{
+										MarkdownDescription: "List of values to match against",
+										ElementType:         types.StringType,
+										Optional:            true,
+									},
 									"string_value": schema.StringAttribute{
-										MarkdownDescription: "Value to match against",
+										MarkdownDescription: "Single value to match against",
 										Optional:            true,
 									},
 								},
@@ -165,8 +170,13 @@ func (r *DimensionResource) Schema(ctx context.Context, req resource.SchemaReque
 													MarkdownDescription: "Criteria operation",
 													Required:            true,
 												},
+												"values": schema.ListAttribute{
+													MarkdownDescription: "List of values to match against",
+													ElementType:         types.StringType,
+													Optional:            true,
+												},
 												"string_value": schema.StringAttribute{
-													MarkdownDescription: "Value to match against",
+													MarkdownDescription: "Single value to match against",
 													Optional:            true,
 												},
 											},
@@ -183,8 +193,13 @@ func (r *DimensionResource) Schema(ctx context.Context, req resource.SchemaReque
 																MarkdownDescription: "Criteria operation",
 																Required:            true,
 															},
+															"values": schema.ListAttribute{
+																MarkdownDescription: "List of values to match against",
+																ElementType:         types.StringType,
+																Optional:            true,
+															},
 															"string_value": schema.StringAttribute{
-																MarkdownDescription: "Value to match against",
+																MarkdownDescription: "Single value to match against",
 																Optional:            true,
 															},
 														},

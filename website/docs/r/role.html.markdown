@@ -254,6 +254,55 @@ resource "identitynow_role" "compound_membership" {
 }
 ```
 
+### Role with Multi-Value Membership Criteria
+
+```hcl
+resource "identitynow_role" "multivalue_membership" {
+  name        = "Multi-Value Membership Role"
+  description = "Assigned based on multiple job codes"
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+
+  membership {
+    type = "STANDARD"
+
+    criteria {
+      operation = "OR"
+
+      children {
+        operation = "AND"
+
+        children {
+          operation = "EQUALS"
+          values    = ["active"]
+
+          key {
+            type     = "IDENTITY"
+            property = "attribute.cloudLifecycleState"
+          }
+        }
+
+        children {
+          operation = "EQUALS"
+          values    = ["G8244", "G8243", "G8242", "G6644"]
+
+          key {
+            type     = "IDENTITY"
+            property = "attribute.jobcode"
+          }
+        }
+      }
+    }
+  }
+
+  enabled = true
+}
+```
+
 ## Arguments Reference
 
 The following arguments are supported:
@@ -358,7 +407,8 @@ A `membership` block supports:
 A `criteria` block supports:
 
 * `operation` - (Required) The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).
-* `string_value` - (Optional) The value to match against.
+* `string_value` - (Optional) A single value to match against.
+* `values` - (Optional) A list of values to match against. Use this when the criteria should match any of multiple values.
 * `key` - (Optional) A `key` block identifying the identity attribute.
 * `children` - (Optional) One or more child `criteria` blocks (supports up to 3 levels of nesting).
 

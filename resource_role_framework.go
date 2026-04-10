@@ -97,6 +97,7 @@ type MembershipModel struct {
 
 type CriteriaModel struct {
 	Operation   types.String `tfsdk:"operation"`
+	Values      types.List   `tfsdk:"values"`
 	StringValue types.String `tfsdk:"string_value"`
 	Key         types.List   `tfsdk:"key"`
 	Children    types.List   `tfsdk:"children"`
@@ -104,6 +105,7 @@ type CriteriaModel struct {
 
 type CriteriaChildModel struct {
 	Operation   types.String `tfsdk:"operation"`
+	Values      types.List   `tfsdk:"values"`
 	StringValue types.String `tfsdk:"string_value"`
 	Key         types.List   `tfsdk:"key"`
 	Children    types.List   `tfsdk:"children"`
@@ -111,6 +113,7 @@ type CriteriaChildModel struct {
 
 type CriteriaLeafModel struct {
 	Operation   types.String `tfsdk:"operation"`
+	Values      types.List   `tfsdk:"values"`
 	StringValue types.String `tfsdk:"string_value"`
 	Key         types.List   `tfsdk:"key"`
 }
@@ -350,8 +353,13 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 										MarkdownDescription: "Criteria operation (EQUALS, NOT_EQUALS, CONTAINS, AND, OR, etc.)",
 										Required:            true,
 									},
+									"values": schema.ListAttribute{
+										MarkdownDescription: "List of values to match against",
+										ElementType:         types.StringType,
+										Optional:            true,
+									},
 									"string_value": schema.StringAttribute{
-										MarkdownDescription: "Value to match against",
+										MarkdownDescription: "Single value to match against",
 										Optional:            true,
 									},
 								},
@@ -368,8 +376,13 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 													MarkdownDescription: "Criteria operation",
 													Required:            true,
 												},
+												"values": schema.ListAttribute{
+													MarkdownDescription: "List of values to match against",
+													ElementType:         types.StringType,
+													Optional:            true,
+												},
 												"string_value": schema.StringAttribute{
-													MarkdownDescription: "Value to match against",
+													MarkdownDescription: "Single value to match against",
 													Optional:            true,
 												},
 											},
@@ -386,8 +399,13 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 																MarkdownDescription: "Criteria operation",
 																Required:            true,
 															},
+															"values": schema.ListAttribute{
+																MarkdownDescription: "List of values to match against",
+																ElementType:         types.StringType,
+																Optional:            true,
+															},
 															"string_value": schema.StringAttribute{
-																MarkdownDescription: "Value to match against",
+																MarkdownDescription: "Single value to match against",
 																Optional:            true,
 															},
 														},
@@ -984,6 +1002,12 @@ func criteriaModelToAPI(ctx context.Context, c CriteriaModel, diags *diag.Diagno
 		Operation: c.Operation.ValueString(),
 	}
 
+	if !c.Values.IsNull() && len(c.Values.Elements()) > 0 {
+		var vals []string
+		diags.Append(c.Values.ElementsAs(ctx, &vals, false)...)
+		criteria.Values = vals
+	}
+
 	if !c.StringValue.IsNull() {
 		criteria.StringValue = c.StringValue.ValueString()
 	}
@@ -1025,6 +1049,12 @@ func criteriaChildModelToAPI(ctx context.Context, c CriteriaChildModel, diags *d
 		Operation: c.Operation.ValueString(),
 	}
 
+	if !c.Values.IsNull() && len(c.Values.Elements()) > 0 {
+		var vals []string
+		diags.Append(c.Values.ElementsAs(ctx, &vals, false)...)
+		criteria.Values = vals
+	}
+
 	if !c.StringValue.IsNull() {
 		criteria.StringValue = c.StringValue.ValueString()
 	}
@@ -1063,6 +1093,12 @@ func criteriaChildModelToAPI(ctx context.Context, c CriteriaChildModel, diags *d
 func criteriaLeafModelToAPI(ctx context.Context, c CriteriaLeafModel, diags *diag.Diagnostics) *RoleMembershipCriteria {
 	criteria := &RoleMembershipCriteria{
 		Operation: c.Operation.ValueString(),
+	}
+
+	if !c.Values.IsNull() && len(c.Values.Elements()) > 0 {
+		var vals []string
+		diags.Append(c.Values.ElementsAs(ctx, &vals, false)...)
+		criteria.Values = vals
 	}
 
 	if !c.StringValue.IsNull() {
@@ -1124,6 +1160,14 @@ func criteriaAPIToState(ctx context.Context, c *RoleMembershipCriteria, diags *d
 		Operation: types.StringValue(c.Operation),
 	}
 
+	if len(c.Values) > 0 {
+		valsList, d := types.ListValueFrom(ctx, types.StringType, c.Values)
+		diags.Append(d...)
+		model.Values = valsList
+	} else {
+		model.Values = types.ListNull(types.StringType)
+	}
+
 	if c.StringValue != "" {
 		model.StringValue = types.StringValue(c.StringValue)
 	} else {
@@ -1160,6 +1204,14 @@ func criteriaChildAPIToModel(ctx context.Context, c *RoleMembershipCriteria, dia
 		Operation: types.StringValue(c.Operation),
 	}
 
+	if len(c.Values) > 0 {
+		valsList, d := types.ListValueFrom(ctx, types.StringType, c.Values)
+		diags.Append(d...)
+		model.Values = valsList
+	} else {
+		model.Values = types.ListNull(types.StringType)
+	}
+
 	if c.StringValue != "" {
 		model.StringValue = types.StringValue(c.StringValue)
 	} else {
@@ -1191,6 +1243,14 @@ func criteriaChildAPIToModel(ctx context.Context, c *RoleMembershipCriteria, dia
 func criteriaLeafAPIToModel(ctx context.Context, c *RoleMembershipCriteria, diags *diag.Diagnostics) CriteriaLeafModel {
 	model := CriteriaLeafModel{
 		Operation: types.StringValue(c.Operation),
+	}
+
+	if len(c.Values) > 0 {
+		valsList, d := types.ListValueFrom(ctx, types.StringType, c.Values)
+		diags.Append(d...)
+		model.Values = valsList
+	} else {
+		model.Values = types.ListNull(types.StringType)
 	}
 
 	if c.StringValue != "" {
@@ -1245,6 +1305,7 @@ func membershipObjectType() types.ObjectType {
 func criteriaObjectType() types.ObjectType {
 	return types.ObjectType{AttrTypes: map[string]attr.Type{
 		"operation":    types.StringType,
+		"values":       types.ListType{ElemType: types.StringType},
 		"string_value": types.StringType,
 		"key":          types.ListType{ElemType: criteriaKeyObjectType()},
 		"children":     types.ListType{ElemType: criteriaChildObjectType()},
@@ -1254,6 +1315,7 @@ func criteriaObjectType() types.ObjectType {
 func criteriaChildObjectType() types.ObjectType {
 	return types.ObjectType{AttrTypes: map[string]attr.Type{
 		"operation":    types.StringType,
+		"values":       types.ListType{ElemType: types.StringType},
 		"string_value": types.StringType,
 		"key":          types.ListType{ElemType: criteriaKeyObjectType()},
 		"children":     types.ListType{ElemType: criteriaLeafObjectType()},
@@ -1263,6 +1325,7 @@ func criteriaChildObjectType() types.ObjectType {
 func criteriaLeafObjectType() types.ObjectType {
 	return types.ObjectType{AttrTypes: map[string]attr.Type{
 		"operation":    types.StringType,
+		"values":       types.ListType{ElemType: types.StringType},
 		"string_value": types.StringType,
 		"key":          types.ListType{ElemType: criteriaKeyObjectType()},
 	}}

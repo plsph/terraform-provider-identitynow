@@ -50,6 +50,7 @@ type RoleMembership struct {
 type RoleMembershipCriteria struct {
 	Operation   string                    `json:"operation,omitempty"`
 	Key         *RoleKey                  `json:"key,omitempty"`
+	Values      []string                  `json:"values,omitempty"`
 	StringValue string                    `json:"stringValue,omitempty"`
 	Children    []*RoleMembershipCriteria `json:"children,omitempty"`
 }
