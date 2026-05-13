@@ -452,24 +452,26 @@ func (r *AccessProfileResource) Update(ctx context.Context, req resource.UpdateR
 		})
 	}
 
-	// Entitlements
-	if !data.Entitlements.IsNull() {
-		var entModels []EntitlementRefModel
-		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &entModels, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		var ents []map[string]interface{}
-		for _, em := range entModels {
-			entType := em.Type.ValueString()
-			if entType == "" {
-				entType = "ENTITLEMENT"
+	// Entitlements - always send patch, use empty array when no entitlements are defined
+	{
+		ents := make([]map[string]interface{}, 0)
+		if !data.Entitlements.IsNull() {
+			var entModels []EntitlementRefModel
+			resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &entModels, false)...)
+			if resp.Diagnostics.HasError() {
+				return
 			}
-			ents = append(ents, map[string]interface{}{
-				"id":   em.ID.ValueString(),
-				"name": em.Name.ValueString(),
-				"type": entType,
-			})
+			for _, em := range entModels {
+				entType := em.Type.ValueString()
+				if entType == "" {
+					entType = "ENTITLEMENT"
+				}
+				ents = append(ents, map[string]interface{}{
+					"id":   em.ID.ValueString(),
+					"name": em.Name.ValueString(),
+					"type": entType,
+				})
+			}
 		}
 		updatePatches = append(updatePatches, &UpdateAccessProfile{
 			Op: "replace", Path: "/entitlements", Value: ents,

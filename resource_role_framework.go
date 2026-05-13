@@ -762,19 +762,21 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		})
 	}
 
-	// Patch access profiles
-	if !data.AccessProfiles.IsNull() {
-		var aps []AccessProfileRefModel
-		resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &aps, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		apValues := make([]interface{}, len(aps))
-		for i, ap := range aps {
-			apValues[i] = map[string]interface{}{
-				"id":   ap.ID.ValueString(),
-				"type": ap.Type.ValueString(),
-				"name": ap.Name.ValueString(),
+	// Patch access profiles - always send patch, use empty array when no access profiles are defined
+	{
+		apValues := make([]interface{}, 0)
+		if !data.AccessProfiles.IsNull() {
+			var aps []AccessProfileRefModel
+			resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &aps, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			for _, ap := range aps {
+				apValues = append(apValues, map[string]interface{}{
+					"id":   ap.ID.ValueString(),
+					"type": ap.Type.ValueString(),
+					"name": ap.Name.ValueString(),
+				})
 			}
 		}
 		updatePatches = append(updatePatches, &UpdateRole{
@@ -784,19 +786,21 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		})
 	}
 
-	// Patch entitlements
-	if !data.Entitlements.IsNull() {
-		var ents []EntitlementRefModel
-		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &ents, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		entValues := make([]interface{}, len(ents))
-		for i, e := range ents {
-			entValues[i] = map[string]interface{}{
-				"id":   e.ID.ValueString(),
-				"type": e.Type.ValueString(),
-				"name": e.Name.ValueString(),
+	// Patch entitlements - always send patch, use empty array when no entitlements are defined
+	{
+		entValues := make([]interface{}, 0)
+		if !data.Entitlements.IsNull() {
+			var ents []EntitlementRefModel
+			resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &ents, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			for _, e := range ents {
+				entValues = append(entValues, map[string]interface{}{
+					"id":   e.ID.ValueString(),
+					"type": e.Type.ValueString(),
+					"name": e.Name.ValueString(),
+				})
 			}
 		}
 		updatePatches = append(updatePatches, &UpdateRole{
