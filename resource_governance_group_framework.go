@@ -158,7 +158,7 @@ func (r *GovernanceGroupResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	gg, err := client.GetGovernanceGroup(ctx, data.ID.ValueString())
+	gg, err := client.GetGovernanceGroups(ctx, data.ID.ValueString())
 	if err != nil {
 		if _, notFound := err.(*NotFoundError); notFound {
 			resp.State.RemoveResource(ctx)
@@ -254,7 +254,7 @@ func (r *GovernanceGroupResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	gg, err := client.GetGovernanceGroup(ctx, data.ID.ValueString())
+	gg, err := client.GetGovernanceGroups(ctx, data.ID.ValueString())
 	if err != nil {
 		if _, notFound := err.(*NotFoundError); notFound {
 			return

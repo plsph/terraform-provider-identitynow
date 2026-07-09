@@ -1201,43 +1201,63 @@ func (c *Client) GetGovernanceGroupByName(ctx context.Context, name string) ([]*
 	return nil, errors.New("dead code")
 }
 
-func (c *Client) GetGovernanceGroup(ctx context.Context, id string) (*GovernanceGroup, error) {
-	workgroupURL := fmt.Sprintf("%s/v2025/workgroups/%s", c.BaseURL, id)
-	tflog.Debug(ctx, "Creating HTTP request to get governance group", map[string]interface{}{
-		"method":   "GET",
-		"url":      workgroupURL,
-		"group_id": id,
-	})
+func (c *Client) GetGovernanceGroups(ctx context.Context, id string) (*GovernanceGroup, error) {
+	limit := 250
+	offset := 0
 	maxRetries := 3
 	retryDelay := 3 * time.Second
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest("GET", workgroupURL, nil)
-		if err != nil {
-			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-			return nil, err
-		}
 
-		req.Header.Set("Accept", "application/json; charset=utf-8")
-		req.Header.Set("X-SailPoint-Experimental", "true")
+	for {
+		filter := fmt.Sprintf("id eq \"%s\"", id)
+		workgroupURL := fmt.Sprintf("%s/v2025/workgroups?filters=%s&limit=%d&offset=%d", c.BaseURL, url.QueryEscape(filter), limit, offset)
+		tflog.Debug(ctx, "Creating HTTP request to get governance groups", map[string]interface{}{
+			"method":   "GET",
+			"url":      workgroupURL,
+			"group_id": id,
+			"limit":    limit,
+			"offset":   offset,
+		})
 
-		req = req.WithContext(ctx)
-
-		res := GovernanceGroup{}
-		if err := c.sendRequest(ctx, req, &res); err != nil {
-			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-			if (attempt < maxRetries) &&
-				(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-				backoffDelay := time.Duration(attempt) * retryDelay
-				time.Sleep(backoffDelay)
-				continue
+		pageResult := []*GovernanceGroup{}
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			req, err := http.NewRequest("GET", workgroupURL, nil)
+			if err != nil {
+				tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+				return nil, err
 			}
-			return nil, err
-		}
-		tflog.Debug(ctx, "GetGovernanceGroup response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
 
-		return &res, nil
+			req.Header.Set("Accept", "application/json; charset=utf-8")
+			req.Header.Set("X-SailPoint-Experimental", "true")
+
+			req = req.WithContext(ctx)
+
+			if err := c.sendRequest(ctx, req, &pageResult); err != nil {
+				tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", pageResult)})
+				if (attempt < maxRetries) &&
+					(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
+					backoffDelay := time.Duration(attempt) * retryDelay
+					time.Sleep(backoffDelay)
+					continue
+				}
+				return nil, err
+			}
+
+			break
+		}
+
+		tflog.Debug(ctx, "GetGovernanceGroups response details", map[string]interface{}{"response": fmt.Sprintf("%+v", pageResult)})
+		if len(pageResult) > 0 {
+			return pageResult[0], nil
+		}
+
+		if len(pageResult) < limit {
+			break
+		}
+
+		offset += limit
 	}
-	return nil, errors.New("dead code")
+
+	return nil, &NotFoundError{"status not found"}
 }
 
 func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*UpdateGovernanceGroup, id interface{}) (*GovernanceGroup, error) {
