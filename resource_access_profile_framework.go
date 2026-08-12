@@ -675,30 +675,66 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		"type": types.StringType,
 	}}
 	if ap.Entitlements != nil {
-		// Get existing entitlements from state/plan for case-insensitive name matching
-		var existingEnts []EntitlementRefModel
+		existingOrder := make([]string, 0, len(ap.Entitlements))
+		existingEntsByID := make(map[string]EntitlementRefModel, len(ap.Entitlements))
 		if !data.Entitlements.IsNull() {
-			data.Entitlements.ElementsAs(ctx, &existingEnts, false)
-		}
-
-		entModels := make([]EntitlementRefModel, len(ap.Entitlements))
-		for i, e := range ap.Entitlements {
-			name := e.Name
-			// Preserve state/plan name if it matches case-insensitively (AD is case-insensitive)
-			for _, existing := range existingEnts {
-				if existing.ID.ValueString() == e.ID && strings.EqualFold(existing.Name.ValueString(), name) {
-					tflog.Warn(ctx, fmt.Sprintf("Entitlement name %s differs from config %s", name, existing.Name.ValueString()))
-					name = existing.Name.ValueString()
-					break
+			var existingEnts []EntitlementRefModel
+			if d := data.Entitlements.ElementsAs(ctx, &existingEnts, false); d.HasError() {
+				diags.Append(d...)
+			} else {
+				for _, existing := range existingEnts {
+					id := existing.ID.ValueString()
+					if id == "" {
+						continue
+					}
+					existingOrder = append(existingOrder, id)
+					existingEntsByID[id] = existing
 				}
 			}
-			entModels[i] = EntitlementRefModel{
+		}
+
+		apiModels := make([]EntitlementRefModel, 0, len(ap.Entitlements))
+		for _, e := range ap.Entitlements {
+			name := e.Name
+			if existing, ok := existingEntsByID[fmt.Sprintf("%v", e.ID)]; ok && strings.EqualFold(existing.Name.ValueString(), name) {
+				name = existing.Name.ValueString()
+			}
+
+			entType := e.Type
+			if entType == "" {
+				entType = "ENTITLEMENT"
+			}
+
+			apiModels = append(apiModels, EntitlementRefModel{
 				ID:   types.StringValue(fmt.Sprintf("%v", e.ID)),
 				Name: types.StringValue(name),
-				Type: types.StringValue(e.Type),
-			}
+				Type: types.StringValue(entType),
+			})
 		}
-		entList, d := types.ListValueFrom(ctx, entObjType, entModels)
+
+		if len(existingOrder) > 0 {
+			apiByID := make(map[string]EntitlementRefModel, len(apiModels))
+			for _, model := range apiModels {
+				apiByID[model.ID.ValueString()] = model
+			}
+			ordered := make([]EntitlementRefModel, 0, len(apiModels))
+			seen := make(map[string]struct{}, len(apiModels))
+			for _, id := range existingOrder {
+				if model, ok := apiByID[id]; ok {
+					ordered = append(ordered, model)
+					seen[id] = struct{}{}
+				}
+			}
+			for _, model := range apiModels {
+				if _, ok := seen[model.ID.ValueString()]; ok {
+					continue
+				}
+				ordered = append(ordered, model)
+			}
+			apiModels = ordered
+		}
+
+		entList, d := types.ListValueFrom(ctx, entObjType, apiModels)
 		diags.Append(d...)
 		data.Entitlements = entList
 	} else {

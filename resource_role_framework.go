@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -665,15 +666,56 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	if role.AccessProfiles != nil {
-		apModels := make([]AccessProfileRefModel, len(role.AccessProfiles))
-		for i, ap := range role.AccessProfiles {
-			apModels[i] = AccessProfileRefModel{
+		existingOrder := make([]string, 0, len(role.AccessProfiles))
+		existingAPsByID := make(map[string]AccessProfileRefModel, len(role.AccessProfiles))
+		if !data.AccessProfiles.IsNull() {
+			var existingAps []AccessProfileRefModel
+			if d := data.AccessProfiles.ElementsAs(ctx, &existingAps, false); d.HasError() {
+				resp.Diagnostics.Append(d...)
+			} else {
+				for _, existing := range existingAps {
+					id := existing.ID.ValueString()
+					if id == "" {
+						continue
+					}
+					existingOrder = append(existingOrder, id)
+					existingAPsByID[id] = existing
+				}
+			}
+		}
+
+		apiModels := make([]AccessProfileRefModel, 0, len(role.AccessProfiles))
+		for _, ap := range role.AccessProfiles {
+			apiModels = append(apiModels, AccessProfileRefModel{
 				ID:   types.StringValue(fmt.Sprintf("%v", ap.ID)),
 				Type: types.StringValue(ap.Type),
 				Name: types.StringValue(ap.Name),
-			}
+			})
 		}
-		apList, diags := types.ListValueFrom(ctx, objType, apModels)
+
+		if len(existingOrder) > 0 {
+			apiByID := make(map[string]AccessProfileRefModel, len(apiModels))
+			for _, model := range apiModels {
+				apiByID[model.ID.ValueString()] = model
+			}
+			ordered := make([]AccessProfileRefModel, 0, len(apiModels))
+			seen := make(map[string]struct{}, len(apiModels))
+			for _, id := range existingOrder {
+				if model, ok := apiByID[id]; ok {
+					ordered = append(ordered, model)
+					seen[id] = struct{}{}
+				}
+			}
+			for _, model := range apiModels {
+				if _, ok := seen[model.ID.ValueString()]; ok {
+					continue
+				}
+				ordered = append(ordered, model)
+			}
+			apiModels = ordered
+		}
+
+		apList, diags := types.ListValueFrom(ctx, objType, apiModels)
 		resp.Diagnostics.Append(diags...)
 		data.AccessProfiles = apList
 	} else {
@@ -681,15 +723,60 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	if role.Entitlements != nil {
-		entModels := make([]EntitlementRefModel, len(role.Entitlements))
-		for i, e := range role.Entitlements {
-			entModels[i] = EntitlementRefModel{
-				ID:   types.StringValue(fmt.Sprintf("%v", e.ID)),
-				Type: types.StringValue(e.Type),
-				Name: types.StringValue(e.Name),
+		existingOrder := make([]string, 0, len(role.Entitlements))
+		existingEntsByID := make(map[string]EntitlementRefModel, len(role.Entitlements))
+		if !data.Entitlements.IsNull() {
+			var existingEnts []EntitlementRefModel
+			if d := data.Entitlements.ElementsAs(ctx, &existingEnts, false); d.HasError() {
+				resp.Diagnostics.Append(d...)
+			} else {
+				for _, existing := range existingEnts {
+					id := existing.ID.ValueString()
+					if id == "" {
+						continue
+					}
+					existingOrder = append(existingOrder, id)
+					existingEntsByID[id] = existing
+				}
 			}
 		}
-		entList, diags := types.ListValueFrom(ctx, objType, entModels)
+
+		apiModels := make([]EntitlementRefModel, 0, len(role.Entitlements))
+		for _, e := range role.Entitlements {
+			name := e.Name
+			if existing, ok := existingEntsByID[fmt.Sprintf("%v", e.ID)]; ok && strings.EqualFold(existing.Name.ValueString(), name) {
+				name = existing.Name.ValueString()
+			}
+			apiModels = append(apiModels, EntitlementRefModel{
+				ID:   types.StringValue(fmt.Sprintf("%v", e.ID)),
+				Type: types.StringValue(e.Type),
+				Name: types.StringValue(name),
+			})
+		}
+
+		if len(existingOrder) > 0 {
+			apiByID := make(map[string]EntitlementRefModel, len(apiModels))
+			for _, model := range apiModels {
+				apiByID[model.ID.ValueString()] = model
+			}
+			ordered := make([]EntitlementRefModel, 0, len(apiModels))
+			seen := make(map[string]struct{}, len(apiModels))
+			for _, id := range existingOrder {
+				if model, ok := apiByID[id]; ok {
+					ordered = append(ordered, model)
+					seen[id] = struct{}{}
+				}
+			}
+			for _, model := range apiModels {
+				if _, ok := seen[model.ID.ValueString()]; ok {
+					continue
+				}
+				ordered = append(ordered, model)
+			}
+			apiModels = ordered
+		}
+
+		entList, diags := types.ListValueFrom(ctx, objType, apiModels)
 		resp.Diagnostics.Append(diags...)
 		data.Entitlements = entList
 	} else {
