@@ -36,6 +36,22 @@ type SourceEntitlementDataSourceModel struct {
 	Modified               types.String `tfsdk:"modified"`
 	Owner                  types.List   `tfsdk:"owner"`
 	DirectPermissions      types.List   `tfsdk:"direct_permissions"`
+	Entitlements           types.List   `tfsdk:"entitlements"`
+}
+
+type SourceEntitlementItemModel struct {
+	ID                     types.String `tfsdk:"id"`
+	Name                   types.String `tfsdk:"name"`
+	Description            types.String `tfsdk:"description"`
+	Attribute              types.String `tfsdk:"attribute"`
+	Value                  types.String `tfsdk:"value"`
+	SourceSchemaObjectType types.String `tfsdk:"source_schema_object_type"`
+	Privileged             types.Bool   `tfsdk:"privileged"`
+	Requestable            types.Bool   `tfsdk:"requestable"`
+	Created                types.String `tfsdk:"created"`
+	Modified               types.String `tfsdk:"modified"`
+	Owner                  types.List   `tfsdk:"owner"`
+	DirectPermissions      types.List   `tfsdk:"direct_permissions"`
 }
 
 func (d *SourceEntitlementDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -67,10 +83,12 @@ func (d *SourceEntitlementDataSource) Schema(ctx context.Context, req datasource
 				MarkdownDescription: "Entitlement description",
 			},
 			"attribute": schema.StringAttribute{
+				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Attribute",
 			},
 			"value": schema.StringAttribute{
+				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Value",
 			},
@@ -109,6 +127,35 @@ func (d *SourceEntitlementDataSource) Schema(ctx context.Context, req datasource
 				Computed:            true,
 				MarkdownDescription: "Direct permissions",
 				ElementType:         types.StringType,
+			},
+			"entitlements": schema.ListNestedAttribute{
+				Computed:            true,
+				MarkdownDescription: "Matching entitlements",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id":                        schema.StringAttribute{Computed: true},
+						"name":                      schema.StringAttribute{Computed: true},
+						"description":               schema.StringAttribute{Computed: true},
+						"attribute":                 schema.StringAttribute{Computed: true},
+						"value":                     schema.StringAttribute{Computed: true},
+						"source_schema_object_type": schema.StringAttribute{Computed: true},
+						"privileged":                schema.BoolAttribute{Computed: true},
+						"requestable":               schema.BoolAttribute{Computed: true},
+						"created":                   schema.StringAttribute{Computed: true},
+						"modified":                  schema.StringAttribute{Computed: true},
+						"owner": schema.ListNestedAttribute{
+							Computed: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"id":   schema.StringAttribute{Computed: true},
+									"type": schema.StringAttribute{Computed: true},
+									"name": schema.StringAttribute{Computed: true},
+								},
+							},
+						},
+						"direct_permissions": schema.ListAttribute{Computed: true, ElementType: types.StringType},
+					},
+				},
 			},
 		},
 	}
@@ -160,43 +207,41 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 		return
 	}
 
-	e := entitlements[0]
-	data.ID = types.StringValue(e.ID)
-	data.Name = types.StringValue(e.Name)
-	data.Attribute = types.StringValue(e.Attribute)
-	data.Value = types.StringValue(e.Value)
-	data.SourceSchemaObjectType = types.StringValue(e.SourceSchemaObjectType)
-	data.Privileged = types.BoolValue(e.Privileged)
-	data.Requestable = types.BoolValue(e.Requestable)
-
-	if e.Source != nil {
-		data.SourceID = types.StringValue(e.Source.ID)
-		data.SourceName = types.StringValue(e.Source.Name)
+	// If API returned multiple entitlements with the same name, try to disambiguate
+	filtered := entitlements
+	attrFilter := ""
+	valFilter := ""
+	if !data.Attribute.IsNull() && !data.Attribute.IsUnknown() && data.Attribute.ValueString() != "" {
+		attrFilter = data.Attribute.ValueString()
 	}
-
-	if e.Description != nil {
-		if desc, ok := e.Description.(string); ok {
-			data.Description = types.StringValue(desc)
-		} else {
-			data.Description = types.StringValue(fmt.Sprintf("%v", e.Description))
+	if !data.Value.IsNull() && !data.Value.IsUnknown() && data.Value.ValueString() != "" {
+		valFilter = data.Value.ValueString()
+	}
+	if attrFilter != "" {
+		tmp := []*SourceEntitlement{}
+		for _, ent := range filtered {
+			if ent.Attribute == attrFilter {
+				tmp = append(tmp, ent)
+			}
 		}
-	} else {
-		data.Description = types.StringNull()
+		filtered = tmp
+	}
+	if valFilter != "" {
+		tmp := []*SourceEntitlement{}
+		for _, ent := range filtered {
+			if ent.Value == valFilter {
+				tmp = append(tmp, ent)
+			}
+		}
+		filtered = tmp
 	}
 
-	if e.Created != nil {
-		data.Created = types.StringValue(fmt.Sprintf("%v", e.Created))
-	} else {
-		data.Created = types.StringNull()
+	if len(filtered) == 0 {
+		resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Entitlement with name %s not found in source %s with provided filters", data.Name.ValueString(), data.SourceID.ValueString()))
+		return
 	}
 
-	if e.Modified != nil {
-		data.Modified = types.StringValue(fmt.Sprintf("%v", e.Modified))
-	} else {
-		data.Modified = types.StringNull()
-	}
-
-	// Handle owner
+	// Build entitlements list
 	ownerObjType := types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"id":   types.StringType,
@@ -204,55 +249,200 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 			"name": types.StringType,
 		},
 	}
-	if e.Owner != nil {
-		if ownerMap, ok := e.Owner.(map[string]interface{}); ok {
-			ownerID := ""
-			ownerType := ""
-			ownerName := ""
-			if v, ok := ownerMap["id"].(string); ok {
-				ownerID = v
+
+	entitlementObjType := types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"id":                        types.StringType,
+			"name":                      types.StringType,
+			"description":               types.StringType,
+			"attribute":                 types.StringType,
+			"value":                     types.StringType,
+			"source_schema_object_type": types.StringType,
+			"privileged":                types.BoolType,
+			"requestable":               types.BoolType,
+			"created":                   types.StringType,
+			"modified":                  types.StringType,
+			"owner":                     types.ListType{ElemType: ownerObjType},
+			"direct_permissions":        types.ListType{ElemType: types.StringType},
+		},
+	}
+
+	entModels := []SourceEntitlementItemModel{}
+	entRaw := make([]map[string]interface{}, 0, len(filtered))
+	for _, e := range filtered {
+		// owner
+		var ownerList types.List
+		ownerRaw := []map[string]interface{}{}
+		if e.Owner != nil {
+			if ownerMap, ok := e.Owner.(map[string]interface{}); ok {
+				ownerID := ""
+				ownerType := ""
+				ownerName := ""
+				if v, ok := ownerMap["id"].(string); ok {
+					ownerID = v
+				}
+				if v, ok := ownerMap["type"].(string); ok {
+					ownerType = v
+				}
+				if v, ok := ownerMap["name"].(string); ok {
+					ownerName = v
+				}
+				ownerObj := OwnerModel{ID: types.StringValue(ownerID), Type: types.StringValue(ownerType), Name: types.StringValue(ownerName)}
+				ol, diags := types.ListValueFrom(ctx, ownerObjType, []OwnerModel{ownerObj})
+				resp.Diagnostics.Append(diags...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				ownerList = ol
+				ownerRaw = append(ownerRaw, map[string]interface{}{"id": ownerID, "type": ownerType, "name": ownerName})
+			} else {
+				ownerList = types.ListNull(ownerObjType)
 			}
-			if v, ok := ownerMap["type"].(string); ok {
-				ownerType = v
+		} else {
+			ownerList = types.ListNull(ownerObjType)
+		}
+
+		// direct permissions
+		var permList types.List
+		permsRaw := []string{}
+		if e.DirectPermissions != nil {
+			perms := make([]string, len(e.DirectPermissions))
+			for i, p := range e.DirectPermissions {
+				perms[i] = fmt.Sprintf("%v", p)
+				permsRaw = append(permsRaw, perms[i])
 			}
-			if v, ok := ownerMap["name"].(string); ok {
-				ownerName = v
-			}
-			ownerObj := OwnerModel{
-				ID:   types.StringValue(ownerID),
-				Type: types.StringValue(ownerType),
-				Name: types.StringValue(ownerName),
-			}
-			ownerList, diags := types.ListValueFrom(ctx, ownerObjType, []OwnerModel{ownerObj})
+			pl, diags := types.ListValueFrom(ctx, types.StringType, perms)
 			resp.Diagnostics.Append(diags...)
 			if resp.Diagnostics.HasError() {
 				return
 			}
-			data.Owner = ownerList
+			permList = pl
 		} else {
-			data.Owner = types.ListNull(ownerObjType)
+			permList = types.ListNull(types.StringType)
 		}
-	} else {
-		data.Owner = types.ListNull(ownerObjType)
+
+		// build model
+		desc := types.StringNull()
+		if e.Description != nil {
+			if s, ok := e.Description.(string); ok {
+				desc = types.StringValue(s)
+			} else {
+				desc = types.StringValue(fmt.Sprintf("%v", e.Description))
+			}
+		}
+		created := types.StringNull()
+		if e.Created != nil {
+			created = types.StringValue(fmt.Sprintf("%v", e.Created))
+		}
+		modified := types.StringNull()
+		if e.Modified != nil {
+			modified = types.StringValue(fmt.Sprintf("%v", e.Modified))
+		}
+
+		item := SourceEntitlementItemModel{
+			ID:                     types.StringValue(e.ID),
+			Name:                   types.StringValue(e.Name),
+			Description:            desc,
+			Attribute:              types.StringValue(e.Attribute),
+			Value:                  types.StringValue(e.Value),
+			SourceSchemaObjectType: types.StringValue(e.SourceSchemaObjectType),
+			Privileged:             types.BoolValue(e.Privileged),
+			Requestable:            types.BoolValue(e.Requestable),
+			Created:                created,
+			Modified:               modified,
+			Owner:                  ownerList,
+			DirectPermissions:      permList,
+		}
+		entModels = append(entModels, item)
+		entRaw = append(entRaw, map[string]interface{}{
+			"id":   e.ID,
+			"name": e.Name,
+			"description": func() string {
+				if e.Description == nil {
+					return ""
+				}
+				if s, ok := e.Description.(string); ok {
+					return s
+				}
+				return fmt.Sprintf("%v", e.Description)
+			}(),
+			"attribute":                 e.Attribute,
+			"value":                     e.Value,
+			"source_schema_object_type": e.SourceSchemaObjectType,
+			"privileged":                e.Privileged,
+			"requestable":               e.Requestable,
+			"created": func() string {
+				if e.Created == nil {
+					return ""
+				}
+				return fmt.Sprintf("%v", e.Created)
+			}(),
+			"modified": func() string {
+				if e.Modified == nil {
+					return ""
+				}
+				return fmt.Sprintf("%v", e.Modified)
+			}(),
+			"owner":              ownerRaw,
+			"direct_permissions": permsRaw,
+		})
 	}
 
-	// Handle direct permissions
-	if e.DirectPermissions != nil {
-		perms := make([]string, len(e.DirectPermissions))
-		for i, p := range e.DirectPermissions {
-			perms[i] = fmt.Sprintf("%v", p)
-		}
-		permList, diags := types.ListValueFrom(ctx, types.StringType, perms)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		data.DirectPermissions = permList
+	entList, diags := types.ListValueFrom(ctx, entitlementObjType, entModels)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// populate singular fields only if exactly one match
+	if len(entModels) == 1 {
+		single := entModels[0]
+		data.ID = single.ID
+		data.Name = single.Name
+		data.Attribute = single.Attribute
+		data.Value = single.Value
+		data.SourceSchemaObjectType = single.SourceSchemaObjectType
+		data.Privileged = single.Privileged
+		data.Requestable = single.Requestable
+		data.Description = single.Description
+		data.Created = single.Created
+		data.Modified = single.Modified
+		data.Owner = single.Owner
+		data.DirectPermissions = single.DirectPermissions
 	} else {
+		// clear singular fields if ambiguous
+		data.ID = types.StringNull()
+		data.Description = types.StringNull()
+		data.SourceName = types.StringNull()
+		data.Attribute = types.StringNull()
+		data.Value = types.StringNull()
+		data.SourceSchemaObjectType = types.StringNull()
+		data.Privileged = types.BoolNull()
+		data.Requestable = types.BoolNull()
+		data.Created = types.StringNull()
+		data.Modified = types.StringNull()
+		data.Owner = types.ListNull(ownerObjType)
 		data.DirectPermissions = types.ListNull(types.StringType)
 	}
+	// set entitlements list on outer data by adding a field (we will attach it via state map below)
+	// Since SourceEntitlementDataSourceModel doesn't have entitlements field, we'll set state using a map
 
+	// set source name from first result when single
+	if len(filtered) == 1 && filtered[0].Source != nil {
+		data.SourceID = types.StringValue(filtered[0].Source.ID)
+		data.SourceName = types.StringValue(filtered[0].Source.Name)
+	} else {
+		data.SourceName = types.StringNull()
+	}
+
+	// Attach the computed entitlements list to the model
+	data.Entitlements = entList
+
+	// Write the entire data model to state (includes entitlements)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func setEntitlementNullState(ctx context.Context, data *SourceEntitlementDataSourceModel, resp *datasource.ReadResponse) {

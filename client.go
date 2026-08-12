@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"golang.org/x/time/rate"
+	"net/http/httputil"
 )
 
 type Client struct {
@@ -2283,7 +2284,18 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
 
+	reqDump, err := httputil.DumpRequestOut(req, true)
+	tflog.Trace(ctx, "REQUEST w dupie", map[string]interface{}{
+		"method":        string(reqDump),
+	})
+
 	res, err := c.HTTPClient.Do(req)
+
+
+	respDump, err := httputil.DumpResponse(res, true)
+	tflog.Trace(ctx, "RESPONSE w dupie", map[string]interface{}{
+		"method":        string(respDump),
+	})
 	if err != nil {
 		tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
 		return err

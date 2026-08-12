@@ -21,3 +21,8 @@ identitynow_source.active_directory_source
 identitynow_source.aws_iam_source
 identitynow_source.azure_ad_source
 ```
+
+Notes:
+
+- The `identitynow_source_entitlement` data source now exposes a computed `entitlements` list when multiple entitlements share the same `name` in a source. When exactly one match is found, the legacy singular fields (e.g. `id`, `attribute`, `value`, `owner`) are populated for backward compatibility.
+- If multiple matches are returned, read `data.<...>.entitlements` to inspect each match (e.g. `data.identitynow_source_entitlement.aad_operator.entitlements[*].id`).

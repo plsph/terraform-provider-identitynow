@@ -11,6 +11,8 @@ To find how you can declare resources see [documentation](https://registry.terra
 
 - This is provider in development working on experimental api.
 
+Note: The `identitynow_source_entitlement` data source now returns a computed `entitlements` list when multiple entitlements share the same `name`. When exactly one match is found the legacy singular fields remain populated for backward compatibility.
+
 # Development
 Edit the Go files that make up the provider, and rebuild the provider.
 
