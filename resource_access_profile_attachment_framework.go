@@ -30,6 +30,16 @@ type AccessProfileAttachmentResourceModel struct {
 	AccessProfiles types.List   `tfsdk:"access_profiles"`
 }
 
+func resolveAccessProfileAttachmentMutation(current, desired []string) []string {
+	if len(desired) == 0 {
+		if len(current) == 0 {
+			return nil
+		}
+		return current
+	}
+	return desired
+}
+
 func (r *AccessProfileAttachmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_access_profile_attachment"
 }
@@ -159,15 +169,40 @@ func (r *AccessProfileAttachmentResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	attachment := &AccessProfileAttachment{
-		SourceAppId:    data.SourceAppID.ValueString(),
-		AccessProfiles: accessProfiles,
-	}
-
 	client, err := r.client.IdentityNowClient(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get IdentityNow client: %s", err))
 		return
+	}
+
+	currentAttachment, err := client.GetAccessProfileAttachment(ctx, data.ID.ValueString())
+	if err != nil {
+		if _, notFound := err.(*NotFoundError); notFound {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read access profile attachment: %s", err))
+		return
+	}
+
+	mutation := resolveAccessProfileAttachmentMutation(currentAttachment.AccessProfiles, accessProfiles)
+	if len(accessProfiles) == 0 && len(currentAttachment.AccessProfiles) > 0 {
+		err = client.DeleteAccessProfileAttachment(ctx, &AccessProfileAttachment{
+			SourceAppId:    data.SourceAppID.ValueString(),
+			AccessProfiles: currentAttachment.AccessProfiles,
+		})
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to detach all access profiles: %s", err))
+			return
+		}
+		data.AccessProfiles, _ = types.ListValueFrom(ctx, types.StringType, []string{})
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		return
+	}
+
+	attachment := &AccessProfileAttachment{
+		SourceAppId:    data.SourceAppID.ValueString(),
+		AccessProfiles: mutation,
 	}
 
 	_, err = client.UpdateAccessProfileAttachment(ctx, attachment, attachment.SourceAppId)
@@ -200,6 +235,10 @@ func (r *AccessProfileAttachmentResource) Delete(ctx context.Context, req resour
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get access profile attachment: %s", err))
+		return
+	}
+
+	if len(attachment.AccessProfiles) == 0 {
 		return
 	}
 
