@@ -51,9 +51,12 @@ type AccessModelMetadataModel struct {
 }
 
 type AccessModelMetadataAttributeModel struct {
-	Key    types.String `tfsdk:"key"`
-	Name   types.String `tfsdk:"name"`
-	Values types.List   `tfsdk:"values"`
+	Key         types.String `tfsdk:"key"`
+	Name        types.String `tfsdk:"name"`
+	Multiselect types.Bool   `tfsdk:"multiselect"`
+	Status      types.String `tfsdk:"status"`
+	Type        types.String `tfsdk:"type"`
+	Values      types.List   `tfsdk:"values"`
 }
 
 type AccessModelMetadataValueModel struct {
@@ -248,6 +251,18 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 									"name": schema.StringAttribute{
 										MarkdownDescription: "Human readable name of the metadata attribute",
 										Required:            true,
+									},
+									"multiselect": schema.BoolAttribute{
+										MarkdownDescription: "Whether multiple values can be selected for the metadata attribute",
+										Optional:            true,
+									},
+									"status": schema.StringAttribute{
+										MarkdownDescription: "Status of the metadata attribute (e.g. active)",
+										Optional:            true,
+									},
+									"type": schema.StringAttribute{
+										MarkdownDescription: "Type of the metadata attribute (e.g. custom)",
+										Optional:            true,
 									},
 								},
 								Blocks: map[string]schema.Block{
@@ -1462,6 +1477,16 @@ func accessModelMetadataModelToAPI(ctx context.Context, metadataList types.List,
 				Key:  am.Key.ValueString(),
 				Name: am.Name.ValueString(),
 			}
+			if !am.Multiselect.IsNull() {
+				multiselect := am.Multiselect.ValueBool()
+				apiAttr.Multiselect = &multiselect
+			}
+			if !am.Status.IsNull() {
+				apiAttr.Status = am.Status.ValueString()
+			}
+			if !am.Type.IsNull() {
+				apiAttr.Type = am.Type.ValueString()
+			}
 
 			if !am.Values.IsNull() && len(am.Values.Elements()) > 0 {
 				var valModels []AccessModelMetadataValueModel
@@ -1503,6 +1528,21 @@ func accessModelMetadataAPIToState(ctx context.Context, metadata *AttributeDTOLi
 		attrModel := AccessModelMetadataAttributeModel{
 			Key:  types.StringValue(a.Key),
 			Name: types.StringValue(a.Name),
+		}
+		if a.Multiselect != nil {
+			attrModel.Multiselect = types.BoolValue(*a.Multiselect)
+		} else {
+			attrModel.Multiselect = types.BoolNull()
+		}
+		if a.Status != "" {
+			attrModel.Status = types.StringValue(a.Status)
+		} else {
+			attrModel.Status = types.StringNull()
+		}
+		if a.Type != "" {
+			attrModel.Type = types.StringValue(a.Type)
+		} else {
+			attrModel.Type = types.StringNull()
 		}
 
 		if len(a.Values) > 0 {
@@ -1549,9 +1589,12 @@ func accessModelMetadataObjectType() types.ObjectType {
 
 func accessModelMetadataAttributeObjectType() types.ObjectType {
 	return types.ObjectType{AttrTypes: map[string]attr.Type{
-		"key":    types.StringType,
-		"name":   types.StringType,
-		"values": types.ListType{ElemType: accessModelMetadataValueObjectType()},
+		"key":         types.StringType,
+		"name":        types.StringType,
+		"multiselect": types.BoolType,
+		"status":      types.StringType,
+		"type":        types.StringType,
+		"values":      types.ListType{ElemType: accessModelMetadataValueObjectType()},
 	}}
 }
 

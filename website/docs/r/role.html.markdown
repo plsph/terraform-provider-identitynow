@@ -82,12 +82,21 @@ resource "identitynow_role" "with_metadata" {
 
   access_model_metadata {
     attributes {
-      key  = "iscPrivacy"
-      name = "Privacy"
+      key         = "iscPrivacy"
+      name        = "Privacy"
+      multiselect = false
+      status      = "active"
+      type        = "custom"
 
       values {
         value  = "public"
         name   = "Public"
+        status = "active"
+      }
+
+      values {
+        value  = "internal"
+        name   = "Internal"
         status = "active"
       }
     }
@@ -355,7 +364,12 @@ An `attributes` block (within `access_model_metadata`) supports:
 
 * `key` - (Required) The unique identifier for the metadata type (e.g. `iscPrivacy`).
 * `name` - (Required) The human readable name of the metadata attribute.
+* `multiselect` - (Optional) Whether multiple values can be selected for the metadata attribute.
+* `status` - (Optional) The status of the metadata attribute (e.g. `active`).
+* `type` - (Optional) The type of the metadata attribute (e.g. `custom`).
 * `values` - (Optional) One or more `values` blocks as defined below.
+
+Each `attributes` block corresponds to an `AccessModelMetadataAttribute` in the IdentityNow API. The Terraform resource supports the attribute key, display name, and its allowed values.
 
 ---
 

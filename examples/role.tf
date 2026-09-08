@@ -14,6 +14,28 @@ resource "identitynow_role" "operator_developer_role" {
     name = identitynow_access_profile.aad_access_profile_operators.name
   }
 
+  access_model_metadata {
+    attributes {
+      key         = "iscPrivacy"
+      name        = "Privacy"
+      multiselect = false
+      status      = "active"
+      type        = "custom"
+
+      values {
+        value  = "public"
+        name   = "Public"
+        status = "active"
+      }
+
+      values {
+        value  = "internal"
+        name   = "Internal"
+        status = "active"
+      }
+    }
+  }
+
   requestable = true
   enabled     = true
 }
