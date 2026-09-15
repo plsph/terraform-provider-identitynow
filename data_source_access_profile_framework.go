@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -21,13 +22,19 @@ type AccessProfileDataSource struct {
 }
 
 type AccessProfileDataSourceModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	Enabled     types.Bool   `tfsdk:"enabled"`
-	Requestable types.Bool   `tfsdk:"requestable"`
-	Source      types.List   `tfsdk:"source"`
-	Owner       types.List   `tfsdk:"owner"`
+	ID                      types.String `tfsdk:"id"`
+	Name                    types.String `tfsdk:"name"`
+	Description             types.String `tfsdk:"description"`
+	Enabled                 types.Bool   `tfsdk:"enabled"`
+	Requestable             types.Bool   `tfsdk:"requestable"`
+	Source                  types.List   `tfsdk:"source"`
+	Owner                   types.List   `tfsdk:"owner"`
+	AccessRequestConfig     types.List   `tfsdk:"access_request_config"`
+	RevocationRequestConfig types.List   `tfsdk:"revocation_request_config"`
+	Segments                types.List   `tfsdk:"segments"`
+	AccessModelMetadata     types.List   `tfsdk:"access_model_metadata"`
+	ProvisioningCriteria    types.List   `tfsdk:"provisioning_criteria"`
+	AdditionalOwners        types.List   `tfsdk:"additional_owners"`
 }
 
 func (d *AccessProfileDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -79,6 +86,32 @@ func (d *AccessProfileDataSource) Schema(ctx context.Context, req datasource.Sch
 						"name": schema.StringAttribute{Computed: true},
 					},
 				},
+			},
+			"access_request_config": schema.ListNestedAttribute{
+				Computed:            true,
+				MarkdownDescription: "Access request configuration",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"comments_required":        schema.BoolAttribute{Computed: true},
+						"denial_comments_required": schema.BoolAttribute{Computed: true},
+						"reauthorization_required": schema.BoolAttribute{Computed: true},
+						"require_end_date":         schema.BoolAttribute{Computed: true},
+					},
+				},
+			},
+			"revocation_request_config": schema.ListNestedAttribute{
+				Computed:            true,
+				MarkdownDescription: "Revocation request configuration",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"approval_schemes": schema.ListAttribute{Computed: true, ElementType: types.StringType},
+					},
+				},
+			},
+			"segments": schema.ListAttribute{
+				Computed:            true,
+				MarkdownDescription: "Segment IDs assigned to this access profile",
+				ElementType:         types.StringType,
 			},
 		},
 	}
@@ -141,6 +174,31 @@ func (d *AccessProfileDataSource) Read(ctx context.Context, req datasource.ReadR
 		data.Requestable = types.BoolValue(*ap.Requestable)
 	} else {
 		data.Requestable = types.BoolNull()
+	}
+	if len(ap.Segments) > 0 {
+		segmentList, d := types.ListValueFrom(ctx, types.StringType, ap.Segments)
+		resp.Diagnostics.Append(d...)
+		data.Segments = segmentList
+	} else {
+		data.Segments = types.ListNull(types.StringType)
+	}
+	if ap.AccessRequestConfig != nil {
+		requestConfig := []map[string]interface{}{{
+			"comments_required":        ap.AccessRequestConfig.CommentsRequired,
+			"denial_comments_required": ap.AccessRequestConfig.DenialCommentsRequired,
+			"reauthorization_required": ap.AccessRequestConfig.ReauthorizationRequired,
+			"require_end_date":         ap.AccessRequestConfig.RequireEndDate,
+		}}
+		if value, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: map[string]attr.Type{
+			"comments_required":        types.BoolType,
+			"denial_comments_required": types.BoolType,
+			"reauthorization_required": types.BoolType,
+			"require_end_date":         types.BoolType,
+		}}, requestConfig); d.HasError() {
+			resp.Diagnostics.Append(d...)
+		} else {
+			data.AccessRequestConfig = value
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

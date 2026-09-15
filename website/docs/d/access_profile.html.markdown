@@ -14,11 +14,15 @@ Use this data source to access information about an existing Access Profile.
 
 ```hcl
 data "identitynow_access_profile" "example" {
-  id = "example"
+  name = "example"
 }
 
 output "identitynow_ap_desc" {
   value = data.identitynow_access_profile.example.description
+}
+
+output "identitynow_ap_segments" {
+  value = data.identitynow_access_profile.example.segments
 }
 ```
 
@@ -48,9 +52,23 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 * `access_request_config` - Access profile request configuration. Contains:
 
-* `comments_required` - Indicates whether the requester of the containing object must provide comments justifying the request.
+* `comments_required` - Indicates whether the requester must provide comments justifying the request.
 
 * `denial_comments_required` - Indicates whether an approver must provide comments when denying the request.
 
+* `reauthorization_required` - Indicates whether reauthorization is required.
+
+* `require_end_date` - Indicates whether the requester must provide an access end date.
+
 * `approval_schemes` - List describing the steps involved in approving the request.
+
+* `revocation_request_config` - Revocation approval configuration for the access profile.
+
+* `segments` - List of segment IDs assigned to the access profile.
+
+* `access_model_metadata` - Optional metadata attributes attached to the access profile.
+
+* `provisioning_criteria` - Optional account-selection criteria for provisioning.
+
+* `additional_owners` - Additional identity or governance group owners.
 

@@ -151,7 +151,7 @@ func (c *Client) GetToken(ctx context.Context) error {
 
 func (c *Client) GetSourceByName(ctx context.Context, name string) ([]*Source, error) {
 	filter := fmt.Sprintf("name eq \"%s\"", name)
-	sourceURL := fmt.Sprintf("%s/v2025/sources?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	sourceURL := fmt.Sprintf("%s/v2026/sources?filters=%s", c.BaseURL, url.QueryEscape(filter))
 	tflog.Debug(ctx, "Creating HTTP request to get source", map[string]interface{}{
 		"method":      "GET",
 		"url":         sourceURL,
@@ -175,7 +175,7 @@ func (c *Client) GetSourceByName(ctx context.Context, name string) ([]*Source, e
 }
 
 func (c *Client) GetSource(ctx context.Context, id string) (*Source, error) {
-	sourceURL := fmt.Sprintf("%s/v2025/sources/%s", c.BaseURL, id)
+	sourceURL := fmt.Sprintf("%s/v2026/sources/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to get source", map[string]interface{}{
 		"method":    "GET",
 		"url":       sourceURL,
@@ -203,7 +203,7 @@ func (c *Client) CreateSourceRequest(ctx context.Context, source *Source) (*Sour
 	if err != nil {
 		return nil, err
 	}
-	sourceURL := fmt.Sprintf("%s/v2025/sources", c.BaseURL)
+	sourceURL := fmt.Sprintf("%s/v2026/sources", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create source", map[string]interface{}{
 		"method": "POST",
 		"url":    sourceURL,
@@ -283,7 +283,7 @@ func (c *Client) AddConnectorAttributesToMicrosoftEntraSource(ctx context.Contex
 	})
 
 	// Create the HTTP PATCH request
-	patchURL := fmt.Sprintf("%s/v2025/sources/%s", c.BaseURL, source.ID)
+	patchURL := fmt.Sprintf("%s/v2026/sources/%s", c.BaseURL, source.ID)
 	tflog.Debug(ctx, "Creating HTTP request to add connector attributes to Microsoft Entra source", map[string]interface{}{
 		"method":    "PATCH",
 		"url":       patchURL,
@@ -351,7 +351,7 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/v2025/sources/%s", c.BaseURL, source.ID)
+	updateURL := fmt.Sprintf("%s/v2026/sources/%s", c.BaseURL, source.ID)
 	tflog.Debug(ctx, "Creating HTTP request to update source", map[string]interface{}{
 		"method":    "PUT",
 		"url":       updateURL,
@@ -383,7 +383,7 @@ func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, err
 }
 
 func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
-	deleteURL := fmt.Sprintf("%s/v2025/sources/%s", c.BaseURL, source.ID)
+	deleteURL := fmt.Sprintf("%s/v2026/sources/%s", c.BaseURL, source.ID)
 	tflog.Debug(ctx, "Creating HTTP request to delete source", map[string]interface{}{
 		"method":    "DELETE",
 		"url":       deleteURL,
@@ -415,7 +415,7 @@ func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
 
 func (c *Client) GetAccessProfileByName(ctx context.Context, name string) ([]*AccessProfile, error) {
 	filter := fmt.Sprintf("name eq \"%s\"", name)
-	profileURL := fmt.Sprintf("%s/v2025/access-profiles?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	profileURL := fmt.Sprintf("%s/v2026/access-profiles?filters=%s", c.BaseURL, url.QueryEscape(filter))
 	tflog.Debug(ctx, "Creating HTTP request to get access profile", map[string]interface{}{
 		"method": "GET",
 		"url":    profileURL,
@@ -459,7 +459,7 @@ func (c *Client) GetAccessProfileByName(ctx context.Context, name string) ([]*Ac
 }
 
 func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfile, error) {
-	profileURL := fmt.Sprintf("%s/v2025/access-profiles/%s", c.BaseURL, id)
+	profileURL := fmt.Sprintf("%s/v2026/access-profiles/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to get access profile", map[string]interface{}{
 		"method":     "GET",
 		"url":        profileURL,
@@ -503,7 +503,7 @@ func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfil
 }
 
 func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*SourceEntitlement, error) {
-	entitlementsURL := fmt.Sprintf("%s/v2025/entitlements?filters=source.id", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", id)
+	entitlementsURL := fmt.Sprintf("%s/v2026/entitlements?filters=source.id", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", id)
 	tflog.Debug(ctx, "Creating HTTP request to get source entitlements", map[string]interface{}{
 		"method":    "GET",
 		"url":       entitlementsURL,
@@ -528,7 +528,7 @@ func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*Sourc
 
 func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter string) ([]*SourceEntitlement, error) {
 	filter := fmt.Sprintf("source.id eq \"%s\" and (name eq \"%s\")", id, nameFilter)
-	entitlementURL := fmt.Sprintf("%s/v2025/entitlements?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	entitlementURL := fmt.Sprintf("%s/v2026/entitlements?filters=%s", c.BaseURL, url.QueryEscape(filter))
 	tflog.Debug(ctx, "Creating HTTP request to get source entitlement", map[string]interface{}{
 		"method":      "GET",
 		"url":         entitlementURL,
@@ -569,7 +569,7 @@ func (c *Client) CreateAccessProfile(ctx context.Context, accessProfile *AccessP
 		return nil, err
 	}
 
-	createURL := fmt.Sprintf("%s/v2025/access-profiles", c.BaseURL)
+	createURL := fmt.Sprintf("%s/v2026/access-profiles", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create access profile", map[string]interface{}{
 		"method": "POST",
 		"url":    createURL,
@@ -600,7 +600,7 @@ func (c *Client) UpdateAccessProfile(ctx context.Context, accessProfile []*Updat
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/v2025/access-profiles/%s", c.BaseURL, id)
+	updateURL := fmt.Sprintf("%s/v2026/access-profiles/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to update access profile", map[string]interface{}{
 		"method":     "PATCH",
 		"url":        updateURL,
@@ -628,7 +628,7 @@ func (c *Client) UpdateAccessProfile(ctx context.Context, accessProfile []*Updat
 }
 
 func (c *Client) DeleteAccessProfile(ctx context.Context, accessProfile *AccessProfile) error {
-	deleteURL := fmt.Sprintf("%s/v2025/access-profiles/%s", c.BaseURL, accessProfile.ID)
+	deleteURL := fmt.Sprintf("%s/v2026/access-profiles/%s", c.BaseURL, accessProfile.ID)
 	tflog.Debug(ctx, "Creating HTTP request to delete access profile", map[string]interface{}{
 		"method":     "DELETE",
 		"url":        deleteURL,
@@ -655,7 +655,7 @@ func (c *Client) DeleteAccessProfile(ctx context.Context, accessProfile *AccessP
 }
 
 func (c *Client) GetRole(ctx context.Context, id string) (*Role, error) {
-	roleURL := fmt.Sprintf("%s/v2025/roles/%s", c.BaseURL, id)
+	roleURL := fmt.Sprintf("%s/v2026/roles/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to get role", map[string]interface{}{
 		"method":  "GET",
 		"url":     roleURL,
@@ -687,7 +687,7 @@ func (c *Client) CreateRole(ctx context.Context, role *Role) (*Role, error) {
 		return nil, err
 	}
 
-	createURL := fmt.Sprintf("%s/v2025/roles", c.BaseURL)
+	createURL := fmt.Sprintf("%s/v2026/roles", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create role", map[string]interface{}{
 		"method": "POST",
 		"url":    createURL,
@@ -721,7 +721,7 @@ func (c *Client) UpdateRole(ctx context.Context, role []*UpdateRole, id interfac
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/v2025/roles/%s", c.BaseURL, id)
+	updateURL := fmt.Sprintf("%s/v2026/roles/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to update role", map[string]interface{}{
 		"method":  "PATCH",
 		"url":     updateURL,
@@ -753,7 +753,7 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 	if err != nil {
 		return nil, err
 	}
-	deleteURL := fmt.Sprintf("%s/v2025/roles/%s", c.BaseURL, role.ID)
+	deleteURL := fmt.Sprintf("%s/v2026/roles/%s", c.BaseURL, role.ID)
 	tflog.Debug(ctx, "Creating HTTP request to delete role", map[string]interface{}{
 		"method":  "DELETE",
 		"url":     deleteURL,
@@ -780,7 +780,7 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 }
 
 func (c *Client) GetIdentityByAlias(ctx context.Context, alias string) ([]*Identity, error) {
-	identityURL := fmt.Sprintf("%s/v2025/identities?filters=alias", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", alias)
+	identityURL := fmt.Sprintf("%s/v2026/identities?filters=alias", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", alias)
 	tflog.Debug(ctx, "Creating HTTP request to get identity by alias", map[string]interface{}{
 		"method": "GET",
 		"url":    identityURL,
@@ -811,7 +811,7 @@ func (c *Client) GetIdentityByAlias(ctx context.Context, alias string) ([]*Ident
 }
 
 func (c *Client) GetIdentityByEmail(ctx context.Context, email string) ([]*Identity, error) {
-	identityURL := fmt.Sprintf("%s/v2025/identities?filters=email", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", email)
+	identityURL := fmt.Sprintf("%s/v2026/identities?filters=email", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", email)
 	tflog.Debug(ctx, "Creating HTTP request to get identity by email", map[string]interface{}{
 		"method": "GET",
 		"url":    identityURL,
@@ -907,7 +907,7 @@ func (c *Client) ManageAccountAggregationSchedule(ctx context.Context, scheduleA
 }
 
 func (c *Client) GetAccountSchema(ctx context.Context, sourceId string, id string) (*AccountSchema, error) {
-	schemaURL := fmt.Sprintf("%s/v2025/sources/%s/schemas/%s", c.BaseURL, sourceId, id)
+	schemaURL := fmt.Sprintf("%s/v2026/sources/%s/schemas/%s", c.BaseURL, sourceId, id)
 	tflog.Debug(ctx, "Creating HTTP request to get account schema", map[string]interface{}{
 		"method":    "GET",
 		"url":       schemaURL,
@@ -938,7 +938,7 @@ func (c *Client) UpdateAccountSchema(ctx context.Context, accountSchema *Account
 	if err != nil {
 		return nil, err
 	}
-	schemaURL := fmt.Sprintf("%s/v2025/sources/%s/schemas/%s", c.BaseURL, accountSchema.SourceID, accountSchema.ID)
+	schemaURL := fmt.Sprintf("%s/v2026/sources/%s/schemas/%s", c.BaseURL, accountSchema.SourceID, accountSchema.ID)
 	tflog.Debug(ctx, "Creating HTTP request to update account schema", map[string]interface{}{
 		"method":    "PUT",
 		"url":       schemaURL,
@@ -966,7 +966,7 @@ func (c *Client) UpdateAccountSchema(ctx context.Context, accountSchema *Account
 }
 
 func (c *Client) DeleteAccountSchema(ctx context.Context, accountSchema *AccountSchema) error {
-	endpoint := fmt.Sprintf("%s/v2025/sources/%s/schemas/%s", c.BaseURL, accountSchema.SourceID, accountSchema.ID)
+	endpoint := fmt.Sprintf("%s/v2026/sources/%s/schemas/%s", c.BaseURL, accountSchema.SourceID, accountSchema.ID)
 
 	client := &http.Client{}
 
@@ -1002,7 +1002,7 @@ func (c *Client) CreatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	if err != nil {
 		return nil, err
 	}
-	policyURL := fmt.Sprintf("%s/v2025/password-policies", c.BaseURL)
+	policyURL := fmt.Sprintf("%s/v2026/password-policies", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create password policy", map[string]interface{}{
 		"method": "POST",
 		"url":    policyURL,
@@ -1034,7 +1034,7 @@ func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	if err != nil {
 		return nil, err
 	}
-	policyURL := fmt.Sprintf("%s/v2025/password-policies", c.BaseURL)
+	policyURL := fmt.Sprintf("%s/v2026/password-policies", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to update password policy", map[string]interface{}{
 		"method": "PUT",
 		"url":    policyURL,
@@ -1060,7 +1060,7 @@ func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 }
 
 func (c *Client) GetPasswordPolicy(ctx context.Context, passwordPolicyId string) (*PasswordPolicy, error) {
-	policyURL := fmt.Sprintf("%s/v2025/password-policies/%s", c.BaseURL, passwordPolicyId)
+	policyURL := fmt.Sprintf("%s/v2026/password-policies/%s", c.BaseURL, passwordPolicyId)
 	tflog.Debug(ctx, "Creating HTTP request to get password policy", map[string]interface{}{
 		"method":    "GET",
 		"url":       policyURL,
@@ -1085,7 +1085,7 @@ func (c *Client) GetPasswordPolicy(ctx context.Context, passwordPolicyId string)
 }
 
 func (c *Client) DeletePasswordPolicy(ctx context.Context, passwordPolicyId string) error {
-	endpoint := fmt.Sprintf("%s/v2025/password-policies/%s", c.BaseURL, passwordPolicyId)
+	endpoint := fmt.Sprintf("%s/v2026/password-policies/%s", c.BaseURL, passwordPolicyId)
 
 	tflog.Debug(ctx, "Creating HTTP request to delete password policy", map[string]interface{}{
 		"method":    "DELETE",
@@ -1134,7 +1134,7 @@ func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *Gov
 		return nil, err
 	}
 
-	workgroupURL := fmt.Sprintf("%s/v2025/workgroups", c.BaseURL)
+	workgroupURL := fmt.Sprintf("%s/v2026/workgroups", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create governance group", map[string]interface{}{
 		"method": "POST",
 		"url":    workgroupURL,
@@ -1163,7 +1163,7 @@ func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *Gov
 
 func (c *Client) GetGovernanceGroupByName(ctx context.Context, name string) ([]*GovernanceGroup, error) {
 	filter := fmt.Sprintf("name eq \"%s\"", name)
-	workgroupURL := fmt.Sprintf("%s/v2025/workgroups?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	workgroupURL := fmt.Sprintf("%s/v2026/workgroups?filters=%s", c.BaseURL, url.QueryEscape(filter))
 	tflog.Debug(ctx, "Creating HTTP request to get governance group by name", map[string]interface{}{
 		"method": "GET",
 		"url":    workgroupURL,
@@ -1209,7 +1209,7 @@ func (c *Client) GetGovernanceGroups(ctx context.Context, id string) (*Governanc
 
 	for {
 		filter := fmt.Sprintf("id eq \"%s\"", id)
-		workgroupURL := fmt.Sprintf("%s/v2025/workgroups?filters=%s&limit=%d&offset=%d", c.BaseURL, url.QueryEscape(filter), limit, offset)
+		workgroupURL := fmt.Sprintf("%s/v2026/workgroups?filters=%s&limit=%d&offset=%d", c.BaseURL, url.QueryEscape(filter), limit, offset)
 		tflog.Debug(ctx, "Creating HTTP request to get governance groups", map[string]interface{}{
 			"method":   "GET",
 			"url":      workgroupURL,
@@ -1265,7 +1265,7 @@ func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*U
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/v2025/workgroups/%s", c.BaseURL, id)
+	updateURL := fmt.Sprintf("%s/v2026/workgroups/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to update governance group", map[string]interface{}{
 		"method":   "PATCH",
 		"url":      updateURL,
@@ -1294,7 +1294,7 @@ func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*U
 }
 
 func (c *Client) DeleteGovernanceGroup(ctx context.Context, governanceGroup *GovernanceGroup) error {
-	deleteURL := fmt.Sprintf("%s/v2025/workgroups/%s", c.BaseURL, governanceGroup.ID)
+	deleteURL := fmt.Sprintf("%s/v2026/workgroups/%s", c.BaseURL, governanceGroup.ID)
 	tflog.Debug(ctx, "Creating HTTP request to delete governance group", map[string]interface{}{
 		"method":   "DELETE",
 		"url":      deleteURL,
@@ -1326,7 +1326,7 @@ func (c *Client) GetSourceAppsAll(ctx context.Context) ([]*SourceApp, error) {
 	offset := 0
 	limit := 250
 	for {
-		sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/all?limit=%d&offset=%d", c.BaseURL, limit, offset)
+		sourceAppURL := fmt.Sprintf("%s/v2026/source-apps/all?limit=%d&offset=%d", c.BaseURL, limit, offset)
 		tflog.Debug(ctx, "Creating HTTP request to get source apps", map[string]interface{}{
 			"method": "GET",
 			"url":    sourceAppURL,
@@ -1361,7 +1361,7 @@ func (c *Client) GetSourceAppsAll(ctx context.Context) ([]*SourceApp, error) {
 
 func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*SourceApp, error) {
 	filter := fmt.Sprintf("name eq \"%s\"", name)
-	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/all?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	sourceAppURL := fmt.Sprintf("%s/v2026/source-apps/all?filters=%s", c.BaseURL, url.QueryEscape(filter))
 	tflog.Debug(ctx, "Creating HTTP request to get source app by name", map[string]interface{}{
 		"method":   "GET",
 		"url":      sourceAppURL,
@@ -1388,7 +1388,7 @@ func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*Source
 }
 
 func (c *Client) GetSourceApp(ctx context.Context, id string) (*SourceApp, error) {
-	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id)
+	sourceAppURL := fmt.Sprintf("%s/v2026/source-apps/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to get source app", map[string]interface{}{
 		"method": "GET",
 		"url":    sourceAppURL,
@@ -1420,7 +1420,7 @@ func (c *Client) CreateSourceApp(ctx context.Context, sourceApp *SourceApp) (*So
 		return nil, err
 	}
 
-	sourceAppURL := fmt.Sprintf("%s/v2025/source-apps", c.BaseURL)
+	sourceAppURL := fmt.Sprintf("%s/v2026/source-apps", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create source app", map[string]interface{}{
 		"method": "POST",
 		"url":    sourceAppURL,
@@ -1452,7 +1452,7 @@ func (c *Client) UpdateSourceApp(ctx context.Context, sourceApp []*UpdateSourceA
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id)
+	updateURL := fmt.Sprintf("%s/v2026/source-apps/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to update source app", map[string]interface{}{
 		"method": "PATCH",
 		"url":    updateURL,
@@ -1481,7 +1481,7 @@ func (c *Client) UpdateSourceApp(ctx context.Context, sourceApp []*UpdateSourceA
 }
 
 func (c *Client) DeleteSourceApp(ctx context.Context, sourceApp *SourceApp) error {
-	deleteURL := fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, sourceApp.ID)
+	deleteURL := fmt.Sprintf("%s/v2026/source-apps/%s", c.BaseURL, sourceApp.ID)
 	tflog.Debug(ctx, "Creating HTTP request to delete source app", map[string]interface{}{
 		"method": "DELETE",
 		"url":    deleteURL,
@@ -1513,7 +1513,7 @@ func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*Ac
 	offset := 0
 	limit := 250
 	for {
-		url := fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
+		url := fmt.Sprintf("%s/v2026/source-apps/%s/access-profiles?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
@@ -1569,7 +1569,7 @@ func (c *Client) UpdateAccessProfileAttachment(ctx context.Context, accessProfil
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/v2025/source-apps/%s", c.BaseURL, id)
+	updateURL := fmt.Sprintf("%s/v2026/source-apps/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to update access profile attachment", map[string]interface{}{
 		"method": "PATCH",
 		"url":    updateURL,
@@ -1603,7 +1603,7 @@ func (c *Client) DeleteAccessProfileAttachment(ctx context.Context, accessProfil
 		return err
 	}
 
-	deleteURL := fmt.Sprintf("%s/v2025/source-apps/%s/access-profiles/bulk-remove", c.BaseURL, accessProfileAttachment.SourceAppId)
+	deleteURL := fmt.Sprintf("%s/v2026/source-apps/%s/access-profiles/bulk-remove", c.BaseURL, accessProfileAttachment.SourceAppId)
 	tflog.Debug(ctx, "Creating HTTP request to delete access profile attachment", map[string]interface{}{
 		"method":        "POST",
 		"url":           deleteURL,
@@ -1636,7 +1636,7 @@ func (c *Client) CreateGovernanceGroupMembers(ctx context.Context, governanceGro
 	if err != nil {
 		return nil, err
 	}
-	createURL := fmt.Sprintf("%s/v2025/workgroups/%s/members/bulk-add", c.BaseURL, id)
+	createURL := fmt.Sprintf("%s/v2026/workgroups/%s/members/bulk-add", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to create governance group members", map[string]interface{}{
 		"method":              "POST",
 		"url":                 createURL,
@@ -1681,7 +1681,7 @@ func (c *Client) GetGovernanceGroupMembers(ctx context.Context, id string) (*Gov
 	offset := 0
 	limit := 50
 	for {
-		url := fmt.Sprintf("%s/v2025/workgroups/%s/members?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
+		url := fmt.Sprintf("%s/v2026/workgroups/%s/members?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
 		tflog.Debug(ctx, "Creating HTTP request to get governance group members", map[string]interface{}{
 			"method":              "GET",
 			"url":                 url,
@@ -1766,7 +1766,7 @@ func (c *Client) UpdateGovernanceGroupMembers(ctx context.Context, governanceGro
 			return nil, err
 		}
 
-		deleteURL := fmt.Sprintf("%s/v2025/workgroups/%s/members/bulk-delete", c.BaseURL, governanceGroupMembers.GovernanceGroupId)
+		deleteURL := fmt.Sprintf("%s/v2026/workgroups/%s/members/bulk-delete", c.BaseURL, governanceGroupMembers.GovernanceGroupId)
 		tflog.Debug(ctx, "Creating HTTP request to update governance group members", map[string]interface{}{
 			"method":              "POST",
 			"url":                 deleteURL,
@@ -1816,7 +1816,7 @@ func (c *Client) UpdateGovernanceGroupMembers(ctx context.Context, governanceGro
 		if err != nil {
 			return nil, err
 		}
-		createURL := fmt.Sprintf("%s/v2025/workgroups/%s/members/bulk-add", c.BaseURL, id)
+		createURL := fmt.Sprintf("%s/v2026/workgroups/%s/members/bulk-add", c.BaseURL, id)
 		tflog.Debug(ctx, "Creating HTTP request to update governance group members", map[string]interface{}{
 			"method":              "POST",
 			"url":                 createURL,
@@ -1864,7 +1864,7 @@ func (c *Client) DeleteGovernanceGroupMembers(ctx context.Context, governanceGro
 		return err
 	}
 
-	deleteURL := fmt.Sprintf("%s/v2025/workgroups/%s/members/bulk-delete", c.BaseURL, governanceGroupMembers.GovernanceGroupId)
+	deleteURL := fmt.Sprintf("%s/v2026/workgroups/%s/members/bulk-delete", c.BaseURL, governanceGroupMembers.GovernanceGroupId)
 	tflog.Debug(ctx, "Creating HTTP request to delete governance group members", map[string]interface{}{
 		"method":              "POST",
 		"url":                 deleteURL,
@@ -1906,7 +1906,7 @@ func (c *Client) DeleteGovernanceGroupMembers(ctx context.Context, governanceGro
 }
 
 func (c *Client) GetTaggedObject(ctx context.Context, objectType string, objectID string) (*TaggedObject, error) {
-	taggedObjectURL := fmt.Sprintf("%s/v2025/tagged-objects/%s/%s", c.BaseURL, url.PathEscape(objectType), url.PathEscape(objectID))
+	taggedObjectURL := fmt.Sprintf("%s/v2026/tagged-objects/%s/%s", c.BaseURL, url.PathEscape(objectType), url.PathEscape(objectID))
 	tflog.Debug(ctx, "Creating HTTP request to get tagged object", map[string]interface{}{
 		"method":      "GET",
 		"url":         taggedObjectURL,
@@ -1949,7 +1949,7 @@ func (c *Client) SetTaggedObject(ctx context.Context, taggedObject *TaggedObject
 		return nil, err
 	}
 
-	taggedObjectURL := fmt.Sprintf("%s/v2025/tagged-objects/%s/%s", c.BaseURL, url.PathEscape(taggedObject.ObjectRef.Type), url.PathEscape(taggedObject.ObjectRef.ID))
+	taggedObjectURL := fmt.Sprintf("%s/v2026/tagged-objects/%s/%s", c.BaseURL, url.PathEscape(taggedObject.ObjectRef.Type), url.PathEscape(taggedObject.ObjectRef.ID))
 	tflog.Debug(ctx, "Creating HTTP request to set tagged object", map[string]interface{}{
 		"method":      "PUT",
 		"url":         taggedObjectURL,
@@ -1976,7 +1976,7 @@ func (c *Client) SetTaggedObject(ctx context.Context, taggedObject *TaggedObject
 }
 
 func (c *Client) DeleteTaggedObject(ctx context.Context, objectType string, objectID string) error {
-	taggedObjectURL := fmt.Sprintf("%s/v2025/tagged-objects/%s/%s", c.BaseURL, url.PathEscape(objectType), url.PathEscape(objectID))
+	taggedObjectURL := fmt.Sprintf("%s/v2026/tagged-objects/%s/%s", c.BaseURL, url.PathEscape(objectType), url.PathEscape(objectID))
 	tflog.Debug(ctx, "Creating HTTP request to delete tagged object", map[string]interface{}{
 		"method":      "DELETE",
 		"url":         taggedObjectURL,
@@ -2002,7 +2002,7 @@ func (c *Client) DeleteTaggedObject(ctx context.Context, objectType string, obje
 }
 
 func (c *Client) GetDimension(ctx context.Context, roleId string, dimensionId string) (*Dimension, error) {
-	dimensionURL := fmt.Sprintf("%s/v2025/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
+	dimensionURL := fmt.Sprintf("%s/v2026/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
 	tflog.Debug(ctx, "Creating HTTP request to get dimension", map[string]interface{}{
 		"method":       "GET",
 		"url":          dimensionURL,
@@ -2033,7 +2033,7 @@ func (c *Client) CreateDimension(ctx context.Context, roleId string, dimension *
 		return nil, err
 	}
 
-	createURL := fmt.Sprintf("%s/v2025/roles/%s/dimensions", c.BaseURL, roleId)
+	createURL := fmt.Sprintf("%s/v2026/roles/%s/dimensions", c.BaseURL, roleId)
 	tflog.Debug(ctx, "Creating HTTP request to create dimension", map[string]interface{}{
 		"method":  "POST",
 		"url":     createURL,
@@ -2063,7 +2063,7 @@ func (c *Client) UpdateDimension(ctx context.Context, roleId string, dimensionId
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/v2025/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
+	updateURL := fmt.Sprintf("%s/v2026/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
 	tflog.Debug(ctx, "Creating HTTP request to update dimension", map[string]interface{}{
 		"method":       "PATCH",
 		"url":          updateURL,
@@ -2090,7 +2090,7 @@ func (c *Client) UpdateDimension(ctx context.Context, roleId string, dimensionId
 }
 
 func (c *Client) DeleteDimension(ctx context.Context, roleId string, dimensionId string) error {
-	deleteURL := fmt.Sprintf("%s/v2025/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
+	deleteURL := fmt.Sprintf("%s/v2026/roles/%s/dimensions/%s", c.BaseURL, roleId, dimensionId)
 	tflog.Debug(ctx, "Creating HTTP request to delete dimension", map[string]interface{}{
 		"method":       "DELETE",
 		"url":          deleteURL,
@@ -2116,7 +2116,7 @@ func (c *Client) DeleteDimension(ctx context.Context, roleId string, dimensionId
 }
 
 func (c *Client) GetWorkflow(ctx context.Context, id string) (*Workflow, error) {
-	workflowURL := fmt.Sprintf("%s/v2025/workflows/%s", c.BaseURL, id)
+	workflowURL := fmt.Sprintf("%s/v2026/workflows/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to get workflow", map[string]interface{}{
 		"method":      "GET",
 		"url":         workflowURL,
@@ -2142,7 +2142,7 @@ func (c *Client) GetWorkflow(ctx context.Context, id string) (*Workflow, error) 
 }
 
 func (c *Client) GetWorkflowByName(ctx context.Context, name string) (*Workflow, error) {
-	workflowURL := fmt.Sprintf("%s/v2025/workflows", c.BaseURL)
+	workflowURL := fmt.Sprintf("%s/v2026/workflows", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to list workflows", map[string]interface{}{
 		"method": "GET",
 		"url":    workflowURL,
@@ -2179,7 +2179,7 @@ func (c *Client) CreateWorkflow(ctx context.Context, workflow *Workflow) (*Workf
 		return nil, err
 	}
 
-	createURL := fmt.Sprintf("%s/v2025/workflows", c.BaseURL)
+	createURL := fmt.Sprintf("%s/v2026/workflows", c.BaseURL)
 	tflog.Debug(ctx, "Creating HTTP request to create workflow", map[string]interface{}{
 		"method": "POST",
 		"url":    createURL,
@@ -2210,7 +2210,7 @@ func (c *Client) UpdateWorkflow(ctx context.Context, id string, workflow *Workfl
 		return nil, err
 	}
 
-	updateURL := fmt.Sprintf("%s/v2025/workflows/%s", c.BaseURL, id)
+	updateURL := fmt.Sprintf("%s/v2026/workflows/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to update workflow", map[string]interface{}{
 		"method":      "PUT",
 		"url":         updateURL,
@@ -2237,7 +2237,7 @@ func (c *Client) UpdateWorkflow(ctx context.Context, id string, workflow *Workfl
 }
 
 func (c *Client) DeleteWorkflow(ctx context.Context, id string) error {
-	deleteURL := fmt.Sprintf("%s/v2025/workflows/%s", c.BaseURL, id)
+	deleteURL := fmt.Sprintf("%s/v2026/workflows/%s", c.BaseURL, id)
 	tflog.Debug(ctx, "Creating HTTP request to delete workflow", map[string]interface{}{
 		"method":      "DELETE",
 		"url":         deleteURL,

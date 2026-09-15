@@ -31,34 +31,47 @@ resource "identitynow_access_profile" "this" {
   description = "example"
   requestable = true
   enabled     = true
- 
+  segments    = ["f7b1b8a3-5fed-4fd4-ad29-82014e137e19"]
+
   entitlements {
     id   = "example id"
     name = "example name"
     type = "ENTITLEMENT"
   }
- 
+
   source {
     id   = "example id"
     name = "example source name"
     type = "SOURCE"
   }
- 
+
   owner {
     id   = "example id"
     name = "example owner name"
     type = "IDENTITY"
   }
- 
+
   access_request_config {
     comments_required        = true
     denial_comments_required = true
-    dynamic "approval_schemes" {
-      for_each = concat(local.manager, local.governance_group)
-      content {
-        approver_type = approval_schemes.value.approver_type
-        approver_id   = approval_schemes.value.approver_id
-      }
+    reauthorization_required = true
+    require_end_date        = true
+
+    approval_schemes {
+      approver_type = "GOVERNANCE_GROUP"
+      approver_id   = "46c79819-a69f-49a2-becb-12c971ae66c6"
+    }
+
+    max_permitted_access_duration {
+      value    = 6
+      time_unit = "MONTHS"
+    }
+  }
+
+  revocation_request_config {
+    approval_schemes {
+      approver_type = "GOVERNANCE_GROUP"
+      approver_id   = "46c79819-a69f-49a2-becb-12c971ae66c6"
     }
   }
 }
@@ -86,11 +99,27 @@ As per developer guide: (https://developer.sailpoint.com/docs/api/v3/create-acce
 
 * `access_request_config` - Access profile request configuration. Contains:
 
-* `comments_required` - Indicates whether the requester of the containing object must provide comments justifying the request.
+* `comments_required` - Indicates whether the requester must provide comments justifying the request.
 
 * `denial_comments_required` - Indicates whether an approver must provide comments when denying the request.
 
-* `approval_schemes` - List describing the steps involved in approving the request.
+* `reauthorization_required` - Indicates whether reauthorization is required.
+
+* `require_end_date` - Indicates whether the requester must provide an access end date.
+
+* `max_permitted_access_duration` - Maximum access duration the requester can grant.
+
+* `approval_schemes` - List describing the approval steps.
+
+* `revocation_request_config` - Revocation approval configuration. Contains an `approval_schemes` block.
+
+* `segments` - List of segment IDs assigned to the access profile.
+
+* `access_model_metadata` - Optional metadata attributes for the access profile.
+
+* `provisioning_criteria` - Optional criteria used to choose the account to provision.
+
+* `additional_owners` - Optional additional identity or governance group owners.
 
 ## Attributes Reference
 

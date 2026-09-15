@@ -31,15 +31,20 @@ type AccessProfileResource struct {
 }
 
 type AccessProfileResourceModel struct {
-	ID                  types.String `tfsdk:"id"`
-	Name                types.String `tfsdk:"name"`
-	Description         types.String `tfsdk:"description"`
-	Owner               types.List   `tfsdk:"owner"`
-	Source              types.List   `tfsdk:"source"`
-	Entitlements        types.List   `tfsdk:"entitlements"`
-	AccessRequestConfig types.List   `tfsdk:"access_request_config"`
-	Enabled             types.Bool   `tfsdk:"enabled"`
-	Requestable         types.Bool   `tfsdk:"requestable"`
+	ID                      types.String `tfsdk:"id"`
+	Name                    types.String `tfsdk:"name"`
+	Description             types.String `tfsdk:"description"`
+	Owner                   types.List   `tfsdk:"owner"`
+	Source                  types.List   `tfsdk:"source"`
+	Entitlements            types.List   `tfsdk:"entitlements"`
+	AccessRequestConfig     types.List   `tfsdk:"access_request_config"`
+	RevocationRequestConfig types.List   `tfsdk:"revocation_request_config"`
+	Segments                types.List   `tfsdk:"segments"`
+	AccessModelMetadata     types.List   `tfsdk:"access_model_metadata"`
+	ProvisioningCriteria    types.List   `tfsdk:"provisioning_criteria"`
+	AdditionalOwners        types.List   `tfsdk:"additional_owners"`
+	Enabled                 types.Bool   `tfsdk:"enabled"`
+	Requestable             types.Bool   `tfsdk:"requestable"`
 }
 
 type EntitlementRefModel struct {
@@ -65,6 +70,23 @@ type ApprovalSchemeModel struct {
 type MaxPermittedAccessDurationModel struct {
 	Value    types.Int64  `tfsdk:"value"`
 	TimeUnit types.String `tfsdk:"time_unit"`
+}
+
+type AccessProfileRevocationRequestConfigModel struct {
+	ApprovalSchemes types.List `tfsdk:"approval_schemes"`
+}
+
+type AdditionalOwnerModel struct {
+	Type types.String `tfsdk:"type"`
+	ID   types.String `tfsdk:"id"`
+	Name types.String `tfsdk:"name"`
+}
+
+type ProvisioningCriteriaModel struct {
+	Operation types.String `tfsdk:"operation"`
+	Attribute types.String `tfsdk:"attribute"`
+	Value     types.String `tfsdk:"value"`
+	Children  types.List   `tfsdk:"children"`
 }
 
 func (r *AccessProfileResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -100,6 +122,12 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"segments": schema.ListAttribute{
+				MarkdownDescription: "List of segment IDs assigned to the access profile",
+				Optional:            true,
+				Computed:            true,
+				ElementType:         types.StringType,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -207,6 +235,80 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 								},
 							},
 						},
+					},
+				},
+			},
+			"revocation_request_config": schema.ListNestedBlock{
+				MarkdownDescription: "Revocation request configuration",
+				NestedObject: schema.NestedBlockObject{
+					Blocks: map[string]schema.Block{
+						"approval_schemes": schema.ListNestedBlock{
+							MarkdownDescription: "Revocation approval schemes",
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"approver_type": schema.StringAttribute{Required: true},
+									"approver_id":   schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("")},
+								},
+							},
+						},
+					},
+				},
+			},
+			"access_model_metadata": schema.ListNestedBlock{
+				MarkdownDescription: "Access model metadata for this access profile",
+				NestedObject: schema.NestedBlockObject{
+					Blocks: map[string]schema.Block{
+						"attributes": schema.ListNestedBlock{
+							MarkdownDescription: "Metadata attributes",
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"key":         schema.StringAttribute{Required: true},
+									"name":        schema.StringAttribute{Required: true},
+									"multiselect": schema.BoolAttribute{Optional: true},
+									"status":      schema.StringAttribute{Optional: true},
+									"type":        schema.StringAttribute{Optional: true},
+									"description": schema.StringAttribute{Optional: true},
+								},
+								Blocks: map[string]schema.Block{
+									"object_types": schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"value": schema.StringAttribute{Required: true}}}},
+									"values":       schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"value": schema.StringAttribute{Required: true}, "name": schema.StringAttribute{Optional: true}, "status": schema.StringAttribute{Optional: true}}}},
+								},
+							},
+						},
+					},
+				},
+			},
+			"provisioning_criteria": schema.ListNestedBlock{
+				MarkdownDescription: "Provisioning criteria to determine which account gets the access profile",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"operation": schema.StringAttribute{Required: true},
+						"attribute": schema.StringAttribute{Optional: true},
+						"value":     schema.StringAttribute{Optional: true},
+					},
+					Blocks: map[string]schema.Block{
+						"children": schema.ListNestedBlock{
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"operation": schema.StringAttribute{Required: true},
+									"attribute": schema.StringAttribute{Optional: true},
+									"value":     schema.StringAttribute{Optional: true},
+								},
+								Blocks: map[string]schema.Block{
+									"children": schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"operation": schema.StringAttribute{Required: true}, "attribute": schema.StringAttribute{Optional: true}, "value": schema.StringAttribute{Optional: true}}}},
+								},
+							},
+						},
+					},
+				},
+			},
+			"additional_owners": schema.ListNestedBlock{
+				MarkdownDescription: "Additional owners for this access profile",
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{Required: true},
+						"id":   schema.StringAttribute{Required: true},
+						"name": schema.StringAttribute{Optional: true},
 					},
 				},
 			},
@@ -344,6 +446,90 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 				}
 			}
 			ap.AccessRequestConfig = config
+		}
+	}
+
+	if !data.Segments.IsNull() {
+		var segments []string
+		resp.Diagnostics.Append(data.Segments.ElementsAs(ctx, &segments, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		ap.Segments = segments
+	}
+
+	if !data.AccessModelMetadata.IsNull() {
+		ap.AccessModelMetadata = accessModelMetadataModelToAPI(ctx, data.AccessModelMetadata, &resp.Diagnostics)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+
+	if !data.RevocationRequestConfig.IsNull() {
+		var revocationModels []AccessProfileRevocationRequestConfigModel
+		resp.Diagnostics.Append(data.RevocationRequestConfig.ElementsAs(ctx, &revocationModels, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if len(revocationModels) > 0 {
+			var schemes []*ApprovalSchemes
+			if !revocationModels[0].ApprovalSchemes.IsNull() {
+				var schemeModels []ApprovalSchemeModel
+				resp.Diagnostics.Append(revocationModels[0].ApprovalSchemes.ElementsAs(ctx, &schemeModels, false)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				for _, s := range schemeModels {
+					schemes = append(schemes, &ApprovalSchemes{ApproverType: s.ApproverType.ValueString(), ApproverId: s.ApproverID.ValueString()})
+				}
+			}
+			ap.RevocationRequestConfig = &AccessProfileRevocationRequestConfig{ApprovalSchemes: schemes}
+		}
+	}
+
+	if !data.ProvisioningCriteria.IsNull() {
+		var criteria []ProvisioningCriteriaModel
+		resp.Diagnostics.Append(data.ProvisioningCriteria.ElementsAs(ctx, &criteria, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		if len(criteria) > 0 {
+			first := criteria[0]
+			ap.ProvisioningCriteria = &ProvisioningCriteriaLevel1{
+				Operation: first.Operation.ValueString(),
+				Attribute: first.Attribute.ValueString(),
+				Value:     first.Value.ValueString(),
+			}
+			if !first.Children.IsNull() {
+				var childModels []ProvisioningCriteriaModel
+				resp.Diagnostics.Append(first.Children.ElementsAs(ctx, &childModels, false)...)
+				if !resp.Diagnostics.HasError() {
+					ap.ProvisioningCriteria.Children = make([]*ProvisioningCriteriaLevel2, 0, len(childModels))
+					for _, child := range childModels {
+						ap.ProvisioningCriteria.Children = append(ap.ProvisioningCriteria.Children, &ProvisioningCriteriaLevel2{
+							Operation: child.Operation.ValueString(),
+							Attribute: child.Attribute.ValueString(),
+							Value:     child.Value.ValueString(),
+						})
+					}
+				}
+			}
+		}
+	}
+
+	if !data.AdditionalOwners.IsNull() {
+		var owners []AdditionalOwnerModel
+		resp.Diagnostics.Append(data.AdditionalOwners.ElementsAs(ctx, &owners, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		ap.AdditionalOwners = make([]*AdditionalOwnerRef, 0, len(owners))
+		for _, owner := range owners {
+			ap.AdditionalOwners = append(ap.AdditionalOwners, &AdditionalOwnerRef{
+				Type: owner.Type.ValueString(),
+				ID:   owner.ID.ValueString(),
+				Name: owner.Name.ValueString(),
+			})
 		}
 	}
 
@@ -807,5 +993,88 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		data.AccessRequestConfig = arcList
 	} else {
 		data.AccessRequestConfig, _ = types.ListValue(arcObjType, []attr.Value{})
+	}
+
+	if len(ap.Segments) > 0 {
+		segmentList, d := types.ListValueFrom(ctx, types.StringType, ap.Segments)
+		diags.Append(d...)
+		data.Segments = segmentList
+	} else {
+		data.Segments, _ = types.ListValue(types.StringType, []attr.Value{})
+	}
+
+	if ap.RevocationRequestConfig != nil {
+		revocationObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+			"approval_schemes": types.ListType{ElemType: approvalSchemeObjType},
+		}}
+		revocationModels := []AccessProfileRevocationRequestConfigModel{{
+			ApprovalSchemes: types.ListNull(approvalSchemeObjType),
+		}}
+		if len(ap.RevocationRequestConfig.ApprovalSchemes) > 0 {
+			var schemeModels []ApprovalSchemeModel
+			for _, s := range ap.RevocationRequestConfig.ApprovalSchemes {
+				schemeModels = append(schemeModels, ApprovalSchemeModel{
+					ApproverType: types.StringValue(s.ApproverType),
+					ApproverID:   types.StringValue(s.ApproverId),
+				})
+			}
+			sl, d := types.ListValueFrom(ctx, approvalSchemeObjType, schemeModels)
+			diags.Append(d...)
+			revocationModels[0].ApprovalSchemes = sl
+		}
+		list, d := types.ListValueFrom(ctx, revocationObjType, revocationModels)
+		diags.Append(d...)
+		data.RevocationRequestConfig = list
+	} else {
+		data.RevocationRequestConfig, _ = types.ListValue(types.ObjectType{AttrTypes: map[string]attr.Type{"approval_schemes": types.ListType{ElemType: approvalSchemeObjType}}}, []attr.Value{})
+	}
+
+	if ap.AccessModelMetadata != nil {
+		data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, ap.AccessModelMetadata, diags)
+	} else {
+		data.AccessModelMetadata = types.ListNull(types.ObjectType{AttrTypes: map[string]attr.Type{"attributes": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{"key": types.StringType, "name": types.StringType, "multiselect": types.BoolType, "status": types.StringType, "type": types.StringType, "object_types": types.ListType{ElemType: types.StringType}, "values": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{"value": types.StringType, "name": types.StringType, "status": types.StringType}}}}}}}})
+	}
+
+	if ap.ProvisioningCriteria != nil {
+		childObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+			"operation": types.StringType,
+			"attribute": types.StringType,
+			"value":     types.StringType,
+			"children":  types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{"operation": types.StringType, "attribute": types.StringType, "value": types.StringType}}},
+		}}
+		provisioningObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+			"operation": types.StringType,
+			"attribute": types.StringType,
+			"value":     types.StringType,
+			"children":  types.ListType{ElemType: childObjType},
+		}}
+		criteriaModels := []ProvisioningCriteriaModel{{
+			Operation: types.StringValue(ap.ProvisioningCriteria.Operation),
+			Attribute: types.StringValue(ap.ProvisioningCriteria.Attribute),
+			Value:     types.StringValue(ap.ProvisioningCriteria.Value),
+			Children:  types.ListNull(childObjType),
+		}}
+		list, d := types.ListValueFrom(ctx, provisioningObjType, criteriaModels)
+		diags.Append(d...)
+		data.ProvisioningCriteria = list
+	} else {
+		data.ProvisioningCriteria, _ = types.ListValue(types.ObjectType{AttrTypes: map[string]attr.Type{"operation": types.StringType, "attribute": types.StringType, "value": types.StringType, "children": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{"operation": types.StringType, "attribute": types.StringType, "value": types.StringType}}}}}, []attr.Value{})
+	}
+
+	if ap.AdditionalOwners != nil {
+		ownerModels := make([]AdditionalOwnerModel, 0, len(ap.AdditionalOwners))
+		for _, owner := range ap.AdditionalOwners {
+			ownerModels = append(ownerModels, AdditionalOwnerModel{
+				Type: types.StringValue(owner.Type),
+				ID:   types.StringValue(owner.ID),
+				Name: types.StringValue(owner.Name),
+			})
+		}
+		additionalOwnersObjType := types.ObjectType{AttrTypes: map[string]attr.Type{"type": types.StringType, "id": types.StringType, "name": types.StringType}}
+		list, d := types.ListValueFrom(ctx, additionalOwnersObjType, ownerModels)
+		diags.Append(d...)
+		data.AdditionalOwners = list
+	} else {
+		data.AdditionalOwners, _ = types.ListValue(types.ObjectType{AttrTypes: map[string]attr.Type{"type": types.StringType, "id": types.StringType, "name": types.StringType}}, []attr.Value{})
 	}
 }
