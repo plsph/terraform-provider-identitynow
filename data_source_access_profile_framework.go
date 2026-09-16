@@ -264,21 +264,23 @@ func (d *AccessProfileDataSource) Read(ctx context.Context, req datasource.ReadR
 		data.Segments = types.ListNull(types.StringType)
 	}
 	if ap.AccessRequestConfig != nil {
-		requestConfig := []map[string]interface{}{{
-			"comments_required":        ap.AccessRequestConfig.CommentsRequired,
-			"denial_comments_required": ap.AccessRequestConfig.DenialCommentsRequired,
-			"reauthorization_required": ap.AccessRequestConfig.ReauthorizationRequired,
-			"require_end_date":         ap.AccessRequestConfig.RequireEndDate,
-		}}
-		if value, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: map[string]attr.Type{
+		requestConfigType := types.ObjectType{AttrTypes: map[string]attr.Type{
 			"comments_required":        types.BoolType,
 			"denial_comments_required": types.BoolType,
 			"reauthorization_required": types.BoolType,
 			"require_end_date":         types.BoolType,
-		}}, requestConfig); d.HasError() {
+		}}
+		requestConfigValue, d := types.ObjectValue(requestConfigType.AttrTypes, map[string]attr.Value{
+			"comments_required":        types.BoolValue(ap.AccessRequestConfig.CommentsRequired),
+			"denial_comments_required": types.BoolValue(ap.AccessRequestConfig.DenialCommentsRequired),
+			"reauthorization_required": types.BoolValue(ap.AccessRequestConfig.ReauthorizationRequired),
+			"require_end_date":         types.BoolValue(ap.AccessRequestConfig.RequireEndDate),
+		})
+		if d.HasError() {
 			resp.Diagnostics.Append(d...)
 		} else {
-			data.AccessRequestConfig = value
+			data.AccessRequestConfig, d = types.ListValue(requestConfigType, []attr.Value{requestConfigValue})
+			resp.Diagnostics.Append(d...)
 		}
 	}
 
