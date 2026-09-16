@@ -66,4 +66,26 @@ func TestAccessProfileStateIncludesAdvancedFields(t *testing.T) {
 	}
 }
 
+func TestAccessProfileStateOmitsEmptyRevocationConfig(t *testing.T) {
+	ap := &AccessProfile{
+		Name:                    "Example",
+		Description:             "Example profile",
+		RevocationRequestConfig: &AccessProfileRevocationRequestConfig{},
+	}
+
+	data := AccessProfileResourceModel{}
+	var diags diag.Diagnostics
+	r := &AccessProfileResource{}
+	r.setStateFromAPI(context.Background(), &data, ap, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if data.RevocationRequestConfig.IsNull() || data.RevocationRequestConfig.IsUnknown() {
+		t.Fatalf("expected empty revocation config to be represented as an empty list, got %#v", data.RevocationRequestConfig)
+	}
+	if len(data.RevocationRequestConfig.Elements()) != 0 {
+		t.Fatalf("expected no revocation config blocks, got %#v", data.RevocationRequestConfig)
+	}
+}
+
 func boolPtr(v bool) *bool { return &v }

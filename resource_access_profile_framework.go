@@ -152,7 +152,6 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 			"segments": schema.ListAttribute{
 				MarkdownDescription: "List of segment IDs assigned to the access profile",
 				Optional:            true,
-				Computed:            true,
 				ElementType:         types.StringType,
 			},
 		},
@@ -1029,30 +1028,28 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		data.Segments, _ = types.ListValue(types.StringType, []attr.Value{})
 	}
 
-	if ap.RevocationRequestConfig != nil {
-		revocationObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
-			"approval_schemes": types.ListType{ElemType: approvalSchemeObjType},
-		}}
+	revocationObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"approval_schemes": types.ListType{ElemType: approvalSchemeObjType},
+	}}
+	if ap.RevocationRequestConfig != nil && len(ap.RevocationRequestConfig.ApprovalSchemes) > 0 {
 		revocationModels := []AccessProfileRevocationRequestConfigModel{{
 			ApprovalSchemes: types.ListNull(approvalSchemeObjType),
 		}}
-		if len(ap.RevocationRequestConfig.ApprovalSchemes) > 0 {
-			var schemeModels []ApprovalSchemeModel
-			for _, s := range ap.RevocationRequestConfig.ApprovalSchemes {
-				schemeModels = append(schemeModels, ApprovalSchemeModel{
-					ApproverType: types.StringValue(s.ApproverType),
-					ApproverID:   types.StringValue(s.ApproverId),
-				})
-			}
-			sl, d := types.ListValueFrom(ctx, approvalSchemeObjType, schemeModels)
-			diags.Append(d...)
-			revocationModels[0].ApprovalSchemes = sl
+		var schemeModels []ApprovalSchemeModel
+		for _, s := range ap.RevocationRequestConfig.ApprovalSchemes {
+			schemeModels = append(schemeModels, ApprovalSchemeModel{
+				ApproverType: types.StringValue(s.ApproverType),
+				ApproverID:   types.StringValue(s.ApproverId),
+			})
 		}
+		sl, d := types.ListValueFrom(ctx, approvalSchemeObjType, schemeModels)
+		diags.Append(d...)
+		revocationModels[0].ApprovalSchemes = sl
 		list, d := types.ListValueFrom(ctx, revocationObjType, revocationModels)
 		diags.Append(d...)
 		data.RevocationRequestConfig = list
 	} else {
-		data.RevocationRequestConfig, _ = types.ListValue(types.ObjectType{AttrTypes: map[string]attr.Type{"approval_schemes": types.ListType{ElemType: approvalSchemeObjType}}}, []attr.Value{})
+		data.RevocationRequestConfig, _ = types.ListValue(revocationObjType, []attr.Value{})
 	}
 
 	if ap.AccessModelMetadata != nil {

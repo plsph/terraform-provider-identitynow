@@ -113,6 +113,87 @@ func (d *AccessProfileDataSource) Schema(ctx context.Context, req datasource.Sch
 				MarkdownDescription: "Segment IDs assigned to this access profile",
 				ElementType:         types.StringType,
 			},
+			"access_model_metadata": schema.ListNestedAttribute{
+				Computed:            true,
+				MarkdownDescription: "Access model metadata for this access profile",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"attributes": schema.ListNestedAttribute{
+							Computed: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"key":         schema.StringAttribute{Computed: true},
+									"name":        schema.StringAttribute{Computed: true},
+									"multiselect": schema.BoolAttribute{Computed: true},
+									"status":      schema.StringAttribute{Computed: true},
+									"type":        schema.StringAttribute{Computed: true},
+									"description": schema.StringAttribute{Computed: true},
+									"object_types": schema.ListNestedAttribute{
+										Computed: true,
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"value": schema.StringAttribute{Computed: true},
+											},
+										},
+									},
+									"values": schema.ListNestedAttribute{
+										Computed: true,
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"value":  schema.StringAttribute{Computed: true},
+												"name":   schema.StringAttribute{Computed: true},
+												"status": schema.StringAttribute{Computed: true},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"provisioning_criteria": schema.ListNestedAttribute{
+				Computed:            true,
+				MarkdownDescription: "Provisioning criteria for this access profile",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"operation": schema.StringAttribute{Computed: true},
+						"attribute": schema.StringAttribute{Computed: true},
+						"value":     schema.StringAttribute{Computed: true},
+						"children": schema.ListNestedAttribute{
+							Computed: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"operation": schema.StringAttribute{Computed: true},
+									"attribute": schema.StringAttribute{Computed: true},
+									"value":     schema.StringAttribute{Computed: true},
+									"children": schema.ListNestedAttribute{
+										Computed: true,
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"operation": schema.StringAttribute{Computed: true},
+												"attribute": schema.StringAttribute{Computed: true},
+												"value":     schema.StringAttribute{Computed: true},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"additional_owners": schema.ListNestedAttribute{
+				Computed:            true,
+				MarkdownDescription: "Additional owners for this access profile",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"type": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true},
+						"name": schema.StringAttribute{Computed: true},
+					},
+				},
+			},
 		},
 	}
 }
