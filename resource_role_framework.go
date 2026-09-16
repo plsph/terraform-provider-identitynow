@@ -56,7 +56,13 @@ type AccessModelMetadataAttributeModel struct {
 	Multiselect types.Bool   `tfsdk:"multiselect"`
 	Status      types.String `tfsdk:"status"`
 	Type        types.String `tfsdk:"type"`
+	Description types.String `tfsdk:"description"`
+	ObjectTypes types.List   `tfsdk:"object_types"`
 	Values      types.List   `tfsdk:"values"`
+}
+
+type AccessModelMetadataObjectTypeModel struct {
+	Value types.String `tfsdk:"value"`
 }
 
 type AccessModelMetadataValueModel struct {
@@ -264,8 +270,22 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 										MarkdownDescription: "Type of the metadata attribute (e.g. custom)",
 										Optional:            true,
 									},
+									"description": schema.StringAttribute{
+										MarkdownDescription: "Description of the metadata attribute",
+										Optional:            true,
+									},
 								},
 								Blocks: map[string]schema.Block{
+									"object_types": schema.ListNestedBlock{
+										MarkdownDescription: "Object types associated with the metadata attribute",
+										NestedObject: schema.NestedBlockObject{
+											Attributes: map[string]schema.Attribute{
+												"value": schema.StringAttribute{
+													Required: true,
+												},
+											},
+										},
+									},
 									"values": schema.ListNestedBlock{
 										MarkdownDescription: "Values assigned to this metadata attribute",
 										NestedObject: schema.NestedBlockObject{
@@ -1487,6 +1507,22 @@ func accessModelMetadataModelToAPI(ctx context.Context, metadataList types.List,
 			if !am.Type.IsNull() {
 				apiAttr.Type = am.Type.ValueString()
 			}
+			if !am.Description.IsNull() {
+				apiAttr.Description = am.Description.ValueString()
+			}
+
+			if !am.ObjectTypes.IsNull() && len(am.ObjectTypes.Elements()) > 0 {
+				var objTypeModels []AccessModelMetadataObjectTypeModel
+				diags.Append(am.ObjectTypes.ElementsAs(ctx, &objTypeModels, false)...)
+				if diags.HasError() {
+					return nil
+				}
+
+				apiAttr.ObjectTypes = make([]string, len(objTypeModels))
+				for j, otm := range objTypeModels {
+					apiAttr.ObjectTypes[j] = otm.Value.ValueString()
+				}
+			}
 
 			if !am.Values.IsNull() && len(am.Values.Elements()) > 0 {
 				var valModels []AccessModelMetadataValueModel
@@ -1544,6 +1580,23 @@ func accessModelMetadataAPIToState(ctx context.Context, metadata *AttributeDTOLi
 		} else {
 			attrModel.Type = types.StringNull()
 		}
+		if a.Description != "" {
+			attrModel.Description = types.StringValue(a.Description)
+		} else {
+			attrModel.Description = types.StringNull()
+		}
+
+		if len(a.ObjectTypes) > 0 {
+			objTypeModels := make([]AccessModelMetadataObjectTypeModel, len(a.ObjectTypes))
+			for j, objectType := range a.ObjectTypes {
+				objTypeModels[j] = AccessModelMetadataObjectTypeModel{Value: types.StringValue(objectType)}
+			}
+			objList, d := types.ListValueFrom(ctx, accessModelMetadataObjectTypeValueObjectType(), objTypeModels)
+			diags.Append(d...)
+			attrModel.ObjectTypes = objList
+		} else {
+			attrModel.ObjectTypes = types.ListNull(accessModelMetadataObjectTypeValueObjectType())
+		}
 
 		if len(a.Values) > 0 {
 			valModels := make([]AccessModelMetadataValueModel, len(a.Values))
@@ -1589,12 +1642,20 @@ func accessModelMetadataObjectType() types.ObjectType {
 
 func accessModelMetadataAttributeObjectType() types.ObjectType {
 	return types.ObjectType{AttrTypes: map[string]attr.Type{
-		"key":         types.StringType,
-		"name":        types.StringType,
-		"multiselect": types.BoolType,
-		"status":      types.StringType,
-		"type":        types.StringType,
-		"values":      types.ListType{ElemType: accessModelMetadataValueObjectType()},
+		"key":          types.StringType,
+		"name":         types.StringType,
+		"multiselect":  types.BoolType,
+		"status":       types.StringType,
+		"type":         types.StringType,
+		"description":  types.StringType,
+		"object_types": types.ListType{ElemType: accessModelMetadataObjectTypeValueObjectType()},
+		"values":       types.ListType{ElemType: accessModelMetadataValueObjectType()},
+	}}
+}
+
+func accessModelMetadataObjectTypeValueObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"value": types.StringType,
 	}}
 }
 

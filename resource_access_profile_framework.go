@@ -89,6 +89,32 @@ type ProvisioningCriteriaModel struct {
 	Children  types.List   `tfsdk:"children"`
 }
 
+func provisioningCriteriaObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"operation": types.StringType,
+		"attribute": types.StringType,
+		"value":     types.StringType,
+		"children":  types.ListType{ElemType: provisioningCriteriaChildObjectType()},
+	}}
+}
+
+func provisioningCriteriaChildObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"operation": types.StringType,
+		"attribute": types.StringType,
+		"value":     types.StringType,
+		"children":  types.ListType{ElemType: provisioningCriteriaLeafObjectType()},
+	}}
+}
+
+func provisioningCriteriaLeafObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: map[string]attr.Type{
+		"operation": types.StringType,
+		"attribute": types.StringType,
+		"value":     types.StringType,
+	}}
+}
+
 func (r *AccessProfileResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_access_profile"
 }
@@ -1032,33 +1058,22 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 	if ap.AccessModelMetadata != nil {
 		data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, ap.AccessModelMetadata, diags)
 	} else {
-		data.AccessModelMetadata = types.ListNull(types.ObjectType{AttrTypes: map[string]attr.Type{"attributes": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{"key": types.StringType, "name": types.StringType, "multiselect": types.BoolType, "status": types.StringType, "type": types.StringType, "object_types": types.ListType{ElemType: types.StringType}, "values": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{"value": types.StringType, "name": types.StringType, "status": types.StringType}}}}}}}})
+		data.AccessModelMetadata = types.ListNull(accessModelMetadataObjectType())
 	}
 
 	if ap.ProvisioningCriteria != nil {
-		childObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
-			"operation": types.StringType,
-			"attribute": types.StringType,
-			"value":     types.StringType,
-			"children":  types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{"operation": types.StringType, "attribute": types.StringType, "value": types.StringType}}},
-		}}
-		provisioningObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
-			"operation": types.StringType,
-			"attribute": types.StringType,
-			"value":     types.StringType,
-			"children":  types.ListType{ElemType: childObjType},
-		}}
+		provisioningObjType := provisioningCriteriaObjectType()
 		criteriaModels := []ProvisioningCriteriaModel{{
 			Operation: types.StringValue(ap.ProvisioningCriteria.Operation),
 			Attribute: types.StringValue(ap.ProvisioningCriteria.Attribute),
 			Value:     types.StringValue(ap.ProvisioningCriteria.Value),
-			Children:  types.ListNull(childObjType),
+			Children:  types.ListNull(provisioningCriteriaChildObjectType()),
 		}}
 		list, d := types.ListValueFrom(ctx, provisioningObjType, criteriaModels)
 		diags.Append(d...)
 		data.ProvisioningCriteria = list
 	} else {
-		data.ProvisioningCriteria, _ = types.ListValue(types.ObjectType{AttrTypes: map[string]attr.Type{"operation": types.StringType, "attribute": types.StringType, "value": types.StringType, "children": types.ListType{ElemType: types.ObjectType{AttrTypes: map[string]attr.Type{"operation": types.StringType, "attribute": types.StringType, "value": types.StringType}}}}}, []attr.Value{})
+		data.ProvisioningCriteria, _ = types.ListValue(provisioningCriteriaObjectType(), []attr.Value{})
 	}
 
 	if ap.AdditionalOwners != nil {
