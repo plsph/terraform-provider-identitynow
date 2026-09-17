@@ -2045,6 +2045,106 @@ func (c *Client) GetDimension(ctx context.Context, roleId string, dimensionId st
 	return &res, nil
 }
 
+func (c *Client) GetSegment(ctx context.Context, id string) (*Segment, error) {
+	segmentURL := fmt.Sprintf("%s/v2026/segments/%s", c.BaseURL, url.PathEscape(id))
+	req, err := http.NewRequest("GET", segmentURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := Segment{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) GetSegments(ctx context.Context) ([]*Segment, error) {
+	segmentURL := fmt.Sprintf("%s/v2026/segments?limit=250&offset=0", c.BaseURL)
+	req, err := http.NewRequest("GET", segmentURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	var res []*Segment
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (c *Client) GetSegmentByName(ctx context.Context, name string) (*Segment, error) {
+	segments, err := c.GetSegments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, segment := range segments {
+		if segment.Name == name {
+			return segment, nil
+		}
+	}
+	return nil, &NotFoundError{fmt.Sprintf("segment with name %q not found", name)}
+}
+
+func (c *Client) CreateSegment(ctx context.Context, segment *Segment) (*Segment, error) {
+	body, err := json.Marshal(segment)
+	if err != nil {
+		return nil, err
+	}
+	segmentURL := fmt.Sprintf("%s/v2026/segments", c.BaseURL)
+	req, err := http.NewRequest("POST", segmentURL, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := Segment{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) UpdateSegment(ctx context.Context, id string, patches []*UpdateSegment) (*Segment, error) {
+	body, err := json.Marshal(patches)
+	if err != nil {
+		return nil, err
+	}
+	segmentURL := fmt.Sprintf("%s/v2026/segments/%s", c.BaseURL, url.PathEscape(id))
+	req, err := http.NewRequest("PATCH", segmentURL, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := Segment{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) DeleteSegment(ctx context.Context, id string) error {
+	segmentURL := fmt.Sprintf("%s/v2026/segments/%s", c.BaseURL, url.PathEscape(id))
+	req, err := http.NewRequest("DELETE", segmentURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	var res interface{}
+	return c.sendRequest(ctx, req, &res)
+}
+
 func (c *Client) CreateDimension(ctx context.Context, roleId string, dimension *Dimension) (*Dimension, error) {
 	body, err := json.Marshal(&dimension)
 	if err != nil {

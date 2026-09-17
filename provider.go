@@ -243,6 +243,7 @@ func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.R
 		NewTaggedObjectResource,
 		NewDimensionResource,
 		NewWorkflowResource,
+		NewSegmentResource,
 	}
 }
 
@@ -258,5 +259,6 @@ func (p *IdentityNowProvider) DataSources(ctx context.Context) []func() datasour
 		NewSourceEntitlementDataSource,
 		NewDimensionDataSource,
 		NewWorkflowDataSource,
+		NewSegmentDataSource,
 	}
 }
