@@ -9,17 +9,17 @@ resource "identitynow_segment" "austin" {
     name = var.owner_name
   }
 
-  visibility_criteria_json = jsonencode({
-    expression = {
-      operator  = "EQUALS"
-      attribute = "location"
-      value = {
-        type  = "STRING"
-        value = "Austin"
-      }
-      children = []
+  visibility_criteria {
+    expression {
+    operator  = "EQUALS"
+    attribute = "location"
+
+    value {
+      type  = "STRING"
+      value = "Austin"
     }
-  })
+  }
+  }
 }
 
 data "identitynow_segment" "existing" {

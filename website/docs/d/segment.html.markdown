@@ -31,7 +31,7 @@ output "segment_id" {
 * `id` - The segment ID.
 * `description` - The segment description.
 * `owner` - The segment owner.
-* `visibility_criteria_json` - The segment visibility criteria encoded as JSON.
+* `visibility_criteria` - The segment visibility criteria as structured nested attributes.
 * `active` - Whether the segment is active.
 * `created` - The segment creation timestamp.
 * `modified` - The segment modification timestamp.

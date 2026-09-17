@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -21,14 +20,14 @@ type SegmentDataSource struct {
 }
 
 type SegmentDataSourceModel struct {
-	ID                     types.String `tfsdk:"id"`
-	Name                   types.String `tfsdk:"name"`
-	Description            types.String `tfsdk:"description"`
-	Owner                  types.List   `tfsdk:"owner"`
-	VisibilityCriteriaJSON types.String `tfsdk:"visibility_criteria_json"`
-	Active                 types.Bool   `tfsdk:"active"`
-	Created                types.String `tfsdk:"created"`
-	Modified               types.String `tfsdk:"modified"`
+	ID                 types.String `tfsdk:"id"`
+	Name               types.String `tfsdk:"name"`
+	Description        types.String `tfsdk:"description"`
+	Owner              types.List   `tfsdk:"owner"`
+	VisibilityCriteria types.List   `tfsdk:"visibility_criteria"`
+	Active             types.Bool   `tfsdk:"active"`
+	Created            types.String `tfsdk:"created"`
+	Modified           types.String `tfsdk:"modified"`
 }
 
 func (d *SegmentDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -39,13 +38,13 @@ func (d *SegmentDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Looks up a SailPoint identity segment by name.",
 		Attributes: map[string]schema.Attribute{
-			"id":                       schema.StringAttribute{Computed: true},
-			"name":                     schema.StringAttribute{Required: true},
-			"description":              schema.StringAttribute{Computed: true},
-			"visibility_criteria_json": schema.StringAttribute{Computed: true},
-			"active":                   schema.BoolAttribute{Computed: true},
-			"created":                  schema.StringAttribute{Computed: true},
-			"modified":                 schema.StringAttribute{Computed: true},
+			"id":                  schema.StringAttribute{Computed: true},
+			"name":                schema.StringAttribute{Required: true},
+			"description":         schema.StringAttribute{Computed: true},
+			"visibility_criteria": visibilityCriteriaAttribute(3),
+			"active":              schema.BoolAttribute{Computed: true},
+			"created":             schema.StringAttribute{Computed: true},
+			"modified":            schema.StringAttribute{Computed: true},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
 				MarkdownDescription: "The segment owner.",
@@ -59,6 +58,40 @@ func (d *SegmentDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 			},
 		},
 	}
+}
+
+func visibilityCriteriaAttribute(depth int) schema.Attribute {
+	return schema.ListNestedAttribute{
+		Computed: true,
+		NestedObject: schema.NestedAttributeObject{
+			Attributes: map[string]schema.Attribute{
+				"expression": visibilityExpressionAttribute(depth),
+			},
+		},
+	}
+}
+
+func visibilityExpressionAttribute(depth int) schema.Attribute {
+	attributes := map[string]schema.Attribute{
+		"operator":  schema.StringAttribute{Computed: true},
+		"attribute": schema.StringAttribute{Computed: true},
+		"value": schema.ListNestedAttribute{
+			Computed: true,
+			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"type":  schema.StringAttribute{Computed: true},
+				"value": schema.StringAttribute{Computed: true},
+			}},
+		},
+	}
+	if depth > 1 {
+		attributes["children"] = schema.ListNestedAttribute{
+			Computed: true,
+			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
+				"expression": visibilityExpressionAttribute(depth - 1),
+			}},
+		}
+	}
+	return schema.ListNestedAttribute{Computed: true, NestedObject: schema.NestedAttributeObject{Attributes: attributes}}
 }
 
 func (d *SegmentDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
@@ -101,15 +134,6 @@ func (d *SegmentDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	data.Created = types.StringValue(segment.Created)
 	data.Modified = types.StringValue(segment.Modified)
 	data.Owner = segmentOwnerState(ctx, segment.Owner, &resp.Diagnostics)
-	if segment.VisibilityCriteria != nil {
-		criteria, err := json.Marshal(segment.VisibilityCriteria)
-		if err != nil {
-			resp.Diagnostics.AddError("State Error", err.Error())
-			return
-		}
-		data.VisibilityCriteriaJSON = types.StringValue(string(criteria))
-	} else {
-		data.VisibilityCriteriaJSON = types.StringNull()
-	}
+	data.VisibilityCriteria = segmentVisibilityCriteriaState(ctx, segment.VisibilityCriteria, &resp.Diagnostics)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

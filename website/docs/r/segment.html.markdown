@@ -24,17 +24,17 @@ resource "identitynow_segment" "austin" {
     name = "support"
   }
 
-  visibility_criteria_json = jsonencode({
-    expression = {
-      operator  = "EQUALS"
-      attribute = "location"
-      value = {
-        type  = "STRING"
-        value = "Austin"
-      }
-      children = []
+  visibility_criteria {
+    expression {
+    operator  = "EQUALS"
+    attribute = "location"
+
+    value {
+      type  = "STRING"
+      value = "Austin"
     }
-  })
+  }
+  }
 }
 ```
 
@@ -45,7 +45,8 @@ The following arguments are supported:
 * `name` - (Required) The segment business name.
 * `description` - (Optional) The segment description.
 * `owner` - (Optional) The segment owner. Supports `id`, `type`, and `name`.
-* `visibility_criteria_json` - (Optional) Visibility criteria encoded as JSON following the SailPoint Visibility Criteria schema.
+* `visibility_criteria` - (Optional) Visibility criteria following the SailPoint Visibility Criteria schema. Supports `expression`, `operator`, `attribute`, `value`, and nested `children` blocks.
+* `visibility_criteria_json` - (Optional) Visibility criteria as a JSON object following the SailPoint Visibility Criteria schema. Conflicts with `visibility_criteria`; configure only one.
 * `active` - (Optional) Whether the segment is active. Defaults to `false`.
 
 ## Attributes Reference
