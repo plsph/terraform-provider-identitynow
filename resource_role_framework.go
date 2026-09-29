@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -152,9 +153,7 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Role name",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				}},
+			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Role description",
 				Optional:            true,
@@ -186,7 +185,8 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				MarkdownDescription: "Role owner",
+				MarkdownDescription: "Role owner. Exactly one owner is required.",
+				Validators:          []validator.List{listSizeBetween(1, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -261,18 +261,22 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 									"multiselect": schema.BoolAttribute{
 										MarkdownDescription: "Whether multiple values can be selected for the metadata attribute",
 										Optional:            true,
+										Computed:            true,
 									},
 									"status": schema.StringAttribute{
 										MarkdownDescription: "Status of the metadata attribute (e.g. active)",
 										Optional:            true,
+										Computed:            true,
 									},
 									"type": schema.StringAttribute{
 										MarkdownDescription: "Type of the metadata attribute (e.g. custom)",
 										Optional:            true,
+										Computed:            true,
 									},
 									"description": schema.StringAttribute{
 										MarkdownDescription: "Description of the metadata attribute",
 										Optional:            true,
+										Computed:            true,
 									},
 								},
 								Blocks: map[string]schema.Block{
@@ -301,6 +305,7 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 												"status": schema.StringAttribute{
 													MarkdownDescription: "Status of the value (e.g. active)",
 													Optional:            true,
+													Computed:            true,
 												},
 											},
 										},
@@ -318,10 +323,12 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 						"comments_required": schema.BoolAttribute{
 							MarkdownDescription: "Whether comments are required when requesting access",
 							Optional:            true,
+							Computed:            true,
 						},
 						"denial_comments_required": schema.BoolAttribute{
 							MarkdownDescription: "Whether comments are required when denying access",
 							Optional:            true,
+							Computed:            true,
 						},
 					},
 					Blocks: map[string]schema.Block{
@@ -491,104 +498,9 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	// Build Role object
-	role := &Role{
-		Name:        data.Name.ValueString(),
-		Description: data.Description.ValueString(),
-	}
-
-	// Parse owner
-	var owners []OwnerModel
-	resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+	role := roleFromModel(ctx, data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-	if len(owners) > 0 {
-		role.RoleOwner = &ObjectInfo{
-			ID:   owners[0].ID.ValueString(),
-			Type: owners[0].Type.ValueString(),
-			Name: owners[0].Name.ValueString(),
-		}
-	}
-
-	// Parse access profiles
-	if !data.AccessProfiles.IsNull() {
-		var aps []AccessProfileRefModel
-		resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &aps, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		role.AccessProfiles = make([]*ObjectInfo, len(aps))
-		for i, ap := range aps {
-			role.AccessProfiles[i] = &ObjectInfo{
-				ID:   ap.ID.ValueString(),
-				Type: ap.Type.ValueString(),
-				Name: ap.Name.ValueString(),
-			}
-		}
-	}
-
-	// Parse entitlements
-	if !data.Entitlements.IsNull() {
-		var ents []EntitlementRefModel
-		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &ents, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		role.Entitlements = make([]*ObjectInfo, len(ents))
-		for i, e := range ents {
-			role.Entitlements[i] = &ObjectInfo{
-				ID:   e.ID.ValueString(),
-				Type: e.Type.ValueString(),
-				Name: e.Name.ValueString(),
-			}
-		}
-	}
-
-	if !data.Requestable.IsNull() {
-		requestable := data.Requestable.ValueBool()
-		role.Requestable = &requestable
-	}
-
-	if !data.Dimensional.IsNull() {
-		dimensional := data.Dimensional.ValueBool()
-		role.Dimensional = &dimensional
-	}
-
-	if !data.Enabled.IsNull() {
-		enabled := data.Enabled.ValueBool()
-		role.Enabled = &enabled
-	}
-
-	// Parse membership
-	if !data.Membership.IsNull() {
-		var memberships []MembershipModel
-		resp.Diagnostics.Append(data.Membership.ElementsAs(ctx, &memberships, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if len(memberships) > 0 {
-			role.Membership = membershipModelToAPI(ctx, memberships[0], &resp.Diagnostics)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-		}
-	}
-
-	// Parse access model metadata
-	if !data.AccessModelMetadata.IsNull() {
-		role.AccessModelMetadata = accessModelMetadataModelToAPI(ctx, data.AccessModelMetadata, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-	}
-
-	// Parse access request config
-	if !data.AccessRequestConfig.IsNull() {
-		role.AccessRequestConfig = roleAccessRequestConfigModelToAPI(ctx, data.AccessRequestConfig, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
 	}
 
 	tflog.Info(ctx, "Creating Role", map[string]interface{}{"name": role.Name})
@@ -607,30 +519,117 @@ func (r *RoleResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	// Update state with returned values
 	data.ID = types.StringValue(newRole.ID)
-	if newRole.Requestable != nil {
-		data.Requestable = types.BoolValue(*newRole.Requestable)
-	}
-	if newRole.Dimensional != nil {
-		data.Dimensional = types.BoolValue(*newRole.Dimensional)
-	}
-	if newRole.Enabled != nil {
-		data.Enabled = types.BoolValue(*newRole.Enabled)
-	}
-
-	// Map access request config from API response to resolve computed values
-	data.AccessRequestConfig = roleAccessRequestConfigAPIToState(ctx, newRole.AccessRequestConfig, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Map access model metadata from API response to resolve computed values
-	data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, newRole.AccessModelMetadata, &resp.Diagnostics)
+	setRoleComputedState(ctx, &data, newRole, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	tflog.Trace(ctx, "created a role resource")
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// roleFromModel converts the Terraform model to the API Role struct.
+func roleFromModel(ctx context.Context, data RoleResourceModel, diags *diag.Diagnostics) *Role {
+	role := &Role{
+		Name:        data.Name.ValueString(),
+		Description: data.Description.ValueString(),
+	}
+
+	// Parse owner
+	var owners []OwnerModel
+	diags.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+	if diags.HasError() {
+		return nil
+	}
+	if len(owners) > 0 {
+		role.RoleOwner = &ObjectInfo{
+			ID:   owners[0].ID.ValueString(),
+			Type: owners[0].Type.ValueString(),
+			Name: owners[0].Name.ValueString(),
+		}
+	}
+
+	// Parse access profiles
+	if !data.AccessProfiles.IsNull() {
+		var aps []AccessProfileRefModel
+		diags.Append(data.AccessProfiles.ElementsAs(ctx, &aps, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		role.AccessProfiles = make([]*ObjectInfo, len(aps))
+		for i, ap := range aps {
+			role.AccessProfiles[i] = &ObjectInfo{
+				ID:   ap.ID.ValueString(),
+				Type: ap.Type.ValueString(),
+				Name: ap.Name.ValueString(),
+			}
+		}
+	}
+
+	// Parse entitlements
+	if !data.Entitlements.IsNull() {
+		var ents []EntitlementRefModel
+		diags.Append(data.Entitlements.ElementsAs(ctx, &ents, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		role.Entitlements = make([]*ObjectInfo, len(ents))
+		for i, e := range ents {
+			role.Entitlements[i] = &ObjectInfo{
+				ID:   e.ID.ValueString(),
+				Type: e.Type.ValueString(),
+				Name: e.Name.ValueString(),
+			}
+		}
+	}
+
+	if !data.Requestable.IsNull() && !data.Requestable.IsUnknown() {
+		requestable := data.Requestable.ValueBool()
+		role.Requestable = &requestable
+	}
+
+	if !data.Dimensional.IsNull() && !data.Dimensional.IsUnknown() {
+		dimensional := data.Dimensional.ValueBool()
+		role.Dimensional = &dimensional
+	}
+
+	if !data.Enabled.IsNull() && !data.Enabled.IsUnknown() {
+		enabled := data.Enabled.ValueBool()
+		role.Enabled = &enabled
+	}
+
+	// Parse membership
+	if !data.Membership.IsNull() {
+		var memberships []MembershipModel
+		diags.Append(data.Membership.ElementsAs(ctx, &memberships, false)...)
+		if diags.HasError() {
+			return nil
+		}
+		if len(memberships) > 0 {
+			role.Membership = membershipModelToAPI(ctx, memberships[0], diags)
+			if diags.HasError() {
+				return nil
+			}
+		}
+	}
+
+	// Parse access model metadata
+	if !data.AccessModelMetadata.IsNull() {
+		role.AccessModelMetadata = accessModelMetadataModelToAPI(ctx, data.AccessModelMetadata, diags)
+		if diags.HasError() {
+			return nil
+		}
+	}
+
+	// Parse access request config
+	if !data.AccessRequestConfig.IsNull() {
+		role.AccessRequestConfig = roleAccessRequestConfigModelToAPI(ctx, data.AccessRequestConfig, diags)
+		if diags.HasError() {
+			return nil
+		}
+	}
+
+	return role
 }
 
 func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -651,7 +650,7 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	role, err := client.GetRole(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -701,24 +700,10 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	if role.AccessProfiles != nil {
-		existingOrder := make([]string, 0, len(role.AccessProfiles))
-		existingAPsByID := make(map[string]AccessProfileRefModel, len(role.AccessProfiles))
-		if !data.AccessProfiles.IsNull() {
-			var existingAps []AccessProfileRefModel
-			if d := data.AccessProfiles.ElementsAs(ctx, &existingAps, false); d.HasError() {
-				resp.Diagnostics.Append(d...)
-			} else {
-				for _, existing := range existingAps {
-					id := existing.ID.ValueString()
-					if id == "" {
-						continue
-					}
-					existingOrder = append(existingOrder, id)
-					existingAPsByID[id] = existing
-				}
-			}
+		var prior []AccessProfileRefModel
+		if !data.AccessProfiles.IsNull() && !data.AccessProfiles.IsUnknown() {
+			resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &prior, false)...)
 		}
-
 		apiModels := make([]AccessProfileRefModel, 0, len(role.AccessProfiles))
 		for _, ap := range role.AccessProfiles {
 			apiModels = append(apiModels, AccessProfileRefModel{
@@ -727,28 +712,7 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 				Name: types.StringValue(ap.Name),
 			})
 		}
-
-		if len(existingOrder) > 0 {
-			apiByID := make(map[string]AccessProfileRefModel, len(apiModels))
-			for _, model := range apiModels {
-				apiByID[model.ID.ValueString()] = model
-			}
-			ordered := make([]AccessProfileRefModel, 0, len(apiModels))
-			seen := make(map[string]struct{}, len(apiModels))
-			for _, id := range existingOrder {
-				if model, ok := apiByID[id]; ok {
-					ordered = append(ordered, model)
-					seen[id] = struct{}{}
-				}
-			}
-			for _, model := range apiModels {
-				if _, ok := seen[model.ID.ValueString()]; ok {
-					continue
-				}
-				ordered = append(ordered, model)
-			}
-			apiModels = ordered
-		}
+		apiModels = orderByPriorIDs(apiModels, prior, func(m AccessProfileRefModel) string { return m.ID.ValueString() })
 
 		apList, diags := types.ListValueFrom(ctx, objType, apiModels)
 		resp.Diagnostics.Append(diags...)
@@ -758,28 +722,19 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	if role.Entitlements != nil {
-		existingOrder := make([]string, 0, len(role.Entitlements))
-		existingEntsByID := make(map[string]EntitlementRefModel, len(role.Entitlements))
-		if !data.Entitlements.IsNull() {
-			var existingEnts []EntitlementRefModel
-			if d := data.Entitlements.ElementsAs(ctx, &existingEnts, false); d.HasError() {
-				resp.Diagnostics.Append(d...)
-			} else {
-				for _, existing := range existingEnts {
-					id := existing.ID.ValueString()
-					if id == "" {
-						continue
-					}
-					existingOrder = append(existingOrder, id)
-					existingEntsByID[id] = existing
-				}
-			}
+		var prior []EntitlementRefModel
+		if !data.Entitlements.IsNull() && !data.Entitlements.IsUnknown() {
+			resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &prior, false)...)
 		}
-
+		priorByID := make(map[string]EntitlementRefModel, len(prior))
+		for _, p := range prior {
+			priorByID[p.ID.ValueString()] = p
+		}
 		apiModels := make([]EntitlementRefModel, 0, len(role.Entitlements))
 		for _, e := range role.Entitlements {
+			// Keep the configured casing when the API name differs only in case
 			name := e.Name
-			if existing, ok := existingEntsByID[fmt.Sprintf("%v", e.ID)]; ok && strings.EqualFold(existing.Name.ValueString(), name) {
+			if existing, ok := priorByID[fmt.Sprintf("%v", e.ID)]; ok && strings.EqualFold(existing.Name.ValueString(), name) {
 				name = existing.Name.ValueString()
 			}
 			apiModels = append(apiModels, EntitlementRefModel{
@@ -788,28 +743,7 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 				Name: types.StringValue(name),
 			})
 		}
-
-		if len(existingOrder) > 0 {
-			apiByID := make(map[string]EntitlementRefModel, len(apiModels))
-			for _, model := range apiModels {
-				apiByID[model.ID.ValueString()] = model
-			}
-			ordered := make([]EntitlementRefModel, 0, len(apiModels))
-			seen := make(map[string]struct{}, len(apiModels))
-			for _, id := range existingOrder {
-				if model, ok := apiByID[id]; ok {
-					ordered = append(ordered, model)
-					seen[id] = struct{}{}
-				}
-			}
-			for _, model := range apiModels {
-				if _, ok := seen[model.ID.ValueString()]; ok {
-					continue
-				}
-				ordered = append(ordered, model)
-			}
-			apiModels = ordered
-		}
+		apiModels = orderByPriorIDs(apiModels, prior, func(m EntitlementRefModel) string { return m.ID.ValueString() })
 
 		entList, diags := types.ListValueFrom(ctx, objType, apiModels)
 		resp.Diagnostics.Append(diags...)
@@ -818,14 +752,9 @@ func (r *RoleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		data.Entitlements = types.ListNull(objType)
 	}
 
-	// Map access model metadata from API response
-	data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, role.AccessModelMetadata, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Map access request config from API response
-	data.AccessRequestConfig = roleAccessRequestConfigAPIToState(ctx, role.AccessRequestConfig, &resp.Diagnostics)
+	// Map access model metadata and access request config from API response
+	data.AccessModelMetadata = accessModelMetadataReconcile(ctx, data.AccessModelMetadata, role.AccessModelMetadata, &resp.Diagnostics)
+	data.AccessRequestConfig = roleAccessRequestConfigReconcile(ctx, data.AccessRequestConfig, role.AccessRequestConfig, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -855,160 +784,19 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	// Build update patches for all mutable fields
-	updatePatches := []*UpdateRole{}
-
-	if !data.Description.IsNull() {
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/description",
-			Value: data.Description.ValueString(),
-		})
-	}
-
-	// Patch owner
-	var owners []OwnerModel
-	resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+	var state RoleResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	role := roleFromModel(ctx, data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if len(owners) > 0 {
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:   "replace",
-			Path: "/owner",
-			Value: map[string]interface{}{
-				"id":   owners[0].ID.ValueString(),
-				"type": owners[0].Type.ValueString(),
-				"name": owners[0].Name.ValueString(),
-			},
-		})
-	}
 
-	// Patch access profiles - always send patch, use empty array when no access profiles are defined
-	{
-		apValues := make([]interface{}, 0)
-		if !data.AccessProfiles.IsNull() {
-			var aps []AccessProfileRefModel
-			resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &aps, false)...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			for _, ap := range aps {
-				apValues = append(apValues, map[string]interface{}{
-					"id":   ap.ID.ValueString(),
-					"type": ap.Type.ValueString(),
-					"name": ap.Name.ValueString(),
-				})
-			}
-		}
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/accessProfiles",
-			Value: apValues,
-		})
-	}
-
-	// Patch entitlements - always send patch, use empty array when no entitlements are defined
-	{
-		entValues := make([]interface{}, 0)
-		if !data.Entitlements.IsNull() {
-			var ents []EntitlementRefModel
-			resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &ents, false)...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			for _, e := range ents {
-				entValues = append(entValues, map[string]interface{}{
-					"id":   e.ID.ValueString(),
-					"type": e.Type.ValueString(),
-					"name": e.Name.ValueString(),
-				})
-			}
-		}
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/entitlements",
-			Value: entValues,
-		})
-	}
-
-	// Patch requestable
-	if !data.Requestable.IsNull() {
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/requestable",
-			Value: data.Requestable.ValueBool(),
-		})
-	}
-
-	// Patch dimensional
-	if !data.Dimensional.IsNull() {
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/dimensional",
-			Value: data.Dimensional.ValueBool(),
-		})
-	}
-
-	// Patch enabled
-	if !data.Enabled.IsNull() {
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/enabled",
-			Value: data.Enabled.ValueBool(),
-		})
-	}
-
-	// Patch membership
-	if !data.Membership.IsNull() {
-		var memberships []MembershipModel
-		resp.Diagnostics.Append(data.Membership.ElementsAs(ctx, &memberships, false)...)
-		if resp.Diagnostics.HasError() {
+	updatePatches := rolePatches(data, state, role)
+	if len(updatePatches) > 0 {
+		if _, err := client.UpdateRole(ctx, updatePatches, data.ID.ValueString()); err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update role: %s", err))
 			return
 		}
-		if len(memberships) > 0 {
-			membership := membershipModelToAPI(ctx, memberships[0], &resp.Diagnostics)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			updatePatches = append(updatePatches, &UpdateRole{
-				Op:    "replace",
-				Path:  "/membership",
-				Value: membership,
-			})
-		}
-	}
-
-	// Patch access model metadata
-	if !data.AccessModelMetadata.IsNull() {
-		metadata := accessModelMetadataModelToAPI(ctx, data.AccessModelMetadata, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/accessModelMetadata",
-			Value: metadata,
-		})
-	}
-
-	// Patch access request config
-	if !data.AccessRequestConfig.IsNull() {
-		arcValue := roleAccessRequestConfigModelToAPI(ctx, data.AccessRequestConfig, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		updatePatches = append(updatePatches, &UpdateRole{
-			Op:    "replace",
-			Path:  "/accessRequestConfig",
-			Value: arcValue,
-		})
-	}
-
-	_, err = client.UpdateRole(ctx, updatePatches, data.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update role: %s", err))
-		return
 	}
 
 	// Re-read the role to resolve computed values
@@ -1017,30 +805,66 @@ func (r *RoleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read role after update: %s", err))
 		return
 	}
-
-	// Map access request config from API response to resolve computed values
-	data.AccessRequestConfig = roleAccessRequestConfigAPIToState(ctx, updatedRole.AccessRequestConfig, &resp.Diagnostics)
+	setRoleComputedState(ctx, &data, updatedRole, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	// Map access model metadata from API response to resolve computed values
-	data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, updatedRole.AccessModelMetadata, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if updatedRole.Requestable != nil {
-		data.Requestable = types.BoolValue(*updatedRole.Requestable)
-	}
-	if updatedRole.Dimensional != nil {
-		data.Dimensional = types.BoolValue(*updatedRole.Dimensional)
-	}
-	if updatedRole.Enabled != nil {
-		data.Enabled = types.BoolValue(*updatedRole.Enabled)
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// setRoleComputedState resolves computed values in a planned model from the API role after apply.
+func setRoleComputedState(ctx context.Context, data *RoleResourceModel, role *Role, diags *diag.Diagnostics) {
+	data.Requestable = computedBoolFromAPI(data.Requestable, role.Requestable)
+	data.Dimensional = computedBoolFromAPI(data.Dimensional, role.Dimensional)
+	data.Enabled = computedBoolFromAPI(data.Enabled, role.Enabled)
+	data.AccessRequestConfig = roleAccessRequestConfigFillUnknown(ctx, data.AccessRequestConfig, role.AccessRequestConfig, diags)
+	data.AccessModelMetadata = accessModelMetadataFillUnknown(ctx, data.AccessModelMetadata, role.AccessModelMetadata, diags)
+}
+
+// rolePatches builds patch operations for the fields that differ between plan and state.
+func rolePatches(plan, state RoleResourceModel, role *Role) []*UpdateRole {
+	var patches []*UpdateRole
+	replace := func(changed bool, path string, value interface{}) {
+		if changed {
+			patches = append(patches, &UpdateRole{Op: "replace", Path: path, Value: value})
+		}
+	}
+	accessProfiles := role.AccessProfiles
+	if accessProfiles == nil {
+		accessProfiles = []*ObjectInfo{}
+	}
+	entitlements := role.Entitlements
+	if entitlements == nil {
+		entitlements = []*ObjectInfo{}
+	}
+	accessRequestConfig := role.AccessRequestConfig
+	if accessRequestConfig == nil {
+		accessRequestConfig = &RoleAccessRequestConfig{}
+	}
+	accessModelMetadata := role.AccessModelMetadata
+	if accessModelMetadata == nil {
+		accessModelMetadata = &AttributeDTOList{Attributes: []*AccessModelMetadataAttribute{}}
+	}
+
+	replace(!plan.Name.Equal(state.Name), "/name", role.Name)
+	replace(!plan.Description.Equal(state.Description), "/description", role.Description)
+	replace(!plan.Owner.Equal(state.Owner), "/owner", role.RoleOwner)
+	replace(!plan.AccessProfiles.Equal(state.AccessProfiles), "/accessProfiles", accessProfiles)
+	replace(!plan.Entitlements.Equal(state.Entitlements), "/entitlements", entitlements)
+	replace(role.Requestable != nil && !plan.Requestable.Equal(state.Requestable), "/requestable", role.Requestable)
+	replace(role.Dimensional != nil && !plan.Dimensional.Equal(state.Dimensional), "/dimensional", role.Dimensional)
+	replace(role.Enabled != nil && !plan.Enabled.Equal(state.Enabled), "/enabled", role.Enabled)
+	replace(!equalIgnoringUnknown(plan.AccessRequestConfig, state.AccessRequestConfig), "/accessRequestConfig", accessRequestConfig)
+	replace(!equalIgnoringUnknown(plan.AccessModelMetadata, state.AccessModelMetadata), "/accessModelMetadata", accessModelMetadata)
+	if !plan.Membership.Equal(state.Membership) {
+		if role.Membership != nil {
+			patches = append(patches, &UpdateRole{Op: "replace", Path: "/membership", Value: role.Membership})
+		} else {
+			patches = append(patches, &UpdateRole{Op: "remove", Path: "/membership"})
+		}
+	}
+	return patches
 }
 
 func (r *RoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -1061,7 +885,7 @@ func (r *RoleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 
 	role, err := client.GetRole(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get role: %s", err))
@@ -1497,17 +1321,17 @@ func accessModelMetadataModelToAPI(ctx context.Context, metadataList types.List,
 				Key:  am.Key.ValueString(),
 				Name: am.Name.ValueString(),
 			}
-			if !am.Multiselect.IsNull() {
+			if !am.Multiselect.IsNull() && !am.Multiselect.IsUnknown() {
 				multiselect := am.Multiselect.ValueBool()
 				apiAttr.Multiselect = &multiselect
 			}
-			if !am.Status.IsNull() {
+			if !am.Status.IsNull() && !am.Status.IsUnknown() {
 				apiAttr.Status = am.Status.ValueString()
 			}
-			if !am.Type.IsNull() {
+			if !am.Type.IsNull() && !am.Type.IsUnknown() {
 				apiAttr.Type = am.Type.ValueString()
 			}
-			if !am.Description.IsNull() {
+			if !am.Description.IsNull() && !am.Description.IsUnknown() {
 				apiAttr.Description = am.Description.ValueString()
 			}
 
@@ -1537,7 +1361,7 @@ func accessModelMetadataModelToAPI(ctx context.Context, metadataList types.List,
 						Value: vm.Value.ValueString(),
 						Name:  vm.Name.ValueString(),
 					}
-					if !vm.Status.IsNull() {
+					if !vm.Status.IsNull() && !vm.Status.IsUnknown() {
 						apiVal.Status = vm.Status.ValueString()
 					}
 					apiAttr.Values[j] = apiVal
@@ -1686,11 +1510,11 @@ func roleAccessRequestConfigModelToAPI(ctx context.Context, configList types.Lis
 	m := configModels[0]
 	config := &RoleAccessRequestConfig{}
 
-	if !m.CommentsRequired.IsNull() {
+	if !m.CommentsRequired.IsNull() && !m.CommentsRequired.IsUnknown() {
 		v := m.CommentsRequired.ValueBool()
 		config.CommentsRequired = &v
 	}
-	if !m.DenialCommentsRequired.IsNull() {
+	if !m.DenialCommentsRequired.IsNull() && !m.DenialCommentsRequired.IsUnknown() {
 		v := m.DenialCommentsRequired.ValueBool()
 		config.DenialCommentsRequired = &v
 	}
@@ -1706,7 +1530,7 @@ func roleAccessRequestConfigModelToAPI(ctx context.Context, configList types.Lis
 			scheme := &ApprovalSchemes{
 				ApproverType: s.ApproverType.ValueString(),
 			}
-			if !s.ApproverID.IsNull() {
+			if !s.ApproverID.IsNull() && !s.ApproverID.IsUnknown() {
 				scheme.ApproverId = s.ApproverID.ValueString()
 			}
 			config.ApprovalSchemes[i] = scheme
@@ -1734,8 +1558,10 @@ func roleAccessRequestConfigModelToAPI(ctx context.Context, configList types.Lis
 						Name:        da.Name.ValueString(),
 						DisplayName: da.DisplayName.ValueString(),
 					}
-					v := da.Derived.ValueBool()
-					attrRef.Derived = &v
+					if !da.Derived.IsNull() && !da.Derived.IsUnknown() {
+						v := da.Derived.ValueBool()
+						attrRef.Derived = &v
+					}
 					dimSchema.DimensionAttributes[j] = attrRef
 				}
 			}
@@ -1754,25 +1580,10 @@ func roleAccessRequestConfigAPIToState(ctx context.Context, config *RoleAccessRe
 		return types.ListNull(arcObjType)
 	}
 
-	// Treat an empty config (no meaningful fields set) as null to avoid perpetual diffs
-	if config.CommentsRequired == nil && config.DenialCommentsRequired == nil &&
-		len(config.ApprovalSchemes) == 0 && config.DimensionSchema == nil {
-		return types.ListNull(arcObjType)
-	}
-
 	model := RoleAccessRequestConfigModel{}
 
-	if config.CommentsRequired != nil {
-		model.CommentsRequired = types.BoolValue(*config.CommentsRequired)
-	} else {
-		model.CommentsRequired = types.BoolNull()
-	}
-
-	if config.DenialCommentsRequired != nil {
-		model.DenialCommentsRequired = types.BoolValue(*config.DenialCommentsRequired)
-	} else {
-		model.DenialCommentsRequired = types.BoolNull()
-	}
+	model.CommentsRequired = types.BoolValue(config.CommentsRequired != nil && *config.CommentsRequired)
+	model.DenialCommentsRequired = types.BoolValue(config.DenialCommentsRequired != nil && *config.DenialCommentsRequired)
 
 	approvalSchemeObjType := roleApprovalSchemeObjectType()
 	if len(config.ApprovalSchemes) > 0 {
@@ -1859,4 +1670,191 @@ func dimensionAttributeRefObjectType() types.ObjectType {
 		"display_name": types.StringType,
 		"derived":      types.BoolType,
 	}}
+}
+
+// accessModelMetadataReconcile maps the API access model metadata to state. Object types that are not
+// configured in prior are kept empty, so API defaults such as "all" do not cause a diff.
+func accessModelMetadataReconcile(ctx context.Context, prior types.List, metadata *AttributeDTOList, diags *diag.Diagnostics) types.List {
+	fromAPI := accessModelMetadataAPIToState(ctx, metadata, diags)
+	if prior.IsUnknown() || fromAPI.IsNull() {
+		if !prior.IsUnknown() && !prior.IsNull() && len(prior.Elements()) == 0 {
+			return prior
+		}
+		return fromAPI
+	}
+	unsetObjectTypes := map[string]bool{}
+	if !prior.IsNull() && len(prior.Elements()) > 0 {
+		var priorModels []AccessModelMetadataModel
+		diags.Append(prior.ElementsAs(ctx, &priorModels, false)...)
+		if len(priorModels) > 0 && !priorModels[0].Attributes.IsNull() && !priorModels[0].Attributes.IsUnknown() {
+			var priorAttrs []AccessModelMetadataAttributeModel
+			diags.Append(priorModels[0].Attributes.ElementsAs(ctx, &priorAttrs, false)...)
+			for _, a := range priorAttrs {
+				if a.ObjectTypes.IsNull() || len(a.ObjectTypes.Elements()) == 0 {
+					unsetObjectTypes[a.Key.ValueString()] = true
+				}
+			}
+		}
+	}
+	if len(unsetObjectTypes) == 0 {
+		return fromAPI
+	}
+	var models []AccessModelMetadataModel
+	diags.Append(fromAPI.ElementsAs(ctx, &models, false)...)
+	var attrs []AccessModelMetadataAttributeModel
+	diags.Append(models[0].Attributes.ElementsAs(ctx, &attrs, false)...)
+	for i := range attrs {
+		if unsetObjectTypes[attrs[i].Key.ValueString()] {
+			attrs[i].ObjectTypes = types.ListNull(accessModelMetadataObjectTypeValueObjectType())
+		}
+	}
+	attrList, d := types.ListValueFrom(ctx, accessModelMetadataAttributeObjectType(), attrs)
+	diags.Append(d...)
+	list, d := types.ListValueFrom(ctx, accessModelMetadataObjectType(), []AccessModelMetadataModel{{Attributes: attrList}})
+	diags.Append(d...)
+	return list
+}
+
+// roleAccessRequestConfigReconcile maps the API access request config to state. A config with only
+// default values is omitted when prior has no access_request_config block.
+func roleAccessRequestConfigReconcile(ctx context.Context, prior types.List, config *RoleAccessRequestConfig, diags *diag.Diagnostics) types.List {
+	priorEmpty := !prior.IsUnknown() && (prior.IsNull() || len(prior.Elements()) == 0)
+	if priorEmpty && roleAccessRequestConfigIsDefault(config) {
+		if prior.IsNull() {
+			return types.ListNull(roleAccessRequestConfigObjectType())
+		}
+		return prior
+	}
+	return roleAccessRequestConfigAPIToState(ctx, config, diags)
+}
+
+func roleAccessRequestConfigIsDefault(config *RoleAccessRequestConfig) bool {
+	return config == nil ||
+		((config.CommentsRequired == nil || !*config.CommentsRequired) &&
+			(config.DenialCommentsRequired == nil || !*config.DenialCommentsRequired) &&
+			len(config.ApprovalSchemes) == 0 &&
+			(config.DimensionSchema == nil || len(config.DimensionSchema.DimensionAttributes) == 0))
+}
+
+// accessModelMetadataFillUnknown resolves unknown values in planned access model metadata from the
+// API after apply. Known planned values are kept, so the state matches the plan.
+func accessModelMetadataFillUnknown(ctx context.Context, planned types.List, metadata *AttributeDTOList, diags *diag.Diagnostics) types.List {
+	if planned.IsNull() || planned.IsUnknown() || len(planned.Elements()) == 0 {
+		return planned
+	}
+	apiByKey := map[string]*AccessModelMetadataAttribute{}
+	if metadata != nil {
+		for _, a := range metadata.Attributes {
+			apiByKey[a.Key] = a
+		}
+	}
+	var models []AccessModelMetadataModel
+	diags.Append(planned.ElementsAs(ctx, &models, false)...)
+	if len(models) == 0 || models[0].Attributes.IsNull() || models[0].Attributes.IsUnknown() {
+		return planned
+	}
+	var attrs []AccessModelMetadataAttributeModel
+	diags.Append(models[0].Attributes.ElementsAs(ctx, &attrs, false)...)
+	for i := range attrs {
+		api := apiByKey[attrs[i].Key.ValueString()]
+		if api == nil {
+			api = &AccessModelMetadataAttribute{}
+		}
+		if attrs[i].Multiselect.IsUnknown() {
+			attrs[i].Multiselect = types.BoolValue(api.Multiselect != nil && *api.Multiselect)
+		}
+		attrs[i].Status = stringFillUnknown(attrs[i].Status, api.Status)
+		attrs[i].Type = stringFillUnknown(attrs[i].Type, api.Type)
+		attrs[i].Description = stringFillUnknown(attrs[i].Description, api.Description)
+		if !attrs[i].Values.IsNull() && !attrs[i].Values.IsUnknown() {
+			apiValues := map[string]*AccessModelMetadataValue{}
+			for _, v := range api.Values {
+				apiValues[v.Value] = v
+			}
+			var values []AccessModelMetadataValueModel
+			diags.Append(attrs[i].Values.ElementsAs(ctx, &values, false)...)
+			for j := range values {
+				apiValue := apiValues[values[j].Value.ValueString()]
+				if apiValue == nil {
+					apiValue = &AccessModelMetadataValue{}
+				}
+				values[j].Name = stringFillUnknown(values[j].Name, apiValue.Name)
+				values[j].Status = stringFillUnknown(values[j].Status, apiValue.Status)
+			}
+			valueList, d := types.ListValueFrom(ctx, accessModelMetadataValueObjectType(), values)
+			diags.Append(d...)
+			attrs[i].Values = valueList
+		}
+	}
+	attrList, d := types.ListValueFrom(ctx, accessModelMetadataAttributeObjectType(), attrs)
+	diags.Append(d...)
+	list, d := types.ListValueFrom(ctx, accessModelMetadataObjectType(), []AccessModelMetadataModel{{Attributes: attrList}})
+	diags.Append(d...)
+	return list
+}
+
+// roleAccessRequestConfigFillUnknown resolves unknown values in the planned access request config
+// from the API after apply. Known planned values are kept, so the state matches the plan.
+func roleAccessRequestConfigFillUnknown(ctx context.Context, planned types.List, config *RoleAccessRequestConfig, diags *diag.Diagnostics) types.List {
+	if planned.IsNull() || planned.IsUnknown() || len(planned.Elements()) == 0 {
+		return planned
+	}
+	if config == nil {
+		config = &RoleAccessRequestConfig{}
+	}
+	var models []RoleAccessRequestConfigModel
+	diags.Append(planned.ElementsAs(ctx, &models, false)...)
+	if len(models) == 0 {
+		return planned
+	}
+	if models[0].CommentsRequired.IsUnknown() {
+		models[0].CommentsRequired = types.BoolValue(config.CommentsRequired != nil && *config.CommentsRequired)
+	}
+	if models[0].DenialCommentsRequired.IsUnknown() {
+		models[0].DenialCommentsRequired = types.BoolValue(config.DenialCommentsRequired != nil && *config.DenialCommentsRequired)
+	}
+	if !models[0].DimensionSchema.IsNull() && !models[0].DimensionSchema.IsUnknown() && len(models[0].DimensionSchema.Elements()) > 0 {
+		apiAttrs := map[string]*DimensionAttributeRef{}
+		if config.DimensionSchema != nil {
+			for _, a := range config.DimensionSchema.DimensionAttributes {
+				apiAttrs[a.Name] = a
+			}
+		}
+		var schemas []RoleDimensionSchemaModel
+		diags.Append(models[0].DimensionSchema.ElementsAs(ctx, &schemas, false)...)
+		for i := range schemas {
+			if schemas[i].DimensionAttributes.IsNull() || schemas[i].DimensionAttributes.IsUnknown() {
+				continue
+			}
+			var attrs []DimensionAttributeRefModel
+			diags.Append(schemas[i].DimensionAttributes.ElementsAs(ctx, &attrs, false)...)
+			for j := range attrs {
+				api := apiAttrs[attrs[j].Name.ValueString()]
+				if api == nil {
+					api = &DimensionAttributeRef{}
+				}
+				attrs[j].DisplayName = stringFillUnknown(attrs[j].DisplayName, api.DisplayName)
+				if attrs[j].Derived.IsUnknown() {
+					attrs[j].Derived = types.BoolValue(api.Derived != nil && *api.Derived)
+				}
+			}
+			attrList, d := types.ListValueFrom(ctx, dimensionAttributeRefObjectType(), attrs)
+			diags.Append(d...)
+			schemas[i].DimensionAttributes = attrList
+		}
+		schemaList, d := types.ListValueFrom(ctx, roleDimensionSchemaObjectType(), schemas)
+		diags.Append(d...)
+		models[0].DimensionSchema = schemaList
+	}
+	list, d := types.ListValueFrom(ctx, roleAccessRequestConfigObjectType(), models)
+	diags.Append(d...)
+	return list
+}
+
+// stringFillUnknown returns value for an unknown planned string and keeps known planned strings.
+func stringFillUnknown(planned types.String, value string) types.String {
+	if planned.IsUnknown() {
+		return types.StringValue(value)
+	}
+	return planned
 }

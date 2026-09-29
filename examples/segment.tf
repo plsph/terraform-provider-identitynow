@@ -4,21 +4,21 @@ resource "identitynow_segment" "austin" {
   active      = true
 
   owner {
-    id   = var.owner_id
+    id   = data.identitynow_identity.john_doe.id
     type = "IDENTITY"
-    name = var.owner_name
+    name = data.identitynow_identity.john_doe.name
   }
 
   visibility_criteria {
     expression {
-    operator  = "EQUALS"
-    attribute = "location"
+      operator  = "EQUALS"
+      attribute = "location"
 
-    value {
-      type  = "STRING"
-      value = "Austin"
+      value {
+        type  = "STRING"
+        value = "Austin"
+      }
     }
-  }
   }
 }
 

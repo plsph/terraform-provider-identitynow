@@ -25,8 +25,8 @@ type Source struct {
 	ManagementWorkgroup       *ManagementWorkgroup      `json:"managementWorkgroup,omitempty"`
 	ID                        string                    `json:"id,omitempty"`
 	Name                      string                    `json:"name"`
-	Created                   time.Time                 `json:"created,omitempty"`
-	Modified                  time.Time                 `json:"modified,omitempty"`
+	Created                   *time.Time                `json:"created,omitempty"`
+	Modified                  *time.Time                `json:"modified,omitempty"`
 }
 
 type Owner struct {

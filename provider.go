@@ -2,19 +2,21 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-)
-
-const (
-	providerDefaultEmptyString = "nil"
 )
 
 // Ensure IdentityNowProvider implements provider.Provider
@@ -63,8 +65,8 @@ func (p *IdentityNowProvider) Schema(ctx context.Context, req provider.SchemaReq
 		Description: "Terraform provider for SailPoint IdentityNow",
 		Attributes: map[string]schema.Attribute{
 			"api_url": schema.StringAttribute{
-				Description: "The URL to the IdentityNow API",
-				Required:    true,
+				Description: "The URL to the IdentityNow API, e.g. https://<tenant>.api.identitynow.com. Can also be set with the IDENTITYNOW_URL environment variable.",
+				Optional:    true,
 			},
 			"client_id": schema.StringAttribute{
 				Description: "API client used to authenticate with the IdentityNow API",
@@ -94,16 +96,19 @@ func (p *IdentityNowProvider) Schema(ctx context.Context, req provider.SchemaReq
 				},
 			},
 			"max_client_pool_size": schema.Int64Attribute{
-				Description: "Max client pool size for communication with the IdentityNow API",
+				Description: "Max client pool size for communication with the IdentityNow API. Can also be set with the IDENTITYNOW_MAX_POOL_SIZE environment variable. Defaults to 1.",
 				Optional:    true,
+				Validators:  []validator.Int64{int64AtLeastValidator{min: 1}},
 			},
 			"default_client_pool_size": schema.Int64Attribute{
-				Description: "Default client pool size for communication with the IdentityNow API",
+				Description: "Default client pool size for communication with the IdentityNow API. Can also be set with the IDENTITYNOW_DEF_POOL_SIZE environment variable. Defaults to 1.",
 				Optional:    true,
+				Validators:  []validator.Int64{int64AtLeastValidator{min: 1}},
 			},
 			"client_request_rate_limit": schema.Int64Attribute{
-				Description: "Client request rate limit for communication with the IdentityNow API",
+				Description: "Client request rate limit in requests per second for communication with the IdentityNow API. Can also be set with the IDENTITYNOW_CLI_RQ_RATE environment variable. Defaults to 10.",
 				Optional:    true,
+				Validators:  []validator.Int64{int64AtLeastValidator{min: 1}},
 			},
 		},
 	}
@@ -121,64 +126,45 @@ func (p *IdentityNowProvider) Configure(ctx context.Context, req provider.Config
 		return
 	}
 
+	for name, value := range map[string]attr.Value{
+		"api_url":                   data.ApiUrl,
+		"client_id":                 data.ClientId,
+		"client_secret":             data.ClientSecret,
+		"credentials":               data.Credentials,
+		"max_client_pool_size":      data.MaxClientPoolSize,
+		"default_client_pool_size":  data.DefaultClientPoolSize,
+		"client_request_rate_limit": data.ClientRequestRateLimit,
+	} {
+		if value.IsUnknown() {
+			resp.Diagnostics.AddAttributeError(
+				path.Root(name),
+				"Unknown provider configuration value",
+				fmt.Sprintf("The provider cannot be configured because %s is unknown. Set it to a value known at plan time or use its environment variable.", name),
+			)
+		}
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Set default values from environment variables
-	if data.ApiUrl.IsNull() {
-		apiUrl := os.Getenv("IDENTITYNOW_URL")
-		if apiUrl == "" {
-			apiUrl = providerDefaultEmptyString
-		}
-		data.ApiUrl = types.StringValue(apiUrl)
-	}
-
-	if data.ClientId.IsNull() {
-		clientId := os.Getenv("IDENTITYNOW_CLIENT_ID")
-		if clientId == "" {
-			clientId = providerDefaultEmptyString
-		}
-		data.ClientId = types.StringValue(clientId)
-	}
-
-	if data.ClientSecret.IsNull() {
-		clientSecret := os.Getenv("IDENTITYNOW_CLIENT_SECRET")
-		if clientSecret == "" {
-			clientSecret = providerDefaultEmptyString
-		}
-		data.ClientSecret = types.StringValue(clientSecret)
-	}
-
-	if data.MaxClientPoolSize.IsNull() {
-		maxPoolSize := os.Getenv("IDENTITYNOW_MAX_POOL_SIZE")
-		if maxPoolSize == "" {
-			data.MaxClientPoolSize = types.Int64Value(1)
-		}
-	}
-
-	if data.DefaultClientPoolSize.IsNull() {
-		defPoolSize := os.Getenv("IDENTITYNOW_DEF_POOL_SIZE")
-		if defPoolSize == "" {
-			data.DefaultClientPoolSize = types.Int64Value(1)
-		}
-	}
-
-	if data.ClientRequestRateLimit.IsNull() {
-		rateLimit := os.Getenv("IDENTITYNOW_CLI_RQ_RATE")
-		if rateLimit == "" {
-			data.ClientRequestRateLimit = types.Int64Value(10)
-		}
-	}
+	apiURL := stringFromEnv(data.ApiUrl, "IDENTITYNOW_URL")
+	clientID := stringFromEnv(data.ClientId, "IDENTITYNOW_CLIENT_ID")
+	clientSecret := stringFromEnv(data.ClientSecret, "IDENTITYNOW_CLIENT_SECRET")
+	maxPoolSize := int64FromEnv(data.MaxClientPoolSize, "IDENTITYNOW_MAX_POOL_SIZE", "max_client_pool_size", 1, &resp.Diagnostics)
+	defaultPoolSize := int64FromEnv(data.DefaultClientPoolSize, "IDENTITYNOW_DEF_POOL_SIZE", "default_client_pool_size", 1, &resp.Diagnostics)
+	rateLimit := int64FromEnv(data.ClientRequestRateLimit, "IDENTITYNOW_CLI_RQ_RATE", "client_request_rate_limit", 10, &resp.Diagnostics)
 
 	// Validate required fields
-	if data.ApiUrl.ValueString() == providerDefaultEmptyString {
+	if apiURL == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("api_url"),
 			"Missing IdentityNow API URL",
 			"The provider cannot create the IdentityNow API client as there is a missing or empty value for the IdentityNow API URL. "+
 				"Set the api_url value in the configuration or use the IDENTITYNOW_URL environment variable. ",
 		)
-	}
-
-	if resp.Diagnostics.HasError() {
-		return
+	} else if !strings.Contains(apiURL, "://") {
+		apiURL = "https://" + apiURL
 	}
 
 	// Parse credentials
@@ -196,35 +182,73 @@ func (p *IdentityNowProvider) Configure(ctx context.Context, req provider.Config
 				ClientSecret: cred.ClientSecret.ValueString(),
 			})
 		}
-	} else {
+	} else if clientID != "" && clientSecret != "" {
 		credentials = []ClientCredential{{
-			ClientId:     data.ClientId.ValueString(),
-			ClientSecret: data.ClientSecret.ValueString(),
+			ClientId:     clientID,
+			ClientSecret: clientSecret,
 		}}
+	} else {
+		resp.Diagnostics.AddError(
+			"Missing IdentityNow API credentials",
+			"Set client_id and client_secret, or credentials, in the provider configuration, "+
+				"or use the IDENTITYNOW_CLIENT_ID and IDENTITYNOW_CLIENT_SECRET environment variables.",
+		)
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	tflog.Debug(ctx, "Provider configuration", map[string]interface{}{
-		"api_url":                   data.ApiUrl.ValueString(),
+		"api_url":                   apiURL,
 		"credentials_pool_size":     len(credentials),
-		"max_client_pool_size":      data.MaxClientPoolSize.ValueInt64(),
-		"default_client_pool_size":  data.DefaultClientPoolSize.ValueInt64(),
-		"client_request_rate_limit": data.ClientRequestRateLimit.ValueInt64(),
+		"max_client_pool_size":      maxPoolSize,
+		"default_client_pool_size":  defaultPoolSize,
+		"client_request_rate_limit": rateLimit,
 	})
 
 	config := &Config{
-		URL:                    data.ApiUrl.ValueString(),
-		ClientId:               data.ClientId.ValueString(),
-		ClientSecret:           data.ClientSecret.ValueString(),
+		URL:                    apiURL,
 		Credentials:            credentials,
-		MaxClientPoolSize:      int(data.MaxClientPoolSize.ValueInt64()),
-		DefaultClientPoolSize:  int(data.DefaultClientPoolSize.ValueInt64()),
-		ClientRequestRateLimit: int(data.ClientRequestRateLimit.ValueInt64()),
+		MaxClientPoolSize:      int(maxPoolSize),
+		DefaultClientPoolSize:  int(defaultPoolSize),
+		ClientRequestRateLimit: int(rateLimit),
 	}
 
 	resp.DataSourceData = config
 	resp.ResourceData = config
 
 	tflog.Info(ctx, "Successfully configured IdentityNow provider")
+}
+
+// stringFromEnv returns the configured value, or the environment variable when the value is not set.
+func stringFromEnv(value types.String, envVar string) string {
+	if !value.IsNull() && value.ValueString() != "" {
+		return value.ValueString()
+	}
+	return os.Getenv(envVar)
+}
+
+// int64FromEnv returns the configured value, or the environment variable, or the default when neither is set.
+// Values must be at least 1.
+func int64FromEnv(value types.Int64, envVar string, attribute string, defaultValue int64, diags *diag.Diagnostics) int64 {
+	if !value.IsNull() {
+		return value.ValueInt64()
+	}
+	raw := os.Getenv(envVar)
+	if raw == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	if err != nil || parsed < 1 {
+		diags.AddAttributeError(
+			path.Root(attribute),
+			"Invalid environment variable value",
+			fmt.Sprintf("%s must be an integer of at least 1, got %q.", envVar, raw),
+		)
+		return defaultValue
+	}
+	return parsed
 }
 
 // Resources returns the list of resources for this provider

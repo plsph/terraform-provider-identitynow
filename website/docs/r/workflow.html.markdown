@@ -10,6 +10,8 @@ description: |-
 
 Manages an IdentityNow Workflow.
 
+Workflows can be created with `enabled = true`: the workflow is created disabled and enabled afterwards. When an enabled workflow is destroyed, it is disabled first and then deleted.
+
 ## Example Usage
 
 ### Basic Workflow with Event Trigger
@@ -35,7 +37,7 @@ resource "identitynow_workflow" "email_on_manager_change" {
   }
 
   definition {
-    start = "Send Email Test"
+    start = "Send Email"
     steps_json = jsonencode({
       "Send Email" = {
         actionId = "sp:send-email"
@@ -146,9 +148,9 @@ As per developer guide: (https://developer.sailpoint.com/docs/api/v2025/create-w
 
 * `description` - (Optional) Description of what the workflow accomplishes.
 
-* `enabled` - (Optional) Enable or disable the workflow. Workflows cannot be created in an enabled state. Defaults to `false`.
+* `enabled` - (Optional) Enable or disable the workflow. If not set, the workflow is created disabled and the value returned by the API is used afterwards.
 
-* `owner` - (Required) Owner of the workflow. Contains:
+* `owner` - (Optional) Owner of the workflow. The IdentityNow API requires an owner. Contains:
   * `id` - (Required) Owner identity ID.
   * `type` - (Required) Owner type (e.g. `IDENTITY`).
   * `name` - (Required) Owner name.
@@ -156,11 +158,13 @@ As per developer guide: (https://developer.sailpoint.com/docs/api/v2025/create-w
 * `trigger` - (Optional) Trigger configuration for the workflow. Contains:
   * `type` - (Required) Trigger type. One of `EVENT`, `SCHEDULED`, or `EXTERNAL`.
   * `display_name` - (Optional) Display name for the trigger.
-  * `attributes_json` - (Optional) Trigger attributes as a JSON string. Use `jsonencode()` for convenience.
+  * `attributes_json` - (Optional) Trigger attributes as a JSON object string. Use `jsonencode()` for convenience.
 
 * `definition` - (Optional) Workflow definition. Contains:
-  * `start` - (Required) The name of the starting step.
-  * `steps_json` - (Required) Workflow steps as a JSON string. Use `jsonencode()` for convenience.
+  * `start` - (Required) The name of the starting step. Must be the name of a step in `steps_json`.
+  * `steps_json` - (Required) Workflow steps as a JSON object string, keyed by step name. Use `jsonencode()` for convenience.
+
+`steps_json` and `attributes_json` must be JSON objects. They are compared semantically, so differences in whitespace or key order don't produce a diff.
 
 ## Attributes Reference
 

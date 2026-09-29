@@ -62,13 +62,9 @@ func (r *TaggedObjectResource) Schema(ctx context.Context, req resource.SchemaRe
 			},
 			"tags": schema.SetAttribute{
 				Optional:            true,
-				Computed:            true,
-				MarkdownDescription: "Set of tags to apply to the objects (case-insensitive, stored as uppercase)",
+				MarkdownDescription: "Set of tags to apply to the objects (case-insensitive, stored as uppercase). The resource manages the full tag set of each object: tags set outside Terraform are replaced, and destroy removes all tags from the objects.",
 				CustomType: CaseInsensitiveStringSetType{
 					SetType: basetypes.SetType{ElemType: CaseInsensitiveStringType{}},
-				},
-				PlanModifiers: []planmodifier.Set{
-					UseStateForCaseInsensitiveSet(),
 				},
 			},
 		},
@@ -95,9 +91,11 @@ func (r *TaggedObjectResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	var tags []string
-	resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
+		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	upperTags := toUpperSlice(tags)
@@ -138,7 +136,9 @@ func (r *TaggedObjectResource) Create(ctx context.Context, req resource.CreateRe
 		}
 	}
 
-	data.Tags = stringSliceToCaseInsensitiveSet(ctx, upperTags, &resp.Diagnostics)
+	if !data.Tags.IsNull() {
+		data.Tags = stringSliceToCaseInsensitiveSet(ctx, upperTags, &resp.Diagnostics)
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -168,34 +168,45 @@ func (r *TaggedObjectResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	// Read tags from the first object; all objects managed by this resource should have the same tags.
-	var readTags []string
+	// All objects managed by this resource should have the same tags. The tags of the first object
+	// that differs from state are used, so drift on any object is detected.
+	var priorTags []string
+	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
+		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &priorTags, false)...)
+	}
+	priorSet := toStringSet(toUpperSlice(priorTags))
+	readTags := toUpperSlice(priorTags)
+	found := 0
 	for _, objectID := range objectIDs {
 		tflog.Info(ctx, "Reading Tagged Object", map[string]interface{}{
 			"object_type": objectType,
 			"object_id":   objectID,
 		})
 
+		objectTags := []string{}
 		taggedObject, err := client.GetTaggedObject(ctx, objectType, objectID)
-		if err != nil {
-			if _, notFound := err.(*NotFoundError); notFound {
-				resp.State.RemoveResource(ctx)
-				return
-			}
+		if err == nil {
+			found++
+			objectTags = toUpperSlice(taggedObject.Tags)
+		} else if !isNotFound(err) {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read tagged object %s/%s: %s", objectType, objectID, err))
 			return
 		}
 
-		if readTags == nil {
-			readTags = taggedObject.Tags
+		if !sameStringSet(toStringSet(objectTags), priorSet) {
+			readTags = objectTags
+			break
 		}
 	}
 
-	if readTags == nil {
-		readTags = []string{}
+	if found == 0 && len(objectIDs) > 0 {
+		resp.State.RemoveResource(ctx)
+		return
 	}
 
-	data.Tags = stringSliceToCaseInsensitiveSet(ctx, readTags, &resp.Diagnostics)
+	if len(readTags) > 0 || !data.Tags.IsNull() {
+		data.Tags = stringSliceToCaseInsensitiveSet(ctx, readTags, &resp.Diagnostics)
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -212,9 +223,11 @@ func (r *TaggedObjectResource) Update(ctx context.Context, req resource.UpdateRe
 	}
 
 	var tags []string
-	resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
-	if resp.Diagnostics.HasError() {
-		return
+	if !data.Tags.IsNull() && !data.Tags.IsUnknown() {
+		resp.Diagnostics.Append(data.Tags.ElementsAs(ctx, &tags, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 
 	upperTags := toUpperSlice(tags)
@@ -278,7 +291,7 @@ func (r *TaggedObjectResource) Update(ctx context.Context, req resource.UpdateRe
 			})
 			err = client.DeleteTaggedObject(ctx, objectType, priorID)
 			if err != nil {
-				if _, notFound := err.(*NotFoundError); !notFound {
+				if !isNotFound(err) {
 					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete tagged object %s/%s: %s", objectType, priorID, err))
 					return
 				}
@@ -286,7 +299,9 @@ func (r *TaggedObjectResource) Update(ctx context.Context, req resource.UpdateRe
 		}
 	}
 
-	data.Tags = stringSliceToCaseInsensitiveSet(ctx, upperTags, &resp.Diagnostics)
+	if !data.Tags.IsNull() {
+		data.Tags = stringSliceToCaseInsensitiveSet(ctx, upperTags, &resp.Diagnostics)
+	}
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -324,7 +339,7 @@ func (r *TaggedObjectResource) Delete(ctx context.Context, req resource.DeleteRe
 
 		_, err = client.GetTaggedObject(ctx, objectType, objectID)
 		if err != nil {
-			if _, notFound := err.(*NotFoundError); notFound {
+			if isNotFound(err) {
 				continue
 			}
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get tagged object %s/%s: %s", objectType, objectID, err))
@@ -391,10 +406,16 @@ func computeID(objectType string, objectIDs []string) string {
 	return fmt.Sprintf("%s/%s", objectType, strings.Join(sorted, ","))
 }
 
+// toUpperSlice returns the upper-cased strings without duplicates.
 func toUpperSlice(ss []string) []string {
-	out := make([]string, len(ss))
-	for i, s := range ss {
-		out[i] = strings.ToUpper(s)
+	out := make([]string, 0, len(ss))
+	seen := make(map[string]bool, len(ss))
+	for _, s := range ss {
+		upper := strings.ToUpper(s)
+		if !seen[upper] {
+			seen[upper] = true
+			out = append(out, upper)
+		}
 	}
 	return out
 }

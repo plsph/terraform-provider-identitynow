@@ -3,7 +3,7 @@ resource "identitynow_form_definition" "access_request" {
   description = "Collects a business justification for an access request."
 
   owner {
-    id   = var.owner_id
+    id   = data.identitynow_identity.john_doe.id
     type = "IDENTITY"
   }
 

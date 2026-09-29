@@ -1,23 +1,25 @@
 package main
 
 type Role struct {
-	Description             string                   `json:"description"`
-	ID                      string                   `json:"id,omitempty"`
-	Name                    string                   `json:"name"`
-	Requestable             *bool                    `json:"requestable,omitempty"`
-	RoleOwner               *ObjectInfo              `json:"owner,omitempty"`
-	AccessProfiles          []*ObjectInfo            `json:"accessProfiles,omitempty"`
-	Entitlements            []*ObjectInfo            `json:"entitlements,omitempty"`
-	LegacyMembershipInfo    interface{}              `json:"legacyMembershipInfo,omitempty"`
-	Dimensional             *bool                    `json:"dimensional,omitempty"`
-	Enabled                 *bool                    `json:"enabled,omitempty"`
-	Segments                []interface{}            `json:"segments,omitempty"`
-	Membership              *RoleMembership          `json:"membership,omitempty"`
-	AccessModelMetadata     *AttributeDTOList        `json:"accessModelMetadata,omitempty"`
-	AccessRequestConfig     *RoleAccessRequestConfig `json:"accessRequestConfig,omitempty"`
-	RevocationRequestConfig struct {
-		ApprovalSchemes []interface{} `json:"approvalSchemes,omitempty"`
-	} `json:"revocationRequestConfig,omitempty"`
+	Description             string                       `json:"description"`
+	ID                      string                       `json:"id,omitempty"`
+	Name                    string                       `json:"name"`
+	Requestable             *bool                        `json:"requestable,omitempty"`
+	RoleOwner               *ObjectInfo                  `json:"owner,omitempty"`
+	AccessProfiles          []*ObjectInfo                `json:"accessProfiles,omitempty"`
+	Entitlements            []*ObjectInfo                `json:"entitlements,omitempty"`
+	LegacyMembershipInfo    interface{}                  `json:"legacyMembershipInfo,omitempty"`
+	Dimensional             *bool                        `json:"dimensional,omitempty"`
+	Enabled                 *bool                        `json:"enabled,omitempty"`
+	Segments                []interface{}                `json:"segments,omitempty"`
+	Membership              *RoleMembership              `json:"membership,omitempty"`
+	AccessModelMetadata     *AttributeDTOList            `json:"accessModelMetadata,omitempty"`
+	AccessRequestConfig     *RoleAccessRequestConfig     `json:"accessRequestConfig,omitempty"`
+	RevocationRequestConfig *RoleRevocationRequestConfig `json:"revocationRequestConfig,omitempty"`
+}
+
+type RoleRevocationRequestConfig struct {
+	ApprovalSchemes []interface{} `json:"approvalSchemes,omitempty"`
 }
 
 type RoleAccessRequestConfig struct {

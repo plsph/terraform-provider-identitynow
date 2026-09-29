@@ -8,9 +8,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -65,15 +67,15 @@ func (r *SourceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 			"name": schema.StringAttribute{
 				Required: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"description": schema.StringAttribute{
 				Required: true,
 			},
 			"connector": schema.StringAttribute{
 				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"delete_threshold": schema.Int64Attribute{
 				Required: true,
@@ -83,10 +85,14 @@ func (r *SourceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			},
 			"authoritative": schema.BoolAttribute{
 				Required: true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
+				Validators: []validator.List{listSizeBetween(1, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id":   schema.StringAttribute{Required: true},
@@ -96,6 +102,7 @@ func (r *SourceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				},
 			},
 			"cluster": schema.ListNestedBlock{
+				Validators: []validator.List{listSizeBetween(0, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id":   schema.StringAttribute{Required: true},
@@ -174,6 +181,11 @@ func (r *SourceResource) Create(ctx context.Context, req resource.CreateRequest,
 	newSource, err := client.CreateSource(ctx, source)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create source: %s", err))
+		if newSource != nil && newSource.ID != "" {
+			// The source was created but not fully configured, keep it in state so Terraform marks it tainted.
+			data.ID = types.StringValue(newSource.ID)
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		}
 		return
 	}
 
@@ -196,7 +208,7 @@ func (r *SourceResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	source, err := client.GetSource(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -262,18 +274,43 @@ func (r *SourceResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	source := &Source{
-		ID:              data.ID.ValueString(),
-		Name:            data.Name.ValueString(),
-		Description:     data.Description.ValueString(),
-		Connector:       data.Connector.ValueString(),
-		DeleteThreshold: int(data.DeleteThreshold.ValueInt64()),
-		Authoritative:   data.Authoritative.ValueBool(),
+	// Patch only the managed fields, so connector attributes, schemas and other configuration are kept.
+	// connector and authoritative are immutable in the API and force replacement instead.
+	patches := []*UpdateSource{
+		{Op: "replace", Path: "/name", Value: data.Name.ValueString()},
+		{Op: "replace", Path: "/description", Value: data.Description.ValueString()},
+		{Op: "replace", Path: "/deleteThreshold", Value: data.DeleteThreshold.ValueInt64()},
 	}
 
-	_, err = client.UpdateSource(ctx, source)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", err.Error())
+	var owners []SourceOwnerModel
+	resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+	if len(owners) > 0 {
+		patches = append(patches, &UpdateSource{Op: "replace", Path: "/owner", Value: &Owner{
+			ID:   owners[0].ID.ValueString(),
+			Type: owners[0].Type.ValueString(),
+			Name: owners[0].Name.ValueString(),
+		}})
+	}
+
+	var state SourceResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	var clusters []ClusterModel
+	resp.Diagnostics.Append(data.Cluster.ElementsAs(ctx, &clusters, false)...)
+	if len(clusters) > 0 {
+		patches = append(patches, &UpdateSource{Op: "replace", Path: "/cluster", Value: &Cluster{
+			ID:   clusters[0].ID.ValueString(),
+			Type: clusters[0].Type.ValueString(),
+			Name: clusters[0].Name.ValueString(),
+		}})
+	} else if len(state.Cluster.Elements()) > 0 {
+		patches = append(patches, &UpdateSource{Op: "remove", Path: "/cluster"})
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if _, err := client.UpdateSource(ctx, data.ID.ValueString(), patches); err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update source: %s", err))
 		return
 	}
 
@@ -295,7 +332,7 @@ func (r *SourceResource) Delete(ctx context.Context, req resource.DeleteRequest,
 
 	source, err := client.GetSource(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", err.Error())

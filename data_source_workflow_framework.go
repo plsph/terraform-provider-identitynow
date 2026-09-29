@@ -146,7 +146,7 @@ func (d *WorkflowDataSource) Read(ctx context.Context, req datasource.ReadReques
 
 	workflow, err := client.GetWorkflowByName(ctx, data.Name.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Workflow with name %s not found", data.Name.ValueString()))
 			return
 		}

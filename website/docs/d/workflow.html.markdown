@@ -8,7 +8,7 @@ description: |-
 
 # Data Source: identitynow_workflow
 
-Use this data source to access information about an existing Workflow.
+Use this data source to access information about an existing Workflow. The lookup fails when several workflows share the name.
 
 ## Example Usage
 
@@ -42,17 +42,17 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 * `enabled` - Whether the workflow is enabled.
 
-* `owner` - Owner of the workflow. Contains:
+* `owner` - List with the owner of the workflow. Each element contains:
   * `id` - Owner identity ID.
   * `type` - Owner type.
   * `name` - Owner name.
 
-* `trigger` - Trigger configuration. Contains:
+* `trigger` - List with the trigger configuration. Each element contains:
   * `type` - Trigger type (EVENT, SCHEDULED, or EXTERNAL).
   * `display_name` - Trigger display name.
   * `attributes_json` - Trigger attributes as a JSON string.
 
-* `definition` - Workflow definition. Contains:
+* `definition` - List with the workflow definition. Each element contains:
   * `start` - The name of the starting step.
   * `steps_json` - Workflow steps as a JSON string.
 

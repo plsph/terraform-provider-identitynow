@@ -21,13 +21,13 @@ type RoleDataSource struct {
 }
 
 type RoleDataSourceModel struct {
-	ID              types.String `tfsdk:"id"`
-	Name            types.String `tfsdk:"name"`
-	Description     types.String `tfsdk:"description"`
-	Owner           types.List   `tfsdk:"owner"`
-	AccessProfiles  types.List   `tfsdk:"access_profiles"`
-	Requestable     types.Bool   `tfsdk:"requestable"`
-	Enabled         types.Bool   `tfsdk:"enabled"`
+	ID             types.String `tfsdk:"id"`
+	Name           types.String `tfsdk:"name"`
+	Description    types.String `tfsdk:"description"`
+	Owner          types.List   `tfsdk:"owner"`
+	AccessProfiles types.List   `tfsdk:"access_profiles"`
+	Requestable    types.Bool   `tfsdk:"requestable"`
+	Enabled        types.Bool   `tfsdk:"enabled"`
 }
 
 func (d *RoleDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -113,6 +113,10 @@ func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	role, err := client.GetRole(ctx, data.ID.ValueString())
 	if err != nil {
+		if isNotFound(err) {
+			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Role with ID %s not found", data.ID.ValueString()))
+			return
+		}
 		resp.Diagnostics.AddError("Client Error", err.Error())
 		return
 	}
@@ -131,6 +135,9 @@ func (d *RoleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 	} else {
 		data.Enabled = types.BoolNull()
 	}
+
+	data.Owner = objectInfoListState(ctx, role.RoleOwner, &resp.Diagnostics)
+	data.AccessProfiles = objectInfoSliceState(ctx, role.AccessProfiles, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -64,7 +65,8 @@ func (r *GovernanceGroupResource) Schema(ctx context.Context, req resource.Schem
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				MarkdownDescription: "Governance Group owner",
+				MarkdownDescription: "Governance Group owner. Exactly one owner is required.",
+				Validators:          []validator.List{listSizeBetween(1, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -78,7 +80,10 @@ func (r *GovernanceGroupResource) Schema(ctx context.Context, req resource.Schem
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Owner type",
+							MarkdownDescription: "Owner type, defaults to IDENTITY",
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
@@ -111,6 +116,7 @@ func (r *GovernanceGroupResource) Create(ctx context.Context, req resource.Creat
 		Description: data.Description.ValueString(),
 	}
 
+	data.Owner = listWithDefaultString(ctx, data.Owner, "type", "IDENTITY", &resp.Diagnostics)
 	var owners []GovernanceGroupOwnerModel
 	resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
 	if resp.Diagnostics.HasError() {
@@ -160,7 +166,7 @@ func (r *GovernanceGroupResource) Read(ctx context.Context, req resource.ReadReq
 
 	gg, err := client.GetGovernanceGroups(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -209,6 +215,7 @@ func (r *GovernanceGroupResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	data.Owner = listWithDefaultString(ctx, data.Owner, "type", "IDENTITY", &resp.Diagnostics)
 	var owners []GovernanceGroupOwnerModel
 	resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
 	if resp.Diagnostics.HasError() {
@@ -256,7 +263,7 @@ func (r *GovernanceGroupResource) Delete(ctx context.Context, req resource.Delet
 
 	gg, err := client.GetGovernanceGroups(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get governance group: %s", err))

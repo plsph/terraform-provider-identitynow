@@ -123,7 +123,7 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 
 	entitlements, err := client.GetSourceEntitlement(ctx, data.SourceID.ValueString(), data.Name.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Entitlement with name %s not found in source %s", data.Name.ValueString(), data.SourceID.ValueString()))
 			return
 		}
@@ -164,11 +164,9 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 	}
 
 	entModels := []SourceEntitlementItemModel{}
-	entRaw := make([]map[string]interface{}, 0, len(entitlements))
 	for _, e := range entitlements {
 		// owner
 		var ownerList types.List
-		ownerRaw := []map[string]interface{}{}
 		if e.Owner != nil {
 			if ownerMap, ok := e.Owner.(map[string]interface{}); ok {
 				ownerID := ""
@@ -190,7 +188,6 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 					return
 				}
 				ownerList = ol
-				ownerRaw = append(ownerRaw, map[string]interface{}{"id": ownerID, "type": ownerType, "name": ownerName})
 			} else {
 				ownerList = types.ListNull(ownerObjType)
 			}
@@ -200,12 +197,10 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 
 		// direct permissions
 		var permList types.List
-		permsRaw := []string{}
 		if e.DirectPermissions != nil {
 			perms := make([]string, len(e.DirectPermissions))
 			for i, p := range e.DirectPermissions {
 				perms[i] = fmt.Sprintf("%v", p)
-				permsRaw = append(permsRaw, perms[i])
 			}
 			pl, diags := types.ListValueFrom(ctx, types.StringType, perms)
 			resp.Diagnostics.Append(diags...)
@@ -250,38 +245,6 @@ func (d *SourceEntitlementDataSource) Read(ctx context.Context, req datasource.R
 			DirectPermissions:      permList,
 		}
 		entModels = append(entModels, item)
-		entRaw = append(entRaw, map[string]interface{}{
-			"id":   e.ID,
-			"name": e.Name,
-			"description": func() string {
-				if e.Description == nil {
-					return ""
-				}
-				if s, ok := e.Description.(string); ok {
-					return s
-				}
-				return fmt.Sprintf("%v", e.Description)
-			}(),
-			"attribute":                 e.Attribute,
-			"value":                     e.Value,
-			"source_schema_object_type": e.SourceSchemaObjectType,
-			"privileged":                e.Privileged,
-			"requestable":               e.Requestable,
-			"created": func() string {
-				if e.Created == nil {
-					return ""
-				}
-				return fmt.Sprintf("%v", e.Created)
-			}(),
-			"modified": func() string {
-				if e.Modified == nil {
-					return ""
-				}
-				return fmt.Sprintf("%v", e.Modified)
-			}(),
-			"owner":              ownerRaw,
-			"direct_permissions": permsRaw,
-		})
 	}
 
 	entList, diags := types.ListValueFrom(ctx, entitlementObjType, entModels)

@@ -55,6 +55,9 @@ func (r *GovernanceGroupMembersResource) Schema(ctx context.Context, req resourc
 			"governance_group_id": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Governance Group ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -73,7 +76,7 @@ func (r *GovernanceGroupMembersResource) Schema(ctx context.Context, req resourc
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Member type",
+							MarkdownDescription: "Member type, defaults to IDENTITY",
 						},
 					},
 				},
@@ -101,6 +104,7 @@ func (r *GovernanceGroupMembersResource) Create(ctx context.Context, req resourc
 		return
 	}
 
+	data.Members = listWithDefaultString(ctx, data.Members, "type", "IDENTITY", &resp.Diagnostics)
 	var members []GovernanceGroupMemberModel
 	resp.Diagnostics.Append(data.Members.ElementsAs(ctx, &members, false)...)
 	if resp.Diagnostics.HasError() {
@@ -154,7 +158,7 @@ func (r *GovernanceGroupMembersResource) Read(ctx context.Context, req resource.
 
 	ggMembers, err := client.GetGovernanceGroupMembers(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -170,14 +174,24 @@ func (r *GovernanceGroupMembersResource) Read(ctx context.Context, req resource.
 		"type": types.StringType,
 	}}
 	if ggMembers.GovernanceGroupMembersMembers != nil {
-		memberModels := make([]GovernanceGroupMemberModel, len(ggMembers.GovernanceGroupMembersMembers))
-		for i, m := range ggMembers.GovernanceGroupMembersMembers {
-			memberModels[i] = GovernanceGroupMemberModel{
+		memberModels := make([]GovernanceGroupMemberModel, 0, len(ggMembers.GovernanceGroupMembersMembers))
+		for _, m := range ggMembers.GovernanceGroupMembersMembers {
+			memberType := m.Type
+			if memberType == "" {
+				memberType = "IDENTITY"
+			}
+			memberModels = append(memberModels, GovernanceGroupMemberModel{
 				ID:   types.StringValue(m.ID),
 				Name: types.StringValue(m.Name),
-				Type: types.StringValue(m.Type),
-			}
+				Type: types.StringValue(memberType),
+			})
 		}
+		// Keep the prior order, the API order is not stable
+		var prior []GovernanceGroupMemberModel
+		if !data.Members.IsNull() && !data.Members.IsUnknown() {
+			resp.Diagnostics.Append(data.Members.ElementsAs(ctx, &prior, false)...)
+		}
+		memberModels = orderByPriorIDs(memberModels, prior, func(m GovernanceGroupMemberModel) string { return m.ID.ValueString() })
 		memberList, diags := types.ListValueFrom(ctx, memberObjType, memberModels)
 		resp.Diagnostics.Append(diags...)
 		data.Members = memberList
@@ -197,6 +211,7 @@ func (r *GovernanceGroupMembersResource) Update(ctx context.Context, req resourc
 
 	tflog.Info(ctx, "Updating Governance Group Members", map[string]interface{}{"id": data.ID.ValueString()})
 
+	data.Members = listWithDefaultString(ctx, data.Members, "type", "IDENTITY", &resp.Diagnostics)
 	var members []GovernanceGroupMemberModel
 	resp.Diagnostics.Append(data.Members.ElementsAs(ctx, &members, false)...)
 	if resp.Diagnostics.HasError() {
@@ -223,10 +238,6 @@ func (r *GovernanceGroupMembersResource) Update(ctx context.Context, req resourc
 	// Get current members for the update call
 	currentMembers, err := client.GetGovernanceGroupMembers(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get current governance group members: %s", err))
 		return
 	}
@@ -255,16 +266,25 @@ func (r *GovernanceGroupMembersResource) Delete(ctx context.Context, req resourc
 		return
 	}
 
-	ggMembers, err := client.GetGovernanceGroupMembers(ctx, data.ID.ValueString())
-	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
-			return
-		}
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get governance group members: %s", err))
+	// Only the members managed by this resource are removed, members added outside Terraform are kept.
+	var members []GovernanceGroupMemberModel
+	resp.Diagnostics.Append(data.Members.ElementsAs(ctx, &members, false)...)
+	if resp.Diagnostics.HasError() || len(members) == 0 {
 		return
+	}
+	ggMembers := &GovernanceGroupMembers{GovernanceGroupId: data.ID.ValueString()}
+	for _, m := range members {
+		ggMembers.GovernanceGroupMembersMembers = append(ggMembers.GovernanceGroupMembersMembers, &GovernanceGroupMembersMembers{
+			ID:   m.ID.ValueString(),
+			Name: m.Name.ValueString(),
+			Type: m.Type.ValueString(),
+		})
 	}
 
 	err = client.DeleteGovernanceGroupMembers(ctx, ggMembers)
+	if isNotFound(err) {
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete governance group members: %s", err))
 		return

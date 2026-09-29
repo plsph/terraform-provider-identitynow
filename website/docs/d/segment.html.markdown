@@ -8,7 +8,7 @@ description: |-
 
 # Data Source: identitynow_segment
 
-Use this data source to look up an existing IdentityNow segment by name.
+Use this data source to look up an existing IdentityNow segment by name. The lookup fails when several segments share the name.
 
 ## Example Usage
 
@@ -30,8 +30,8 @@ output "segment_id" {
 
 * `id` - The segment ID.
 * `description` - The segment description.
-* `owner` - The segment owner.
-* `visibility_criteria` - The segment visibility criteria as structured nested attributes.
+* `owner` - List with the segment owner. Each element contains `id`, `type` and `name`.
+* `visibility_criteria` - The segment visibility criteria as structured nested attributes: a list with an `expression` containing `operator`, `attribute`, `value` (with `type` and `value`) and `children`, each child with a nested `expression` (up to 3 levels).
 * `active` - Whether the segment is active.
 * `created` - The segment creation timestamp.
 * `modified` - The segment modification timestamp.

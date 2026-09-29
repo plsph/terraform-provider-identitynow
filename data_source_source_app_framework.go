@@ -101,7 +101,7 @@ func (d *SourceAppDataSource) Read(ctx context.Context, req datasource.ReadReque
 
 	sourceApps, err := client.GetSourceAppByName(ctx, data.Name.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Source App with name %s not found", data.Name.ValueString()))
 			return
 		}
@@ -130,6 +130,7 @@ func (d *SourceAppDataSource) Read(ctx context.Context, req datasource.ReadReque
 	} else {
 		data.MatchAllAccounts = types.BoolNull()
 	}
+	data.Source = objectInfoListState(ctx, sa.SourceAppSource, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

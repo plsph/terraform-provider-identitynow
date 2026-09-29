@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -157,14 +156,12 @@ func (r *FormDefinitionResource) Schema(ctx context.Context, req resource.Schema
 			},
 			"form_input": schema.ListNestedBlock{
 				MarkdownDescription: "Form inputs required when creating a form instance",
+				PlanModifiers:       []planmodifier.List{formInputIDsFromState{}},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							MarkdownDescription: "Form input identifier, assigned by the API",
 							Computed:            true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
 						},
 						"type": schema.StringAttribute{
 							MarkdownDescription: "Form input type (STRING or ARRAY)",
@@ -265,7 +262,7 @@ func (r *FormDefinitionResource) Read(ctx context.Context, req resource.ReadRequ
 
 	form, err := client.GetFormDefinition(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -303,9 +300,8 @@ func (r *FormDefinitionResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
+	// used_by and created keep their planned (prior state) values, Read refreshes them.
 	data.FormInput = formInputWithIDs(ctx, data.FormInput, updatedForm.FormInput, &resp.Diagnostics)
-	data.UsedBy = formUsedByState(ctx, updatedForm.UsedBy, &resp.Diagnostics)
-	data.Created = types.StringValue(updatedForm.Created)
 	data.Modified = types.StringValue(updatedForm.Modified)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -328,7 +324,7 @@ func (r *FormDefinitionResource) Delete(ctx context.Context, req resource.Delete
 
 	err = client.DeleteFormDefinition(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete form definition: %s", err))
@@ -463,6 +459,48 @@ func formInputState(ctx context.Context, inputs []*FormDefinitionInput, prior ty
 	return list
 }
 
+// formInputIDsFromState keeps the IDs of existing form inputs in the plan. Inputs are matched to
+// prior state by label and type, so inserting or removing an input does not shift IDs between inputs.
+// Inputs without a match keep an unknown ID, which the API assigns.
+type formInputIDsFromState struct{}
+
+func (m formInputIDsFromState) Description(ctx context.Context) string {
+	return "Keeps the IDs of form inputs that match prior state by label and type."
+}
+
+func (m formInputIDsFromState) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m formInputIDsFromState) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
+	if req.StateValue.IsNull() || req.PlanValue.IsNull() || req.PlanValue.IsUnknown() {
+		return
+	}
+	var prior, planned []FormDefinitionInputModel
+	resp.Diagnostics.Append(req.StateValue.ElementsAs(ctx, &prior, false)...)
+	resp.Diagnostics.Append(req.PlanValue.ElementsAs(ctx, &planned, false)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	used := make([]bool, len(prior))
+	for i := range planned {
+		if !planned[i].ID.IsUnknown() && !planned[i].ID.IsNull() {
+			continue
+		}
+		planned[i].ID = types.StringUnknown()
+		for j := range prior {
+			if !used[j] && prior[j].Label.Equal(planned[i].Label) && prior[j].Type.Equal(planned[i].Type) {
+				planned[i].ID = prior[j].ID
+				used[j] = true
+				break
+			}
+		}
+	}
+	list, d := types.ListValueFrom(ctx, formInputObjectType, planned)
+	resp.Diagnostics.Append(d...)
+	resp.PlanValue = list
+}
+
 // formInputWithIDs fills the API-assigned IDs into the planned form inputs, matching them by position.
 // Other planned values are kept as-is so the state matches the plan after apply.
 func formInputWithIDs(ctx context.Context, planned types.List, inputs []*FormDefinitionInput, diags *diag.Diagnostics) types.List {
@@ -546,40 +584,4 @@ func isEmptyJSONArray(raw json.RawMessage) bool {
 	}
 	list, ok := value.([]interface{})
 	return ok && len(list) == 0
-}
-
-func jsonSemanticallyEqual(a, b []byte) bool {
-	var av, bv interface{}
-	if err := json.Unmarshal(a, &av); err != nil {
-		return false
-	}
-	if err := json.Unmarshal(b, &bv); err != nil {
-		return false
-	}
-	return reflect.DeepEqual(av, bv)
-}
-
-// jsonArrayStringValidator checks that a string attribute contains a JSON array.
-type jsonArrayStringValidator struct{}
-
-func (v jsonArrayStringValidator) Description(ctx context.Context) string {
-	return "value must be a JSON array"
-}
-
-func (v jsonArrayStringValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v jsonArrayStringValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
-		return
-	}
-	var value interface{}
-	if err := json.Unmarshal([]byte(req.ConfigValue.ValueString()), &value); err != nil {
-		resp.Diagnostics.AddAttributeError(req.Path, "Invalid JSON", fmt.Sprintf("Unable to parse %s: %s", req.Path, err))
-		return
-	}
-	if _, ok := value.([]interface{}); !ok {
-		resp.Diagnostics.AddAttributeError(req.Path, "Invalid JSON", fmt.Sprintf("%s must be a JSON array", req.Path))
-	}
 }

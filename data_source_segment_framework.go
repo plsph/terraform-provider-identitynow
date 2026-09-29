@@ -41,7 +41,7 @@ func (d *SegmentDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 			"id":                  schema.StringAttribute{Computed: true},
 			"name":                schema.StringAttribute{Required: true},
 			"description":         schema.StringAttribute{Computed: true},
-			"visibility_criteria": visibilityCriteriaAttribute(3),
+			"visibility_criteria": visibilityCriteriaAttribute(segmentVisibilityDepth),
 			"active":              schema.BoolAttribute{Computed: true},
 			"created":             schema.StringAttribute{Computed: true},
 			"modified":            schema.StringAttribute{Computed: true},
@@ -119,7 +119,7 @@ func (d *SegmentDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 	segment, err := client.GetSegmentByName(ctx, data.Name.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Segment with name %s not found", data.Name.ValueString()))
 			return
 		}

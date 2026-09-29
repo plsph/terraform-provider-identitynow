@@ -1,35 +1,23 @@
 package main
 
-import "testing"
+import (
+	"reflect"
+	"testing"
+)
 
-func TestResolveAccessProfileAttachmentMutation(t *testing.T) {
-	t.Run("non-empty desired list uses desired list", func(t *testing.T) {
-		current := []string{"a", "b"}
-		desired := []string{"b"}
+func TestAccessProfilesToDetach(t *testing.T) {
+	got := accessProfilesToDetach([]string{"a", "b", "c"}, []string{"b", "c", "unmanaged"})
+	if !reflect.DeepEqual(got, []string{"b", "c"}) {
+		t.Fatalf("expected only managed and attached profiles, got %#v", got)
+	}
+	if got := accessProfilesToDetach([]string{"a"}, nil); len(got) != 0 {
+		t.Fatalf("expected nothing to detach, got %#v", got)
+	}
+}
 
-		got := resolveAccessProfileAttachmentMutation(current, desired)
-		if len(got) != 1 || got[0] != "b" {
-			t.Fatalf("expected desired list to be used, got %#v", got)
-		}
-	})
-
-	t.Run("empty desired list detaches current attachments", func(t *testing.T) {
-		current := []string{"a", "b", "c"}
-		desired := []string{}
-
-		got := resolveAccessProfileAttachmentMutation(current, desired)
-		if len(got) != 3 {
-			t.Fatalf("expected all current attachments to be detached, got %#v", got)
-		}
-	})
-
-	t.Run("already empty attachments are treated as no-op", func(t *testing.T) {
-		current := []string{}
-		desired := []string{}
-
-		got := resolveAccessProfileAttachmentMutation(current, desired)
-		if len(got) != 0 {
-			t.Fatalf("expected empty mutation to remain empty, got %#v", got)
-		}
-	})
+func TestOrderByPriorIDs(t *testing.T) {
+	got := orderByPriorIDs([]string{"c", "a", "new", "b"}, []string{"a", "b", "c", "removed"}, func(id string) string { return id })
+	if !reflect.DeepEqual(got, []string{"a", "b", "c", "new"}) {
+		t.Fatalf("unexpected order %#v", got)
+	}
 }

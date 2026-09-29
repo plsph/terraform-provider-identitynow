@@ -24,3 +24,7 @@ unlocked
 # Intellij
 .idea
 *.iml
+
+# Build output
+/terraform-provider-identitynow
+dist/

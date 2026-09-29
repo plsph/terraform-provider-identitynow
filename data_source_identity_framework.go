@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -88,13 +89,13 @@ func (d *IdentityDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 				MarkdownDescription: "Identity attributes",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"adp_id":    schema.StringAttribute{Computed: true},
-						"lastname":  schema.StringAttribute{Computed: true},
-						"firstname": schema.StringAttribute{Computed: true},
-						"phone":     schema.StringAttribute{Computed: true},
-						"user_type": schema.StringAttribute{Computed: true},
-						"uid":       schema.StringAttribute{Computed: true},
-						"email":     schema.StringAttribute{Computed: true},
+						"adp_id":     schema.StringAttribute{Computed: true},
+						"lastname":   schema.StringAttribute{Computed: true},
+						"firstname":  schema.StringAttribute{Computed: true},
+						"phone":      schema.StringAttribute{Computed: true},
+						"user_type":  schema.StringAttribute{Computed: true},
+						"uid":        schema.StringAttribute{Computed: true},
+						"email":      schema.StringAttribute{Computed: true},
 						"workday_id": schema.StringAttribute{Computed: true},
 					},
 				},
@@ -147,7 +148,7 @@ func (d *IdentityDataSource) Read(ctx context.Context, req datasource.ReadReques
 		tflog.Info(ctx, "Reading Identity data source by alias", map[string]interface{}{"alias": alias})
 		identities, err := client.GetIdentityByAlias(ctx, alias)
 		if err != nil {
-			if _, notFound := err.(*NotFoundError); notFound {
+			if isNotFound(err) {
 				resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Identity with alias %s not found", alias))
 				return
 			}
@@ -161,11 +162,15 @@ func (d *IdentityDataSource) Read(ctx context.Context, req datasource.ReadReques
 		tflog.Info(ctx, "Reading Identity data source by email", map[string]interface{}{"email": email})
 		identities, err := client.GetIdentityByEmail(ctx, email)
 		if err != nil {
-			if _, notFound := err.(*NotFoundError); notFound {
+			if isNotFound(err) {
 				resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Identity with email %s not found", email))
 				return
 			}
 			resp.Diagnostics.AddError("Client Error", err.Error())
+			return
+		}
+		if len(identities) > 1 {
+			resp.Diagnostics.AddError("Multiple Identities Found", fmt.Sprintf("%d identities have the email %s, look up the identity by alias instead", len(identities), email))
 			return
 		}
 		if len(identities) > 0 {
@@ -186,6 +191,33 @@ func (d *IdentityDataSource) Read(ctx context.Context, req datasource.ReadReques
 	data.Enabled = types.BoolValue(identity.Enabled)
 	data.IsManager = types.BoolValue(identity.IsManager)
 	data.IdentityStatus = types.StringValue(identity.IdentityStatus)
+
+	attributesType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"adp_id":     types.StringType,
+		"lastname":   types.StringType,
+		"firstname":  types.StringType,
+		"phone":      types.StringType,
+		"user_type":  types.StringType,
+		"uid":        types.StringType,
+		"email":      types.StringType,
+		"workday_id": types.StringType,
+	}}
+	data.Attributes = types.ListNull(attributesType)
+	if a := identity.IdentityAttributes; a != nil {
+		attributes, d := types.ObjectValue(attributesType.AttrTypes, map[string]attr.Value{
+			"adp_id":     stringValueOrNull(a.AdpID),
+			"lastname":   stringValueOrNull(a.LastName),
+			"firstname":  stringValueOrNull(a.FirstName),
+			"phone":      stringValueOrNull(a.Phone),
+			"user_type":  stringValueOrNull(a.UserType),
+			"uid":        stringValueOrNull(a.UID),
+			"email":      stringValueOrNull(a.Email),
+			"workday_id": stringValueOrNull(a.WorkdayId),
+		})
+		resp.Diagnostics.Append(d...)
+		data.Attributes, d = types.ListValue(attributesType, []attr.Value{attributes})
+		resp.Diagnostics.Append(d...)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

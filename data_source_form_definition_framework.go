@@ -136,7 +136,7 @@ func (d *FormDefinitionDataSource) Read(ctx context.Context, req datasource.Read
 
 	form, err := client.GetFormDefinitionByName(ctx, data.Name.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Form definition with name %s not found", data.Name.ValueString()))
 			return
 		}

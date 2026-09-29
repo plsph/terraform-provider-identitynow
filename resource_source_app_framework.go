@@ -5,11 +5,14 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -65,16 +68,25 @@ func (r *SourceAppResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 			"enabled": schema.BoolAttribute{
 				Optional:            true,
+				Computed:            true,
 				MarkdownDescription: "Whether the source app is enabled",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"match_all_accounts": schema.BoolAttribute{
 				Optional:            true,
+				Computed:            true,
 				MarkdownDescription: "Whether to match all accounts",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"source": schema.ListNestedBlock{
 				MarkdownDescription: "Account source for the source app",
+				Validators:          []validator.List{listSizeBetween(0, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -88,7 +100,10 @@ func (r *SourceAppResource) Schema(ctx context.Context, req resource.SchemaReque
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Source type",
+							MarkdownDescription: "Source type, defaults to SOURCE",
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
@@ -121,27 +136,12 @@ func (r *SourceAppResource) Create(ctx context.Context, req resource.CreateReque
 		Description: data.Description.ValueString(),
 	}
 
-	if !data.Enabled.IsNull() {
-		v := data.Enabled.ValueBool()
-		sa.Enabled = &v
-	}
-
-	if !data.MatchAllAccounts.IsNull() {
-		v := data.MatchAllAccounts.ValueBool()
-		sa.MatchAllAccounts = &v
-	}
-
-	var sources []SourceAppSourceModel
-	resp.Diagnostics.Append(data.Source.ElementsAs(ctx, &sources, false)...)
+	sa.Enabled = boolPointer(data.Enabled)
+	sa.MatchAllAccounts = boolPointer(data.MatchAllAccounts)
+	data.Source = sourceAppSourceWithType(ctx, data.Source, &resp.Diagnostics)
+	sa.SourceAppSource = sourceAppSourceValue(ctx, data.Source, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-	if len(sources) > 0 {
-		sa.SourceAppSource = &ObjectInfo{
-			ID:   sources[0].ID.ValueString(),
-			Name: sources[0].Name.ValueString(),
-			Type: sources[0].Type.ValueString(),
-		}
 	}
 
 	tflog.Info(ctx, "Creating Source App", map[string]interface{}{"name": sa.Name})
@@ -159,6 +159,8 @@ func (r *SourceAppResource) Create(ctx context.Context, req resource.CreateReque
 	}
 
 	data.ID = types.StringValue(newSA.ID)
+	data.Enabled = computedBoolFromAPI(data.Enabled, newSA.Enabled)
+	data.MatchAllAccounts = computedBoolFromAPI(data.MatchAllAccounts, newSA.MatchAllAccounts)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -180,7 +182,7 @@ func (r *SourceAppResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	sa, err := client.GetSourceApp(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -203,11 +205,15 @@ func (r *SourceAppResource) Read(ctx context.Context, req resource.ReadRequest, 
 		"type": types.StringType,
 	}}
 	if sa.SourceAppSource != nil {
+		sourceType := sa.SourceAppSource.Type
+		if sourceType == "" {
+			sourceType = "SOURCE"
+		}
 		sourceModels := []SourceAppSourceModel{
 			{
 				ID:   types.StringValue(fmt.Sprintf("%v", sa.SourceAppSource.ID)),
 				Name: types.StringValue(sa.SourceAppSource.Name),
-				Type: types.StringValue(sa.SourceAppSource.Type),
+				Type: types.StringValue(sourceType),
 			},
 		}
 		sourceList, diags := types.ListValueFrom(ctx, sourceObjType, sourceModels)
@@ -240,19 +246,29 @@ func (r *SourceAppResource) Update(ctx context.Context, req resource.UpdateReque
 		{Op: "replace", Path: "/description", Value: data.Description.ValueString()},
 	}
 
-	if !data.Enabled.IsNull() {
-		updatePatches = append(updatePatches, &UpdateSourceApp{Op: "replace", Path: "/enabled", Value: data.Enabled.ValueBool()})
+	if enabled := boolPointer(data.Enabled); enabled != nil {
+		updatePatches = append(updatePatches, &UpdateSourceApp{Op: "replace", Path: "/enabled", Value: *enabled})
 	}
 
-	if !data.MatchAllAccounts.IsNull() {
-		updatePatches = append(updatePatches, &UpdateSourceApp{Op: "replace", Path: "/matchAllAccounts", Value: data.MatchAllAccounts.ValueBool()})
+	if matchAll := boolPointer(data.MatchAllAccounts); matchAll != nil {
+		updatePatches = append(updatePatches, &UpdateSourceApp{Op: "replace", Path: "/matchAllAccounts", Value: *matchAll})
 	}
 
-	_, err = client.UpdateSourceApp(ctx, updatePatches, data.ID.ValueString())
+	data.Source = sourceAppSourceWithType(ctx, data.Source, &resp.Diagnostics)
+	if source := sourceAppSourceValue(ctx, data.Source, &resp.Diagnostics); source != nil {
+		updatePatches = append(updatePatches, &UpdateSourceApp{Op: "replace", Path: "/accountSource", Value: source})
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	updated, err := client.UpdateSourceApp(ctx, updatePatches, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update source app: %s", err))
 		return
 	}
+	data.Enabled = computedBoolFromAPI(data.Enabled, updated.Enabled)
+	data.MatchAllAccounts = computedBoolFromAPI(data.MatchAllAccounts, updated.MatchAllAccounts)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -274,7 +290,7 @@ func (r *SourceAppResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	sa, err := client.GetSourceApp(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get source app: %s", err))
@@ -290,4 +306,46 @@ func (r *SourceAppResource) Delete(ctx context.Context, req resource.DeleteReque
 
 func (r *SourceAppResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+// boolPointer returns a pointer to a known boolean value, or nil for null and unknown values.
+func boolPointer(value types.Bool) *bool {
+	if value.IsNull() || value.IsUnknown() {
+		return nil
+	}
+	v := value.ValueBool()
+	return &v
+}
+
+// sourceAppSourceWithType resolves an unknown source type to SOURCE, the only account source type.
+func sourceAppSourceWithType(ctx context.Context, list types.List, diags *diag.Diagnostics) types.List {
+	if list.IsNull() || list.IsUnknown() || len(list.Elements()) == 0 {
+		return list
+	}
+	var sources []SourceAppSourceModel
+	diags.Append(list.ElementsAs(ctx, &sources, false)...)
+	for i := range sources {
+		if sources[i].Type.IsUnknown() || sources[i].Type.IsNull() {
+			sources[i].Type = types.StringValue("SOURCE")
+		}
+	}
+	result, d := types.ListValueFrom(ctx, list.ElementType(ctx), sources)
+	diags.Append(d...)
+	return result
+}
+
+func sourceAppSourceValue(ctx context.Context, list types.List, diags *diag.Diagnostics) *ObjectInfo {
+	if list.IsNull() || list.IsUnknown() || len(list.Elements()) == 0 {
+		return nil
+	}
+	var sources []SourceAppSourceModel
+	diags.Append(list.ElementsAs(ctx, &sources, false)...)
+	if len(sources) == 0 {
+		return nil
+	}
+	return &ObjectInfo{
+		ID:   sources[0].ID.ValueString(),
+		Name: sources[0].Name.ValueString(),
+		Type: sources[0].Type.ValueString(),
+	}
 }

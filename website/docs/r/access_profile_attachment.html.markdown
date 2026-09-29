@@ -3,20 +3,36 @@ subcategory: "Access Profile"
 layout: "identitynow"
 page_title: "IdentityNow: identitynow_access_profile_attachment"
 description: |-
-  Manages an IdentityNow Source App's Access Profiles attachment.
+  Manages the Access Profiles attached to an IdentityNow Source App.
 ---
 
 # identitynow_access_profile_attachment
 
-Manages an IdentityNow Source App's Access Profiles attachment.
-Access Profile attached to Source App cannot be deleted, it must be detached first.
+Manages the Access Profiles attached to an IdentityNow Source App.
+
+The list of access profiles is authoritative: access profiles attached to the source app outside Terraform are detached on apply. Destroying the resource detaches only the access profiles managed by the resource.
+
+An access profile attached to a source app can't be deleted, it must be detached first.
 
 ## Example Usage
 
 ```hcl
+resource "identitynow_source_app" "example" {
+  name        = "Active Directory Developers"
+  description = "Application for requesting developer access"
+
+  source {
+    id   = "2c9180835d191a86015d28455b4a2329"
+    name = "Active Directory"
+  }
+}
+
 resource "identitynow_access_profile_attachment" "example" {
   source_app_id = identitynow_source_app.example.id
-  access_profiles = [ "example_id0", "example_id1" ]
+  access_profiles = [
+    "2c91808a7813090a017813b6301f0044",
+    "2c91808a7813090a017813b6301f0045",
+  ]
 }
 ```
 
@@ -24,14 +40,20 @@ resource "identitynow_access_profile_attachment" "example" {
 
 The following arguments are supported:
 
-* `source_app_id` - Id of source app.
-* `access_profiles`- List of access profiles attached to source app.
+* `source_app_id` - (Required) ID of the source app. Changing this forces a new resource to be created.
 
-## Timeouts
+* `access_profiles` - (Required) List of IDs of the access profiles attached to the source app.
 
-The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/language/resource/syntax#operation-timeouts) for certain actions:
+## Attributes Reference
 
-* `create` - (Defaults to 30 minutes) Used when creating the Source App.
-* `read` - (Defaults to 5 minutes) Used when retrieving the Source App.
-* `update` - (Defaults to 30 minutes) Used when updating the Source App.
-* `delete` - (Defaults to 30 minutes) Used when deleting the Source App.
+In addition to the Arguments listed above - the following Attributes are exported:
+
+* `id` - Access profile attachment ID (same as `source_app_id`).
+
+## Import
+
+Access profile attachments can be imported using the source app ID:
+
+```shell
+terraform import identitynow_access_profile_attachment.example <source-app-id>
+```

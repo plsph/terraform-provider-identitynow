@@ -62,9 +62,6 @@ func (r *DimensionResource) Schema(ctx context.Context, req resource.SchemaReque
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Dimension name",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "Dimension description",
@@ -361,7 +358,7 @@ func (r *DimensionResource) Read(ctx context.Context, req resource.ReadRequest, 
 
 	dimension, err := client.GetDimension(ctx, data.RoleID.ValueString(), data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -459,96 +456,72 @@ func (r *DimensionResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	updatePatches := []*UpdateDimension{}
-
-	if !data.Description.IsNull() {
-		updatePatches = append(updatePatches, &UpdateDimension{
-			Op:    "replace",
-			Path:  "/description",
-			Value: data.Description.ValueString(),
-		})
-	}
-
-	// Patch owner
-	var owners []OwnerModel
-	resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+	var state DimensionResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if len(owners) > 0 {
-		updatePatches = append(updatePatches, &UpdateDimension{
-			Op:   "replace",
-			Path: "/owner",
-			Value: map[string]interface{}{
-				"id":   owners[0].ID.ValueString(),
-				"type": owners[0].Type.ValueString(),
-				"name": owners[0].Name.ValueString(),
-			},
-		})
+
+	// Patch the fields that changed. Removed values are sent as empty values or removed,
+	// so that clearing them in the configuration also clears them in IdentityNow.
+	updatePatches := []*UpdateDimension{}
+	replace := func(changed bool, path string, value interface{}) {
+		if changed {
+			updatePatches = append(updatePatches, &UpdateDimension{Op: "replace", Path: path, Value: value})
+		}
+	}
+	replace(!data.Name.Equal(state.Name), "/name", data.Name.ValueString())
+	replace(!data.Description.Equal(state.Description), "/description", data.Description.ValueString())
+
+	if !data.Owner.Equal(state.Owner) {
+		var owners []OwnerModel
+		resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+		if len(owners) > 0 {
+			replace(true, "/owner", &ObjectInfo{
+				ID:   owners[0].ID.ValueString(),
+				Type: owners[0].Type.ValueString(),
+				Name: owners[0].Name.ValueString(),
+			})
+		} else {
+			updatePatches = append(updatePatches, &UpdateDimension{Op: "remove", Path: "/owner"})
+		}
 	}
 
-	// Patch access profiles
-	if !data.AccessProfiles.IsNull() {
+	if !data.AccessProfiles.Equal(state.AccessProfiles) {
 		var aps []AccessProfileRefModel
 		resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &aps, false)...)
-		if resp.Diagnostics.HasError() {
-			return
+		apValues := make([]*ObjectInfo, 0, len(aps))
+		for _, ap := range aps {
+			apValues = append(apValues, &ObjectInfo{ID: ap.ID.ValueString(), Type: ap.Type.ValueString(), Name: ap.Name.ValueString()})
 		}
-		apValues := make([]interface{}, len(aps))
-		for i, ap := range aps {
-			apValues[i] = map[string]interface{}{
-				"id":   ap.ID.ValueString(),
-				"type": ap.Type.ValueString(),
-				"name": ap.Name.ValueString(),
-			}
-		}
-		updatePatches = append(updatePatches, &UpdateDimension{
-			Op:    "replace",
-			Path:  "/accessProfiles",
-			Value: apValues,
-		})
+		replace(true, "/accessProfiles", apValues)
 	}
 
-	// Patch entitlements
-	if !data.Entitlements.IsNull() {
+	if !data.Entitlements.Equal(state.Entitlements) {
 		var ents []EntitlementRefModel
 		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &ents, false)...)
-		if resp.Diagnostics.HasError() {
-			return
+		entValues := make([]*ObjectInfo, 0, len(ents))
+		for _, e := range ents {
+			entValues = append(entValues, &ObjectInfo{ID: e.ID.ValueString(), Type: e.Type.ValueString(), Name: e.Name.ValueString()})
 		}
-		entValues := make([]interface{}, len(ents))
-		for i, e := range ents {
-			entValues[i] = map[string]interface{}{
-				"id":   e.ID.ValueString(),
-				"type": e.Type.ValueString(),
-				"name": e.Name.ValueString(),
-			}
-		}
-		updatePatches = append(updatePatches, &UpdateDimension{
-			Op:    "replace",
-			Path:  "/entitlements",
-			Value: entValues,
-		})
+		replace(true, "/entitlements", entValues)
 	}
 
-	// Patch membership
-	if !data.Membership.IsNull() {
+	if !data.Membership.Equal(state.Membership) {
 		var memberships []MembershipModel
 		resp.Diagnostics.Append(data.Membership.ElementsAs(ctx, &memberships, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
 		if len(memberships) > 0 {
-			membership := membershipModelToAPI(ctx, memberships[0], &resp.Diagnostics)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			updatePatches = append(updatePatches, &UpdateDimension{
-				Op:    "replace",
-				Path:  "/membership",
-				Value: membership,
-			})
+			replace(true, "/membership", membershipModelToAPI(ctx, memberships[0], &resp.Diagnostics))
+		} else {
+			updatePatches = append(updatePatches, &UpdateDimension{Op: "remove", Path: "/membership"})
 		}
+	}
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if len(updatePatches) == 0 {
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		return
 	}
 
 	_, err = client.UpdateDimension(ctx, data.RoleID.ValueString(), data.ID.ValueString(), updatePatches)
@@ -581,7 +554,7 @@ func (r *DimensionResource) Delete(ctx context.Context, req resource.DeleteReque
 
 	err = client.DeleteDimension(ctx, data.RoleID.ValueString(), data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete dimension: %s", err))

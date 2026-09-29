@@ -14,7 +14,7 @@ Use this data source to access information about an existing Governance Group.
 
 ```hcl
 data "identitynow_governance_group" "example" {
-  id = "example"
+  name = "Access Approvers"
 }
 
 output "identitynow_group_description" {
@@ -26,15 +26,14 @@ output "identitynow_group_description" {
 
 The following arguments are supported:
 
-* `name` - Governance group name.
+* `name` - (Required) Governance group name.
 
 ## Attributes Reference
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* `id` - Id of the governance group.
+* `id` - ID of the governance group.
 
 * `description` - Governance group description.
 
-* `owner` - Governance group owner.
-
+* `owner` - List with the governance group owner. Each element contains `id`, `type` and `name`.

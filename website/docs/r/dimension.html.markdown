@@ -10,11 +10,25 @@ description: |-
 
 Manages an IdentityNow Dimension. A dimension is a sub-division of a role that allows fine-grained access grouping.
 
+All arguments except `role_id` can be updated in place. Removing `description`, `owner` or `membership` from the configuration clears them in IdentityNow.
+
 ## Example Usage
 
 ### Dimension with Single Value Criteria
 
 ```hcl
+resource "identitynow_role" "example" {
+  name        = "Sales Role"
+  description = "Dimensional role for the sales department"
+  dimensional = true
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+}
+
 resource "identitynow_dimension" "example" {
   role_id     = identitynow_role.example.id
   name        = "Example Dimension"
@@ -52,7 +66,7 @@ resource "identitynow_dimension" "example" {
 
 ```hcl
 resource "identitynow_dimension" "multivalue" {
-  role_id     = identitynow_role.example.id
+  role_id     = "2c91808a7813090a017813b6301fabcd"
   name        = "Multi-Value Dimension"
   description = "A dimension matching multiple job codes"
 
@@ -83,12 +97,12 @@ resource "identitynow_dimension" "multivalue" {
 The following arguments are supported:
 
 * `role_id` - (Required) The ID of the role this dimension belongs to. Changing this forces a new resource to be created.
-* `name` - (Required) The name of the dimension. Changing this forces a new resource to be created.
-* `description` - (Optional) A description for the dimension.
-* `owner` - (Optional) An owner block as defined below.
+* `name` - (Required) The name of the dimension. Can be updated in place.
+* `description` - (Optional) A description for the dimension. Removing it clears the description.
+* `owner` - (Optional) An `owner` block as defined below. Removing it clears the owner.
 * `access_profiles` - (Optional) One or more `access_profiles` blocks as defined below.
 * `entitlements` - (Optional) One or more `entitlements` blocks as defined below.
-* `membership` - (Optional) A `membership` block as defined below.
+* `membership` - (Optional) A `membership` block as defined below. Removing it clears the membership criteria.
 
 ---
 

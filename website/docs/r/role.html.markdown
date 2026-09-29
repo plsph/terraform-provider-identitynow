@@ -10,6 +10,8 @@ description: |-
 
 Manages an IdentityNow Role. Roles bundle access profiles, entitlements, and dimensions together and can be assigned to identities through access requests or membership criteria.
 
+All arguments, including `name`, can be updated in place. Removing `description` or `membership` from the configuration clears them in IdentityNow.
+
 ## Example Usage
 
 ### Basic Role
@@ -316,17 +318,17 @@ resource "identitynow_role" "multivalue_membership" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the role. Changing this forces a new resource to be created.
-* `description` - (Optional) A description of the role.
-* `owner` - (Optional) An `owner` block as defined below.
+* `name` - (Required) The name of the role. Can be updated in place.
+* `description` - (Optional) A description of the role. Removing it clears the description.
+* `owner` - (Required) An `owner` block as defined below. Exactly one block is required.
 * `access_profiles` - (Optional) One or more `access_profiles` blocks as defined below.
 * `entitlements` - (Optional) One or more `entitlements` blocks as defined below.
 * `access_model_metadata` - (Optional) An `access_model_metadata` block as defined below. Defines access model metadata for this role.
 * `access_request_config` - (Optional) An `access_request_config` block as defined below. Configures the approval process for access requests.
-* `membership` - (Optional) A `membership` block as defined below.
-* `requestable` - (Optional) Whether this role is requestable via access requests.
-* `enabled` - (Optional) Whether this role is enabled.
-* `dimensional` - (Optional) Whether this role is dimensional.
+* `membership` - (Optional) A `membership` block as defined below. Removing it clears the membership criteria.
+* `requestable` - (Optional) Whether this role is requestable via access requests. If not set, the value returned by the API is used.
+* `enabled` - (Optional) Whether this role is enabled. If not set, the value returned by the API is used.
+* `dimensional` - (Optional) Whether this role is dimensional. If not set, the value returned by the API is used.
 
 ---
 
@@ -364,12 +366,14 @@ An `attributes` block (within `access_model_metadata`) supports:
 
 * `key` - (Required) The unique identifier for the metadata type (e.g. `iscPrivacy`).
 * `name` - (Required) The human readable name of the metadata attribute.
-* `multiselect` - (Optional) Whether multiple values can be selected for the metadata attribute.
-* `status` - (Optional) The status of the metadata attribute (e.g. `active`).
-* `type` - (Optional) The type of the metadata attribute (e.g. `custom`).
+* `multiselect` - (Optional) Whether multiple values can be selected for the metadata attribute. If not set, the value returned by the API is used.
+* `status` - (Optional) The status of the metadata attribute (e.g. `active`). If not set, the value returned by the API is used.
+* `type` - (Optional) The type of the metadata attribute (e.g. `custom`). If not set, the value returned by the API is used.
+* `description` - (Optional) The description of the metadata attribute. If not set, the value returned by the API is used.
+* `object_types` - (Optional) One or more `object_types` blocks, each with a required `value` naming an object type the metadata attribute applies to (e.g. `role`).
 * `values` - (Optional) One or more `values` blocks as defined below.
 
-Each `attributes` block corresponds to an `AccessModelMetadataAttribute` in the IdentityNow API. The Terraform resource supports the attribute key, display name, and its allowed values.
+Each `attributes` block corresponds to an `AccessModelMetadataAttribute` in the IdentityNow API.
 
 ---
 
@@ -377,14 +381,14 @@ A `values` block (within `attributes`) supports:
 
 * `value` - (Required) The metadata value.
 * `name` - (Required) The human readable name of the value.
-* `status` - (Optional) The status of the value (e.g. `active`).
+* `status` - (Optional) The status of the value (e.g. `active`). If not set, the value returned by the API is used.
 
 ---
 
 An `access_request_config` block supports:
 
-* `comments_required` - (Optional) Whether comments are required when requesting access.
-* `denial_comments_required` - (Optional) Whether comments are required when denying access.
+* `comments_required` - (Optional) Whether comments are required when requesting access. If not set, the value returned by the API is used.
+* `denial_comments_required` - (Optional) Whether comments are required when denying access. If not set, the value returned by the API is used.
 * `approval_schemes` - (Optional) One or more `approval_schemes` blocks as defined below.
 * `dimension_schema` - (Optional) A `dimension_schema` block for dimension-specific approval configuration.
 
@@ -406,8 +410,8 @@ A `dimension_schema` block supports:
 A `dimension_attributes` block supports:
 
 * `name` - (Required) The attribute name.
-* `display_name` - (Required) The display name of the attribute.
-* `derived` - (Required) Whether the attribute is derived.
+* `display_name` - (Optional) The display name of the attribute. If not set, the value returned by the API is used.
+* `derived` - (Optional) Whether the attribute is derived. If not set, the value returned by the API is used.
 
 ---
 

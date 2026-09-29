@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func TestAccessProfileStateIncludesAdvancedFields(t *testing.T) {
@@ -89,3 +90,105 @@ func TestAccessProfileStateOmitsEmptyRevocationConfig(t *testing.T) {
 }
 
 func boolPtr(v bool) *bool { return &v }
+
+func TestAccessProfilePatchesOnlyChangedFields(t *testing.T) {
+	state := AccessProfileResourceModel{
+		Name:                    types.StringValue("Old"),
+		Description:             types.StringValue("Same"),
+		Owner:                   types.ListNull(types.ObjectType{}),
+		Source:                  types.ListNull(types.ObjectType{}),
+		Entitlements:            types.ListNull(types.ObjectType{}),
+		AccessRequestConfig:     types.ListNull(types.ObjectType{}),
+		RevocationRequestConfig: types.ListNull(types.ObjectType{}),
+		Segments:                types.ListNull(types.StringType),
+		AccessModelMetadata:     types.ListNull(types.ObjectType{}),
+		ProvisioningCriteria:    types.ListNull(types.ObjectType{}),
+		AdditionalOwners:        types.ListNull(types.ObjectType{}),
+		Enabled:                 types.BoolValue(true),
+		Requestable:             types.BoolValue(true),
+	}
+	plan := state
+	plan.Name = types.StringValue("New")
+	plan.Requestable = types.BoolValue(false)
+
+	patches := accessProfilePatches(plan, state, &AccessProfile{Name: "New", Enabled: boolPtr(true), Requestable: boolPtr(false)})
+	if len(patches) != 2 || patches[0].Path != "/name" || patches[1].Path != "/requestable" {
+		var paths []string
+		for _, p := range patches {
+			paths = append(paths, p.Path)
+		}
+		t.Fatalf("expected /name and /requestable patches, got %v", paths)
+	}
+}
+
+func TestAccessProfileUnknownBoolsAreNotSent(t *testing.T) {
+	data := AccessProfileResourceModel{
+		Name:                    types.StringValue("Example"),
+		Description:             types.StringValue("Example"),
+		Owner:                   types.ListNull(types.ObjectType{}),
+		Source:                  types.ListNull(types.ObjectType{}),
+		Entitlements:            types.ListNull(types.ObjectType{}),
+		AccessRequestConfig:     types.ListNull(types.ObjectType{}),
+		RevocationRequestConfig: types.ListNull(types.ObjectType{}),
+		Segments:                types.ListNull(types.StringType),
+		AccessModelMetadata:     types.ListNull(types.ObjectType{}),
+		ProvisioningCriteria:    types.ListNull(types.ObjectType{}),
+		AdditionalOwners:        types.ListNull(types.ObjectType{}),
+		Enabled:                 types.BoolUnknown(),
+		Requestable:             types.BoolUnknown(),
+	}
+	var diags diag.Diagnostics
+	ap := (&AccessProfileResource{}).apiFromModel(context.Background(), data, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if ap.Enabled != nil || ap.Requestable != nil {
+		t.Fatalf("expected unknown booleans to be omitted, got enabled=%v requestable=%v", ap.Enabled, ap.Requestable)
+	}
+	if got := computedBoolFromAPI(types.BoolUnknown(), boolPtr(true)); !got.ValueBool() {
+		t.Errorf("expected API value for unknown planned bool")
+	}
+	if got := computedBoolFromAPI(types.BoolValue(false), boolPtr(true)); got.ValueBool() {
+		t.Errorf("expected planned value to be kept")
+	}
+}
+
+func TestAccessProfileProvisioningCriteriaRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	criteria := &ProvisioningCriteriaLevel1{
+		Operation: "OR",
+		Children: []*ProvisioningCriteriaLevel2{{
+			Operation: "AND",
+			Children: []*ProvisioningCriteriaLevel3{
+				{Operation: "EQUALS", Attribute: "department", Value: "IT"},
+			},
+		}},
+	}
+	var diags diag.Diagnostics
+	state := provisioningCriteriaAPIToState(ctx, criteria, &diags)
+	got := provisioningCriteriaModelToAPI(ctx, state, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if got.Operation != "OR" || len(got.Children) != 1 || len(got.Children[0].Children) != 1 || got.Children[0].Children[0].Value != "IT" {
+		t.Fatalf("unexpected criteria after round trip: %+v", got)
+	}
+
+	var models []ProvisioningCriteriaModel
+	diags.Append(state.ElementsAs(ctx, &models, false)...)
+	if !models[0].Attribute.IsNull() || !models[0].Value.IsNull() {
+		t.Fatalf("expected empty attribute and value to be null, got %+v", models[0])
+	}
+}
+
+func TestAccessProfileStateKeepsUnsetSegmentsNull(t *testing.T) {
+	data := AccessProfileResourceModel{Segments: types.ListNull(types.StringType)}
+	var diags diag.Diagnostics
+	(&AccessProfileResource{}).setStateFromAPI(context.Background(), &data, &AccessProfile{Name: "Example"}, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if !data.Segments.IsNull() {
+		t.Fatalf("expected segments to stay null, got %s", data.Segments)
+	}
+}

@@ -118,7 +118,7 @@ func (d *SourceDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 
 	sources, err := client.GetSourceByName(ctx, data.Name.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Source with name %s not found", data.Name.ValueString()))
 			return
 		}
@@ -138,6 +138,14 @@ func (d *SourceDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	data.Connector = types.StringValue(source.Connector)
 	data.DeleteThreshold = types.Int64Value(int64(source.DeleteThreshold))
 	data.Authoritative = types.BoolValue(source.Authoritative)
+	data.Owner = types.ListNull(objectInfoObjectType)
+	if source.Owner != nil {
+		data.Owner = objectInfoListState(ctx, &ObjectInfo{ID: source.Owner.ID, Type: source.Owner.Type, Name: source.Owner.Name}, &resp.Diagnostics)
+	}
+	data.Cluster = types.ListNull(objectInfoObjectType)
+	if source.Cluster != nil {
+		data.Cluster = objectInfoListState(ctx, &ObjectInfo{ID: source.Cluster.ID, Type: source.Cluster.Type, Name: source.Cluster.Name}, &resp.Diagnostics)
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

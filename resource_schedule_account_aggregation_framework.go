@@ -4,13 +4,18 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var _ resource.Resource = &ScheduleAccountAggregationResource{}
+var _ resource.ResourceWithImportState = &ScheduleAccountAggregationResource{}
 
 func NewScheduleAccountAggregationResource() resource.Resource {
 	return &ScheduleAccountAggregationResource{}
@@ -37,15 +42,22 @@ func (r *ScheduleAccountAggregationResource) Schema(ctx context.Context, req res
 			"id": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Schedule ID (same as source_id)",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"source_id": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Source ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"cron_expressions": schema.ListAttribute{
 				Required:            true,
-				MarkdownDescription: "Account aggregation scheduling in cron expression format",
+				MarkdownDescription: "Account aggregation scheduling in cron expression format. Exactly one expression is supported.",
 				ElementType:         types.StringType,
+				Validators:          []validator.List{listSizeBetween(1, 1)},
 			},
 		},
 	}
@@ -89,22 +101,12 @@ func (r *ScheduleAccountAggregationResource) Create(ctx context.Context, req res
 		return
 	}
 
-	newSchedule, err := client.ManageAccountAggregationSchedule(ctx, schedule, true)
-	if err != nil {
+	if _, err := client.ManageAccountAggregationSchedule(ctx, schedule, true); err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create account aggregation schedule: %s", err))
 		return
 	}
 
-	newSchedule.SourceID = schedule.SourceID
-	data.ID = types.StringValue(newSchedule.SourceID)
-
-	cronList, diags := types.ListValueFrom(ctx, types.StringType, newSchedule.CronExpressions)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.CronExpressions = cronList
-
+	data.ID = types.StringValue(schedule.SourceID)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -125,7 +127,7 @@ func (r *ScheduleAccountAggregationResource) Read(ctx context.Context, req resou
 
 	schedule, err := client.GetAccountAggregationSchedule(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -133,17 +135,19 @@ func (r *ScheduleAccountAggregationResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	if schedule.CronExpressions != nil {
-		schedule.SourceID = data.ID.ValueString()
-		data.SourceID = types.StringValue(schedule.SourceID)
-
-		cronList, diags := types.ListValueFrom(ctx, types.StringType, schedule.CronExpressions)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		data.CronExpressions = cronList
+	// A schedule without cron expressions is disabled, so the managed schedule no longer exists.
+	if len(schedule.CronExpressions) == 0 {
+		resp.State.RemoveResource(ctx)
+		return
 	}
+
+	data.SourceID = types.StringValue(data.ID.ValueString())
+	cronList, diags := types.ListValueFrom(ctx, types.StringType, schedule.CronExpressions)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.CronExpressions = cronList
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -174,22 +178,12 @@ func (r *ScheduleAccountAggregationResource) Update(ctx context.Context, req res
 		return
 	}
 
-	newSchedule, err := client.ManageAccountAggregationSchedule(ctx, schedule, true)
-	if err != nil {
+	if _, err := client.ManageAccountAggregationSchedule(ctx, schedule, true); err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update account aggregation schedule: %s", err))
 		return
 	}
 
-	newSchedule.SourceID = schedule.SourceID
-	data.ID = types.StringValue(newSchedule.SourceID)
-
-	cronList, diags := types.ListValueFrom(ctx, types.StringType, newSchedule.CronExpressions)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	data.CronExpressions = cronList
-
+	data.ID = types.StringValue(schedule.SourceID)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -210,14 +204,14 @@ func (r *ScheduleAccountAggregationResource) Delete(ctx context.Context, req res
 
 	schedule, err := client.GetAccountAggregationSchedule(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get account aggregation schedule: %s", err))
 		return
 	}
 
-	if schedule.CronExpressions != nil {
+	if len(schedule.CronExpressions) > 0 {
 		schedule.SourceID = data.ID.ValueString()
 		_, err = client.ManageAccountAggregationSchedule(ctx, schedule, false)
 		if err != nil {
@@ -225,4 +219,8 @@ func (r *ScheduleAccountAggregationResource) Delete(ctx context.Context, req res
 			return
 		}
 	}
+}
+
+func (r *ScheduleAccountAggregationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

@@ -8,19 +8,20 @@ description: |-
 
 # identitynow_governance_group
 
-Manages an IdentityNow Governance Group.
+Manages an IdentityNow Governance Group. Use `identitynow_governance_group_members` to manage its members.
 
 ## Example Usage
 
 ```hcl
 resource "identitynow_governance_group" "this" {
-    name        = "example"
-    description = "example"
-    owner {
-      id   = "example"
-      name = "example"
-      type = "IDENTITY"
-    }
+  name        = "Access Approvers"
+  description = "Approves access requests"
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    name = "John Doe"
+    type = "IDENTITY"
+  }
 }
 ```
 
@@ -30,29 +31,25 @@ The following arguments are supported:
 
 As described in (https://developer.sailpoint.com/docs/api/v2024/create-workgroup)
 
-* `name` - Governance group name.
+* `name` - (Required) Governance group name.
 
-* `description` - Governance group description.
+* `description` - (Required) Governance group description.
 
-* `owner` - Governance group owner.
+* `owner` - (Required) Governance group owner. Exactly one block is required. Contains:
+  * `id` - (Required) Owner identity ID.
+  * `name` - (Required) Owner name.
+  * `type` - (Optional) Owner type. Defaults to `IDENTITY`.
 
 ## Attributes Reference
 
 In addition to the Arguments listed above - the following Attributes are exported:
 
-* `id` - Governance group id.
-
-## Timeouts
-
-The `timeouts` block allows you to specify [timeouts](https://www.terraform.io/language/regovernance_groups/syntax#operation-timeouts) for certain actions:
-
-* `create` - (Defaults to 30 minutes) Used when creating the Governance Group.
-* `read` - (Defaults to 5 minutes) Used when retrieving the Governance Group.
-* `update` - (Defaults to 30 minutes) Used when updating the Governance Group.
-* `delete` - (Defaults to 30 minutes) Used when deleting the Governance Group.
+* `id` - Governance group ID.
 
 ## Import
 
-```
-terraform import identitynow_governance_group.this [id]
+Governance groups can be imported using their ID:
+
+```shell
+terraform import identitynow_governance_group.this <governance-group-id>
 ```

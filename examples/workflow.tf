@@ -4,9 +4,9 @@ resource "identitynow_workflow" "email_on_manager_change" {
   enabled     = false
 
   owner {
-    id   = var.workflow_owner_id
+    id   = data.identitynow_identity.john_doe.id
     type = "IDENTITY"
-    name = var.workflow_owner_name
+    name = data.identitynow_identity.john_doe.name
   }
 
   trigger {
@@ -18,7 +18,7 @@ resource "identitynow_workflow" "email_on_manager_change" {
   }
 
   definition {
-    start = "Send Email Test"
+    start = "Send Email"
     steps_json = jsonencode({
       "Send Email" = {
         actionId = "sp:send-email"

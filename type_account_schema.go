@@ -19,9 +19,10 @@ type AccountSchema struct {
 type AccountSchemaAttribute struct {
 	Description   string                        `json:"description,omitempty"`
 	IsEntitlement bool                          `json:"isEntitlement,omitempty"`
-	IsMultiValued bool                          `json:"isMultiValued,omitempty"`
+	IsMultiValued bool                          `json:"isMulti,omitempty"`
 	IsGroup       bool                          `json:"isGroup,omitempty"`
 	Name          string                        `json:"name"`
+	NativeName    string                        `json:"nativeName,omitempty"`
 	Type          string                        `json:"type,omitempty"`
 	Schema        *AccountSchemaAttributeSchema `json:"schema,omitempty"`
 }

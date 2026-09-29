@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -21,7 +21,7 @@ func TestFormDefinitionClient(t *testing.T) {
 	const formJSON = `{"id":"form-1","name":"my form","owner":{"type":"IDENTITY","id":"owner-1","name":"Owner"},"formElements":[{"id":"1","elementType":"SECTION"}],"created":"2026-01-01T00:00:00Z","modified":"2026-01-02T00:00:00Z"}`
 
 	var gotMethod, gotPath, gotQuery, gotBody string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		gotMethod, gotPath, gotQuery, gotBody = r.Method, r.URL.Path, r.URL.Query().Get("filters"), string(body)
 		w.Header().Set("Content-Type", "application/json")
@@ -39,8 +39,7 @@ func TestFormDefinitionClient(t *testing.T) {
 		default:
 			_, _ = w.Write([]byte(formJSON))
 		}
-	}))
-	defer server.Close()
+	})
 
 	ctx := context.Background()
 	client := NewClient(ctx, server.URL, "id", "secret", 100)
@@ -68,7 +67,7 @@ func TestFormDefinitionClient(t *testing.T) {
 
 	t.Run("get by name filters and matches exactly", func(t *testing.T) {
 		form, err := client.GetFormDefinitionByName(ctx, `my "form"`)
-		if _, notFound := err.(*NotFoundError); !notFound {
+		if !isNotFound(err) {
 			t.Fatalf("expected not found error, got %v (%+v)", err, form)
 		}
 		if gotQuery != `name eq "my \"form\""` {
@@ -105,7 +104,7 @@ func TestFormDefinitionClient(t *testing.T) {
 
 	t.Run("get missing returns not found", func(t *testing.T) {
 		_, err := client.GetFormDefinition(ctx, "missing")
-		if _, notFound := err.(*NotFoundError); !notFound {
+		if !isNotFound(err) {
 			t.Fatalf("expected not found error, got %v", err)
 		}
 	})
@@ -296,5 +295,36 @@ func TestFormDefinitionSchemas(t *testing.T) {
 	}
 	if _, ok := resp.DataSourceSchemas["identitynow_form_definition"]; !ok {
 		t.Error("identitynow_form_definition data source is not registered")
+	}
+}
+
+func TestFormInputIDsFromStateMatchesByLabelAndType(t *testing.T) {
+	ctx := context.Background()
+	var diags diag.Diagnostics
+	prior, d := types.ListValueFrom(ctx, formInputObjectType, []FormDefinitionInputModel{
+		{ID: types.StringValue("id-a"), Type: types.StringValue("STRING"), Label: types.StringValue("a"), Description: types.StringNull()},
+		{ID: types.StringValue("id-b"), Type: types.StringValue("STRING"), Label: types.StringValue("b"), Description: types.StringNull()},
+	})
+	diags.Append(d...)
+	// A new input "new" is inserted before "b", so matching by position would give it b's ID.
+	planned, d := types.ListValueFrom(ctx, formInputObjectType, []FormDefinitionInputModel{
+		{ID: types.StringUnknown(), Type: types.StringValue("STRING"), Label: types.StringValue("a"), Description: types.StringNull()},
+		{ID: types.StringUnknown(), Type: types.StringValue("STRING"), Label: types.StringValue("new"), Description: types.StringNull()},
+		{ID: types.StringUnknown(), Type: types.StringValue("STRING"), Label: types.StringValue("b"), Description: types.StringNull()},
+	})
+	diags.Append(d...)
+
+	req := planmodifier.ListRequest{StateValue: prior, PlanValue: planned}
+	resp := &planmodifier.ListResponse{PlanValue: planned}
+	formInputIDsFromState{}.PlanModifyList(ctx, req, resp)
+	diags.Append(resp.Diagnostics...)
+
+	var got []FormDefinitionInputModel
+	diags.Append(resp.PlanValue.ElementsAs(ctx, &got, false)...)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if got[0].ID.ValueString() != "id-a" || !got[1].ID.IsUnknown() || got[2].ID.ValueString() != "id-b" {
+		t.Fatalf("unexpected ids: %s, %s, %s", got[0].ID, got[1].ID, got[2].ID)
 	}
 }

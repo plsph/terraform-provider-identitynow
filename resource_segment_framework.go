@@ -13,12 +13,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// segmentVisibilityDepth is the number of nested expression levels supported in visibility criteria.
+const segmentVisibilityDepth = 3
+
 var _ resource.Resource = &SegmentResource{}
 var _ resource.ResourceWithImportState = &SegmentResource{}
-var _ resource.ResourceWithModifyPlan = &SegmentResource{}
+var _ resource.ResourceWithValidateConfig = &SegmentResource{}
 
 func NewSegmentResource() resource.Resource {
 	return &SegmentResource{}
@@ -49,6 +53,13 @@ type SegmentVisibilityExpressionModel struct {
 	Attribute types.String `tfsdk:"attribute"`
 	Value     types.List   `tfsdk:"value"`
 	Children  types.List   `tfsdk:"children"`
+}
+
+// SegmentVisibilityLeafExpressionModel is the expression at the deepest level, which has no children.
+type SegmentVisibilityLeafExpressionModel struct {
+	Operator  types.String `tfsdk:"operator"`
+	Attribute types.String `tfsdk:"attribute"`
+	Value     types.List   `tfsdk:"value"`
 }
 
 type SegmentVisibilityValueModel struct {
@@ -87,6 +98,9 @@ func (r *SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"created": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The segment creation timestamp.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"modified": schema.StringAttribute{
 				Computed:            true,
@@ -94,11 +108,12 @@ func (r *SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"visibility_criteria_json": schema.StringAttribute{
 				Optional:            true,
+				Validators:          []validator.String{jsonObjectStringValidator{}},
 				MarkdownDescription: "Visibility criteria as a JSON object. Conflicts with visibility_criteria.",
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"visibility_criteria": visibilityCriteriaBlock(3, false),
+			"visibility_criteria": visibilityCriteriaBlock(segmentVisibilityDepth, false),
 			"owner": schema.ListNestedBlock{
 				MarkdownDescription: "The segment owner.",
 				NestedObject: schema.NestedBlockObject{
@@ -113,13 +128,15 @@ func (r *SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest
 	}
 }
 
-func (r *SegmentResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	var data SegmentResourceModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+func (r *SegmentResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var criteria types.List
+	var criteriaJSON types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("visibility_criteria"), &criteria)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("visibility_criteria_json"), &criteriaJSON)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if visibilityCriteriaConfigured(data.VisibilityCriteria) && !data.VisibilityCriteriaJSON.IsNull() && !data.VisibilityCriteriaJSON.IsUnknown() && data.VisibilityCriteriaJSON.ValueString() != "" {
+	if visibilityCriteriaConfigured(criteria) && visibilityCriteriaJSONConfigured(criteriaJSON) {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("visibility_criteria_json"),
 			"Conflicting visibility criteria configuration",
@@ -190,15 +207,9 @@ func segmentVisibilityValue(ctx context.Context, value types.List, diagnostics *
 	if diagnostics.HasError() || len(models) == 0 {
 		return nil
 	}
-	criteria := &SegmentVisibilityCriteria{}
-	if !models[0].Expression.IsNull() && len(models[0].Expression.Elements()) > 0 {
-		var expressions []SegmentVisibilityExpressionModel
-		diagnostics.Append(models[0].Expression.ElementsAs(ctx, &expressions, false)...)
-		if len(expressions) > 0 {
-			criteria.Expression = segmentVisibilityExpressionValue(ctx, expressions[0], diagnostics)
-		}
+	return &SegmentVisibilityCriteria{
+		Expression: segmentVisibilityExpressionListValue(ctx, models[0].Expression, segmentVisibilityDepth, diagnostics),
 	}
-	return criteria
 }
 
 func segmentVisibilityJSONValue(raw types.String, diagnostics *diag.Diagnostics) *SegmentVisibilityCriteria {
@@ -213,6 +224,23 @@ func segmentVisibilityJSONValue(raw types.String, diagnostics *diag.Diagnostics)
 	return &value
 }
 
+// segmentVisibilityJSONState returns the state value for visibility_criteria_json. Both values are
+// compared after decoding into the API struct, so formatting, key order and unset fields do not
+// cause a diff, while changes made outside Terraform are detected.
+func segmentVisibilityJSONState(prior types.String, criteria *SegmentVisibilityCriteria) types.String {
+	fromAPI, err := json.Marshal(criteria)
+	if err != nil || criteria == nil {
+		return types.StringNull()
+	}
+	var priorCriteria SegmentVisibilityCriteria
+	if err := json.Unmarshal([]byte(prior.ValueString()), &priorCriteria); err == nil {
+		if normalizedPrior, err := json.Marshal(&priorCriteria); err == nil && string(normalizedPrior) == string(fromAPI) {
+			return prior
+		}
+	}
+	return types.StringValue(string(fromAPI))
+}
+
 func visibilityCriteriaConfigured(value types.List) bool {
 	return !value.IsNull() && !value.IsUnknown() && len(value.Elements()) > 0
 }
@@ -221,38 +249,58 @@ func visibilityCriteriaJSONConfigured(value types.String) bool {
 	return !value.IsNull() && !value.IsUnknown() && value.ValueString() != ""
 }
 
-func segmentVisibilityExpressionValue(ctx context.Context, model SegmentVisibilityExpressionModel, diagnostics *diag.Diagnostics) *SegmentVisibilityExpression {
-	expression := &SegmentVisibilityExpression{Operator: model.Operator.ValueString(), Attribute: model.Attribute.ValueString()}
-	if !model.Value.IsNull() && len(model.Value.Elements()) > 0 {
-		var values []SegmentVisibilityValueModel
-		diagnostics.Append(model.Value.ElementsAs(ctx, &values, false)...)
-		if len(values) > 0 {
-			expression.Value = &SegmentVisibilityValue{Type: values[0].Type.ValueString(), Value: values[0].Value.ValueString()}
-		}
+// segmentVisibilityExpressionListValue converts the single-element expression list at the given depth.
+// The deepest level has no children attribute, so it is decoded into the leaf model.
+func segmentVisibilityExpressionListValue(ctx context.Context, list types.List, depth int, diagnostics *diag.Diagnostics) *SegmentVisibilityExpression {
+	if list.IsNull() || list.IsUnknown() || len(list.Elements()) == 0 {
+		return nil
 	}
-	if !model.Children.IsNull() && len(model.Children.Elements()) > 0 {
+	if depth <= 1 {
+		var leaves []SegmentVisibilityLeafExpressionModel
+		diagnostics.Append(list.ElementsAs(ctx, &leaves, false)...)
+		if len(leaves) == 0 {
+			return nil
+		}
+		return segmentVisibilityLeafValue(ctx, leaves[0].Operator, leaves[0].Attribute, leaves[0].Value, diagnostics)
+	}
+	var expressions []SegmentVisibilityExpressionModel
+	diagnostics.Append(list.ElementsAs(ctx, &expressions, false)...)
+	if len(expressions) == 0 {
+		return nil
+	}
+	model := expressions[0]
+	expression := segmentVisibilityLeafValue(ctx, model.Operator, model.Attribute, model.Value, diagnostics)
+	if !model.Children.IsNull() && !model.Children.IsUnknown() && len(model.Children.Elements()) > 0 {
 		var children []SegmentVisibilityCriteriaModel
 		diagnostics.Append(model.Children.ElementsAs(ctx, &children, false)...)
 		for _, child := range children {
-			if !child.Expression.IsNull() && len(child.Expression.Elements()) > 0 {
-				var childExpressions []SegmentVisibilityExpressionModel
-				diagnostics.Append(child.Expression.ElementsAs(ctx, &childExpressions, false)...)
-				if len(childExpressions) > 0 {
-					expression.Children = append(expression.Children, segmentVisibilityExpressionValue(ctx, childExpressions[0], diagnostics))
-				}
+			if childExpression := segmentVisibilityExpressionListValue(ctx, child.Expression, depth-1, diagnostics); childExpression != nil {
+				expression.Children = append(expression.Children, childExpression)
 			}
 		}
 	}
 	return expression
 }
 
+func segmentVisibilityLeafValue(ctx context.Context, operator, attribute types.String, value types.List, diagnostics *diag.Diagnostics) *SegmentVisibilityExpression {
+	expression := &SegmentVisibilityExpression{Operator: operator.ValueString(), Attribute: attribute.ValueString()}
+	if !value.IsNull() && !value.IsUnknown() && len(value.Elements()) > 0 {
+		var values []SegmentVisibilityValueModel
+		diagnostics.Append(value.ElementsAs(ctx, &values, false)...)
+		if len(values) > 0 {
+			expression.Value = &SegmentVisibilityValue{Type: values[0].Type.ValueString(), Value: values[0].Value.ValueString()}
+		}
+	}
+	return expression
+}
+
 func segmentVisibilityCriteriaState(ctx context.Context, criteria *SegmentVisibilityCriteria, diagnostics *diag.Diagnostics) types.List {
-	criteriaType := segmentVisibilityCriteriaObjectType(3)
+	criteriaType := segmentVisibilityCriteriaObjectType(segmentVisibilityDepth)
 	if criteria == nil || criteria.Expression == nil {
 		return types.ListNull(criteriaType)
 	}
 	model := SegmentVisibilityCriteriaModel{
-		Expression: segmentVisibilityExpressionState(ctx, criteria.Expression, 3, diagnostics),
+		Expression: segmentVisibilityExpressionState(ctx, criteria.Expression, segmentVisibilityDepth, diagnostics),
 	}
 	value, diags := types.ListValueFrom(ctx, criteriaType, []SegmentVisibilityCriteriaModel{model})
 	diagnostics.Append(diags...)
@@ -264,26 +312,32 @@ func segmentVisibilityExpressionState(ctx context.Context, expression *SegmentVi
 	if expression == nil {
 		return types.ListNull(expressionType)
 	}
-	model := SegmentVisibilityExpressionModel{
-		Operator:  types.StringValue(expression.Operator),
-		Attribute: types.StringValue(expression.Attribute),
-		Value:     segmentVisibilityValueState(ctx, expression.Value, diagnostics),
+	operator := stringValueOrNull(expression.Operator)
+	attribute := stringValueOrNull(expression.Attribute)
+	value := segmentVisibilityValueState(ctx, expression.Value, diagnostics)
+	if depth <= 1 {
+		result, diags := types.ListValueFrom(ctx, expressionType, []SegmentVisibilityLeafExpressionModel{{
+			Operator: operator, Attribute: attribute, Value: value,
+		}})
+		diagnostics.Append(diags...)
+		return result
 	}
-	if depth > 1 && len(expression.Children) > 0 {
+	model := SegmentVisibilityExpressionModel{Operator: operator, Attribute: attribute, Value: value}
+	childType := segmentVisibilityCriteriaObjectType(depth - 1)
+	if len(expression.Children) > 0 {
 		children := make([]SegmentVisibilityCriteriaModel, len(expression.Children))
 		for i, child := range expression.Children {
 			children[i] = SegmentVisibilityCriteriaModel{Expression: segmentVisibilityExpressionState(ctx, child, depth-1, diagnostics)}
 		}
-		childType := segmentVisibilityCriteriaObjectType(depth - 1)
-		value, diags := types.ListValueFrom(ctx, childType, children)
+		childList, diags := types.ListValueFrom(ctx, childType, children)
 		diagnostics.Append(diags...)
-		model.Children = value
-	} else if depth > 1 {
-		model.Children, _ = types.ListValue(segmentVisibilityCriteriaObjectType(depth-1), []attr.Value{})
+		model.Children = childList
+	} else {
+		model.Children, _ = types.ListValue(childType, []attr.Value{})
 	}
-	value, diags := types.ListValueFrom(ctx, expressionType, []SegmentVisibilityExpressionModel{model})
+	result, diags := types.ListValueFrom(ctx, expressionType, []SegmentVisibilityExpressionModel{model})
 	diagnostics.Append(diags...)
-	return value
+	return result
 }
 
 func segmentVisibilityValueState(ctx context.Context, value *SegmentVisibilityValue, diagnostics *diag.Diagnostics) types.List {
@@ -380,7 +434,7 @@ func (r *SegmentResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 	segment, err := client.GetSegment(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -389,13 +443,16 @@ func (r *SegmentResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	data.Name = types.StringValue(segment.Name)
-	data.Description = types.StringValue(segment.Description)
+	if segment.Description != "" || !data.Description.IsNull() {
+		data.Description = types.StringValue(segment.Description)
+	}
 	data.Active = types.BoolValue(segment.Active)
 	data.Created = types.StringValue(segment.Created)
 	data.Modified = types.StringValue(segment.Modified)
 	data.Owner = segmentOwnerState(ctx, segment.Owner, &resp.Diagnostics)
 	if visibilityCriteriaJSONConfigured(data.VisibilityCriteriaJSON) {
-		data.VisibilityCriteria = types.ListNull(segmentVisibilityCriteriaObjectType(3))
+		data.VisibilityCriteria = types.ListNull(segmentVisibilityCriteriaObjectType(segmentVisibilityDepth))
+		data.VisibilityCriteriaJSON = segmentVisibilityJSONState(data.VisibilityCriteriaJSON, segment.VisibilityCriteria)
 	} else {
 		data.VisibilityCriteria = segmentVisibilityCriteriaState(ctx, segment.VisibilityCriteria, &resp.Diagnostics)
 		data.VisibilityCriteriaJSON = types.StringNull()
@@ -424,22 +481,43 @@ func (r *SegmentResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	patches := []*UpdateSegment{
-		{Op: "replace", Path: "/name", Value: data.Name.ValueString()},
-		{Op: "replace", Path: "/description", Value: data.Description.ValueString()},
-		{Op: "replace", Path: "/active", Value: data.Active.ValueBool()},
+	var state SegmentResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	var patches []*UpdateSegment
+	replace := func(changed bool, path string, value interface{}) {
+		if changed {
+			patches = append(patches, &UpdateSegment{Op: "replace", Path: path, Value: value})
+		}
 	}
-	if owner := segmentOwnerValue(ctx, data.Owner, &resp.Diagnostics); owner != nil {
-		patches = append(patches, &UpdateSegment{Op: "replace", Path: "/owner", Value: owner})
+	replace(!data.Name.Equal(state.Name), "/name", data.Name.ValueString())
+	replace(!data.Description.Equal(state.Description), "/description", data.Description.ValueString())
+	replace(!data.Active.Equal(state.Active), "/active", data.Active.ValueBool())
+	if !data.Owner.Equal(state.Owner) {
+		if owner := segmentOwnerValue(ctx, data.Owner, &resp.Diagnostics); owner != nil {
+			replace(true, "/owner", owner)
+		} else {
+			patches = append(patches, &UpdateSegment{Op: "remove", Path: "/owner"})
+		}
 	}
-	criteria := segmentVisibilityValue(ctx, data.VisibilityCriteria, &resp.Diagnostics)
-	if criteria == nil {
-		criteria = segmentVisibilityJSONValue(data.VisibilityCriteriaJSON, &resp.Diagnostics)
-	}
-	if criteria != nil {
-		patches = append(patches, &UpdateSegment{Op: "replace", Path: "/visibilityCriteria", Value: criteria})
+	if !data.VisibilityCriteria.Equal(state.VisibilityCriteria) || !data.VisibilityCriteriaJSON.Equal(state.VisibilityCriteriaJSON) {
+		criteria := segmentVisibilityValue(ctx, data.VisibilityCriteria, &resp.Diagnostics)
+		if criteria == nil {
+			criteria = segmentVisibilityJSONValue(data.VisibilityCriteriaJSON, &resp.Diagnostics)
+		}
+		if criteria != nil {
+			replace(true, "/visibilityCriteria", criteria)
+		} else {
+			// Criteria were removed from the configuration, so the segment no longer restricts visibility.
+			patches = append(patches, &UpdateSegment{Op: "remove", Path: "/visibilityCriteria"})
+		}
 	}
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if len(patches) == 0 {
+		data.Modified = state.Modified
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
 	}
 
@@ -453,7 +531,7 @@ func (r *SegmentResource) Update(ctx context.Context, req resource.UpdateRequest
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update segment: %s", err))
 		return
 	}
-	data.Created = types.StringValue(updated.Created)
+	// created keeps its planned (prior state) value
 	data.Modified = types.StringValue(updated.Modified)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -470,7 +548,7 @@ func (r *SegmentResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 	if err := client.DeleteSegment(ctx, data.ID.ValueString()); err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete segment: %s", err))

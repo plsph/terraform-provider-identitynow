@@ -1,12 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# Set the version to something with the format x.y.z, ideally not a version already published externally
-# Once the directory ~/.terraform.d/plugins/registry.terraform.io/openaxon/identitynow is created,
-# TF will not longer attempt to look for any versions of this provider on the remote registry.
-# When finished with development, you can remove the folder from your laptop to start using the public provider again.
-# https://www.terraform.io/docs/commands/cli-config.html#implied-local-mirror-directories
-VERSION=0.6.2
-go build -o terraform-provider-identitynow
-mkdir -p ~/.terraform.d/plugins/registry.terraform.io/plsph/identitynow/${VERSION}/darwin_amd64
-mv terraform-provider-identitynow ~/.terraform.d/plugins/registry.terraform.io/plsph/identitynow/${VERSION}/darwin_amd64/terraform-provider-identitynow_v${VERSION}
+# Builds the provider and installs it into the implied local mirror directory, so Terraform uses it
+# instead of the registry version: https://developer.hashicorp.com/terraform/cli/config/config-file#implied-local-mirror-directories
+# Use a version that is not published, e.g. ./scripts/build.sh 0.0.1-dev
+# Remove ~/.terraform.d/plugins/registry.terraform.io/plsph/identitynow when finished to use the registry version again.
+VERSION=${1:-${VERSION:-0.0.1-dev}}
+OS_ARCH="$(go env GOOS)_$(go env GOARCH)"
+PLUGIN_DIR=~/.terraform.d/plugins/registry.terraform.io/plsph/identitynow/${VERSION}/${OS_ARCH}
+
+mkdir -p "${PLUGIN_DIR}"
+go build -ldflags "-X main.version=${VERSION}" -o "${PLUGIN_DIR}/terraform-provider-identitynow_v${VERSION}"
+echo "Installed ${PLUGIN_DIR}/terraform-provider-identitynow_v${VERSION}"

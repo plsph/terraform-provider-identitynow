@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -122,6 +123,7 @@ func (r *WorkflowResource) Schema(ctx context.Context, req resource.SchemaReques
 						"attributes_json": schema.StringAttribute{
 							MarkdownDescription: "Trigger attributes as a JSON string",
 							Optional:            true,
+							Validators:          []validator.String{jsonObjectStringValidator{}},
 						},
 					},
 				},
@@ -137,6 +139,7 @@ func (r *WorkflowResource) Schema(ctx context.Context, req resource.SchemaReques
 						"steps_json": schema.StringAttribute{
 							MarkdownDescription: "Workflow steps as a JSON string",
 							Required:            true,
+							Validators:          []validator.String{jsonObjectStringValidator{}},
 						},
 					},
 				},
@@ -226,6 +229,9 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
+	// Workflows cannot be created in an enabled state, so they are enabled after creation.
+	enable := workflow.Enabled != nil && *workflow.Enabled
+	workflow.Enabled = nil
 	newWorkflow, err := client.CreateWorkflow(ctx, workflow)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create workflow: %s", err))
@@ -233,8 +239,20 @@ func (r *WorkflowResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	data.ID = types.StringValue(newWorkflow.ID)
+	if enable {
+		newWorkflow, err = client.SetWorkflowEnabled(ctx, newWorkflow.ID, true)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Workflow %s was created but could not be enabled: %s", data.ID.ValueString(), err))
+			// Keep the created workflow in state, so Terraform marks it tainted instead of orphaning it.
+			data.Enabled = types.BoolValue(false)
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
+	}
 	if newWorkflow.Enabled != nil {
 		data.Enabled = types.BoolValue(*newWorkflow.Enabled)
+	} else if data.Enabled.IsUnknown() {
+		data.Enabled = types.BoolValue(false)
 	}
 
 	tflog.Trace(ctx, "created a workflow resource")
@@ -258,7 +276,7 @@ func (r *WorkflowResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	workflow, err := client.GetWorkflow(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -300,6 +318,23 @@ func (r *WorkflowResource) Read(ctx context.Context, req resource.ReadRequest, r
 		data.Owner = types.ListNull(ownerObjType)
 	}
 
+	// Prior JSON values are kept when they are semantically equal to the API values
+	priorAttributesJSON, priorStepsJSON := types.StringNull(), types.StringNull()
+	var priorTriggers []WorkflowTriggerModel
+	if !data.Trigger.IsNull() && !data.Trigger.IsUnknown() {
+		resp.Diagnostics.Append(data.Trigger.ElementsAs(ctx, &priorTriggers, false)...)
+	}
+	if len(priorTriggers) > 0 {
+		priorAttributesJSON = priorTriggers[0].AttributesJSON
+	}
+	var priorDefinitions []WorkflowDefinitionModel
+	if !data.Definition.IsNull() && !data.Definition.IsUnknown() {
+		resp.Diagnostics.Append(data.Definition.ElementsAs(ctx, &priorDefinitions, false)...)
+	}
+	if len(priorDefinitions) > 0 {
+		priorStepsJSON = priorDefinitions[0].StepsJSON
+	}
+
 	// Map trigger
 	triggerObjType := types.ObjectType{AttrTypes: map[string]attr.Type{
 		"type":            types.StringType,
@@ -307,18 +342,11 @@ func (r *WorkflowResource) Read(ctx context.Context, req resource.ReadRequest, r
 		"attributes_json": types.StringType,
 	}}
 	if workflow.Trigger != nil {
-		attrsJSON := ""
-		if workflow.Trigger.Attributes != nil {
-			b, err := json.Marshal(workflow.Trigger.Attributes)
-			if err == nil {
-				attrsJSON = string(b)
-			}
-		}
 		triggerModels := []WorkflowTriggerModel{
 			{
 				Type:           types.StringValue(workflow.Trigger.Type),
 				DisplayName:    stringValueOrNull(workflow.Trigger.DisplayName),
-				AttributesJSON: stringValueOrNull(attrsJSON),
+				AttributesJSON: jsonStringState(priorAttributesJSON, workflow.Trigger.Attributes),
 			},
 		}
 		triggerList, diags := types.ListValueFrom(ctx, triggerObjType, triggerModels)
@@ -334,17 +362,15 @@ func (r *WorkflowResource) Read(ctx context.Context, req resource.ReadRequest, r
 		"steps_json": types.StringType,
 	}}
 	if workflow.Definition != nil {
-		stepsJSON := ""
-		if workflow.Definition.Steps != nil {
-			b, err := json.Marshal(workflow.Definition.Steps)
-			if err == nil {
-				stepsJSON = string(b)
-			}
+		stepsJSON := jsonStringState(priorStepsJSON, workflow.Definition.Steps)
+		if stepsJSON.IsNull() {
+			// steps_json is required, so an empty definition is stored as an empty object
+			stepsJSON = types.StringValue("{}")
 		}
 		defModels := []WorkflowDefinitionModel{
 			{
 				Start:     types.StringValue(workflow.Definition.Start),
-				StepsJSON: types.StringValue(stepsJSON),
+				StepsJSON: stepsJSON,
 			},
 		}
 		defList, diags := types.ListValueFrom(ctx, defObjType, defModels)
@@ -454,9 +480,29 @@ func (r *WorkflowResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
+	// Enabled workflows cannot be deleted, so they are disabled first. The current value is read,
+	// because the workflow may have been enabled outside Terraform.
+	current, err := client.GetWorkflow(ctx, data.ID.ValueString())
+	if err != nil {
+		if isNotFound(err) {
+			return
+		}
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read workflow before deletion: %s", err))
+		return
+	}
+	if current.Enabled != nil && *current.Enabled {
+		if _, err := client.SetWorkflowEnabled(ctx, data.ID.ValueString(), false); err != nil {
+			if isNotFound(err) {
+				return
+			}
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to disable workflow before deletion: %s", err))
+			return
+		}
+	}
+
 	err = client.DeleteWorkflow(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete workflow: %s", err))

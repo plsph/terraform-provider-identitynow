@@ -104,7 +104,7 @@ func (d *AccessProfileDataSource) Schema(ctx context.Context, req datasource.Sch
 				MarkdownDescription: "Revocation request configuration",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"approval_schemes": schema.ListAttribute{Computed: true, ElementType: types.StringType},
+						"approval_schemes": schema.ListAttribute{Computed: true, ElementType: types.StringType, MarkdownDescription: "Approver types of the revocation approval schemes"},
 					},
 				},
 			},
@@ -227,7 +227,7 @@ func (d *AccessProfileDataSource) Read(ctx context.Context, req datasource.ReadR
 
 	accessProfiles, err := client.GetAccessProfileByName(ctx, data.Name.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.Diagnostics.AddError("Not Found", fmt.Sprintf("Access Profile with name %s not found", data.Name.ValueString()))
 			return
 		}
@@ -263,13 +263,50 @@ func (d *AccessProfileDataSource) Read(ctx context.Context, req datasource.ReadR
 	} else {
 		data.Segments = types.ListNull(types.StringType)
 	}
+	data.Owner = objectInfoListState(ctx, ap.AccessProfileOwner, &resp.Diagnostics)
+	data.Source = objectInfoListState(ctx, ap.AccessProfileSource, &resp.Diagnostics)
+	data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, ap.AccessModelMetadata, &resp.Diagnostics)
+	if ap.ProvisioningCriteria != nil {
+		data.ProvisioningCriteria = provisioningCriteriaAPIToState(ctx, ap.ProvisioningCriteria, &resp.Diagnostics)
+	} else {
+		data.ProvisioningCriteria = types.ListNull(provisioningCriteriaObjectType())
+	}
+
+	additionalOwnerType := types.ObjectType{AttrTypes: map[string]attr.Type{"type": types.StringType, "id": types.StringType, "name": types.StringType}}
+	additionalOwners := make([]AdditionalOwnerModel, 0, len(ap.AdditionalOwners))
+	for _, owner := range ap.AdditionalOwners {
+		additionalOwners = append(additionalOwners, AdditionalOwnerModel{
+			Type: types.StringValue(owner.Type),
+			ID:   types.StringValue(owner.ID),
+			Name: types.StringValue(owner.Name),
+		})
+	}
+	data.AdditionalOwners, _ = types.ListValueFrom(ctx, additionalOwnerType, additionalOwners)
+
+	revocationType := types.ObjectType{AttrTypes: map[string]attr.Type{"approval_schemes": types.ListType{ElemType: types.StringType}}}
+	data.RevocationRequestConfig = types.ListNull(revocationType)
+	if ap.RevocationRequestConfig != nil {
+		// approval_schemes lists the approver types, e.g. MANAGER or GOVERNANCE_GROUP
+		approvers := make([]string, 0, len(ap.RevocationRequestConfig.ApprovalSchemes))
+		for _, scheme := range ap.RevocationRequestConfig.ApprovalSchemes {
+			approvers = append(approvers, scheme.ApproverType)
+		}
+		approverList, d := types.ListValueFrom(ctx, types.StringType, approvers)
+		resp.Diagnostics.Append(d...)
+		revocation, d := types.ObjectValue(revocationType.AttrTypes, map[string]attr.Value{"approval_schemes": approverList})
+		resp.Diagnostics.Append(d...)
+		data.RevocationRequestConfig, d = types.ListValue(revocationType, []attr.Value{revocation})
+		resp.Diagnostics.Append(d...)
+	}
+
+	requestConfigType := types.ObjectType{AttrTypes: map[string]attr.Type{
+		"comments_required":        types.BoolType,
+		"denial_comments_required": types.BoolType,
+		"reauthorization_required": types.BoolType,
+		"require_end_date":         types.BoolType,
+	}}
+	data.AccessRequestConfig = types.ListNull(requestConfigType)
 	if ap.AccessRequestConfig != nil {
-		requestConfigType := types.ObjectType{AttrTypes: map[string]attr.Type{
-			"comments_required":        types.BoolType,
-			"denial_comments_required": types.BoolType,
-			"reauthorization_required": types.BoolType,
-			"require_end_date":         types.BoolType,
-		}}
 		requestConfigValue, d := types.ObjectValue(requestConfigType.AttrTypes, map[string]attr.Value{
 			"comments_required":        types.BoolValue(ap.AccessRequestConfig.CommentsRequired),
 			"denial_comments_required": types.BoolValue(ap.AccessRequestConfig.DenialCommentsRequired),

@@ -34,7 +34,7 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 * `name` - The name of the role.
 * `description` - The description of the role.
-* `owner` - The owner of the role. Each element contains `id`, `type`, and `name`.
+* `owner` - List with the owner of the role. Each element contains `id`, `type`, and `name`.
 * `access_profiles` - The access profiles assigned to this role. Each element contains `id`, `type`, and `name`.
 * `requestable` - Whether the role is requestable.
 * `enabled` - Whether the role is enabled.

@@ -14,6 +14,12 @@ resource "identitynow_role" "operator_developer_role" {
     name = identitynow_access_profile.aad_access_profile_operators.name
   }
 
+  access_profiles {
+    id   = identitynow_access_profile.ad_access_profile_developers.id
+    type = "ACCESS_PROFILE"
+    name = identitynow_access_profile.ad_access_profile_developers.name
+  }
+
   access_model_metadata {
     attributes {
       key         = "iscPrivacy"
@@ -40,10 +46,11 @@ resource "identitynow_role" "operator_developer_role" {
   enabled     = true
 }
 
-data "identitynow_role" "example" {
-  id = "2c91808a7813090a017813b6301f1234"
+data "identitynow_role" "operator_developer_role" {
+  id = identitynow_role.operator_developer_role.id
 }
 
-output "role_name" {
-  value = data.identitynow_role.example.name
+output "role_access_profile_names" {
+  value = data.identitynow_role.operator_developer_role.access_profiles[*].name
 }
+

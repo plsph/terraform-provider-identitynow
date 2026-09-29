@@ -30,14 +30,16 @@ type AccessProfileAttachmentResourceModel struct {
 	AccessProfiles types.List   `tfsdk:"access_profiles"`
 }
 
-func resolveAccessProfileAttachmentMutation(current, desired []string) []string {
-	if len(desired) == 0 {
-		if len(current) == 0 {
-			return nil
+// accessProfilesToDetach returns the managed access profile IDs that are still attached.
+func accessProfilesToDetach(managed, attached []string) []string {
+	isAttached := toStringSet(attached)
+	var result []string
+	for _, id := range managed {
+		if _, ok := isAttached[id]; ok {
+			result = append(result, id)
 		}
-		return current
 	}
-	return desired
+	return result
 }
 
 func (r *AccessProfileAttachmentResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -46,7 +48,7 @@ func (r *AccessProfileAttachmentResource) Metadata(ctx context.Context, req reso
 
 func (r *AccessProfileAttachmentResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Access Profile Attachment resource - attaches access profiles to a source app",
+		MarkdownDescription: "Access Profile Attachment resource - attaches access profiles to a source app. The list is authoritative: access profiles attached outside Terraform are detached on apply.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
@@ -58,6 +60,9 @@ func (r *AccessProfileAttachmentResource) Schema(ctx context.Context, req resour
 			"source_app_id": schema.StringAttribute{
 				Required:            true,
 				MarkdownDescription: "Source App ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"access_profiles": schema.ListAttribute{
 				Required:            true,
@@ -106,13 +111,13 @@ func (r *AccessProfileAttachmentResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	newAttachment, err := client.UpdateAccessProfileAttachment(ctx, attachment, attachment.SourceAppId)
+	_, err = client.UpdateAccessProfileAttachment(ctx, attachment, attachment.SourceAppId)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create access profile attachment: %s", err))
 		return
 	}
 
-	data.ID = types.StringValue(newAttachment.SourceAppId)
+	data.ID = types.StringValue(data.SourceAppID.ValueString())
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -134,7 +139,7 @@ func (r *AccessProfileAttachmentResource) Read(ctx context.Context, req resource
 
 	attachment, err := client.GetAccessProfileAttachment(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -144,7 +149,16 @@ func (r *AccessProfileAttachmentResource) Read(ctx context.Context, req resource
 
 	data.SourceAppID = types.StringValue(attachment.SourceAppId)
 
-	apList, diags := types.ListValueFrom(ctx, types.StringType, attachment.AccessProfiles)
+	// Keep the prior order, the API order is not stable
+	var prior []string
+	if !data.AccessProfiles.IsNull() && !data.AccessProfiles.IsUnknown() {
+		resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &prior, false)...)
+	}
+	attached := orderByPriorIDs(attachment.AccessProfiles, prior, func(id string) string { return id })
+	if attached == nil {
+		attached = []string{}
+	}
+	apList, diags := types.ListValueFrom(ctx, types.StringType, attached)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -177,16 +191,15 @@ func (r *AccessProfileAttachmentResource) Update(ctx context.Context, req resour
 
 	currentAttachment, err := client.GetAccessProfileAttachment(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
-			resp.State.RemoveResource(ctx)
-			return
-		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read access profile attachment: %s", err))
 		return
 	}
 
-	mutation := resolveAccessProfileAttachmentMutation(currentAttachment.AccessProfiles, accessProfiles)
-	if len(accessProfiles) == 0 && len(currentAttachment.AccessProfiles) > 0 {
+	if len(accessProfiles) == 0 {
+		if len(currentAttachment.AccessProfiles) == 0 {
+			resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+			return
+		}
 		err = client.DeleteAccessProfileAttachment(ctx, &AccessProfileAttachment{
 			SourceAppId:    data.SourceAppID.ValueString(),
 			AccessProfiles: currentAttachment.AccessProfiles,
@@ -202,7 +215,7 @@ func (r *AccessProfileAttachmentResource) Update(ctx context.Context, req resour
 
 	attachment := &AccessProfileAttachment{
 		SourceAppId:    data.SourceAppID.ValueString(),
-		AccessProfiles: mutation,
+		AccessProfiles: accessProfiles,
 	}
 
 	_, err = client.UpdateAccessProfileAttachment(ctx, attachment, attachment.SourceAppId)
@@ -231,18 +244,22 @@ func (r *AccessProfileAttachmentResource) Delete(ctx context.Context, req resour
 
 	attachment, err := client.GetAccessProfileAttachment(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get access profile attachment: %s", err))
 		return
 	}
 
-	if len(attachment.AccessProfiles) == 0 {
+	// Only the access profiles managed by this resource are detached.
+	var managed []string
+	resp.Diagnostics.Append(data.AccessProfiles.ElementsAs(ctx, &managed, false)...)
+	detach := accessProfilesToDetach(managed, attachment.AccessProfiles)
+	if resp.Diagnostics.HasError() || len(detach) == 0 {
 		return
 	}
 
-	err = client.DeleteAccessProfileAttachment(ctx, attachment)
+	err = client.DeleteAccessProfileAttachment(ctx, &AccessProfileAttachment{SourceAppId: attachment.SourceAppId, AccessProfiles: detach})
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete access profile attachment: %s", err))
 		return

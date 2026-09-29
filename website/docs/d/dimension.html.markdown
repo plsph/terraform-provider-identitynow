@@ -36,6 +36,7 @@ In addition to the Arguments listed above - the following Attributes are exporte
 
 * `name` - The name of the dimension.
 * `description` - The description of the dimension.
-* `owner` - The owner of the dimension.
-* `access_profiles` - The access profiles assigned to this dimension.
-* `entitlements` - The entitlements assigned to this dimension.
+* `owner` - List with the owner of the dimension. Each element contains `id`, `type` and `name`.
+* `access_profiles` - The access profiles assigned to this dimension. Each element contains `id`, `type` and `name`.
+* `entitlements` - The entitlements assigned to this dimension. Each element contains `id`, `type` and `name`.
+

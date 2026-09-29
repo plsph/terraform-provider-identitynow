@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
@@ -160,132 +159,38 @@ func (v CaseInsensitiveStringSetValue) SetSemanticEquals(ctx context.Context, ne
 		return false, diags
 	}
 
-	priorElems := v.SetValue.Elements()
-	newElems := newSetValue.SetValue.Elements()
-
-	if len(priorElems) != len(newElems) {
+	priorUpper, d := upperStringSet(ctx, v.SetValue.Elements())
+	diags.Append(d...)
+	newUpper, d := upperStringSet(ctx, newSetValue.SetValue.Elements())
+	diags.Append(d...)
+	if diags.HasError() {
 		return false, diags
 	}
+	return sameStringSet(priorUpper, newUpper), diags
+}
 
-	// Build uppercase set of one side
-	priorUpper := make(map[string]struct{}, len(priorElems))
-	for _, e := range priorElems {
+// upperStringSet returns the upper-cased string values of elements as a set.
+func upperStringSet(ctx context.Context, elements []attr.Value) (map[string]struct{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	result := make(map[string]struct{}, len(elements))
+	for _, e := range elements {
 		if sv, ok := e.(basetypes.StringValuable); ok {
 			s, d := sv.ToStringValue(ctx)
 			diags.Append(d...)
-			if diags.HasError() {
-				return false, diags
-			}
-			priorUpper[strings.ToUpper(s.ValueString())] = struct{}{}
+			result[strings.ToUpper(s.ValueString())] = struct{}{}
 		}
 	}
+	return result, diags
+}
 
-	for _, e := range newElems {
-		if sv, ok := e.(basetypes.StringValuable); ok {
-			s, d := sv.ToStringValue(ctx)
-			diags.Append(d...)
-			if diags.HasError() {
-				return false, diags
-			}
-			if _, found := priorUpper[strings.ToUpper(s.ValueString())]; !found {
-				return false, diags
-			}
+func sameStringSet(a, b map[string]struct{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k := range a {
+		if _, ok := b[k]; !ok {
+			return false
 		}
 	}
-
-	return true, diags
-}
-
-// --- Plan Modifier ---
-
-// useStateForCaseInsensitiveSet is a plan modifier that prevents drift caused by
-// case differences between config and state. When the planned set (from config)
-// is case-insensitively equal to the prior state, it uses the prior state value.
-// Terraform Core accepts plan == prior for Optional+Computed attributes.
-type useStateForCaseInsensitiveSet struct{}
-
-func UseStateForCaseInsensitiveSet() planmodifier.Set {
-	return useStateForCaseInsensitiveSet{}
-}
-
-func (m useStateForCaseInsensitiveSet) Description(ctx context.Context) string {
-	return "Uses the prior state value when the planned set differs only in case."
-}
-
-func (m useStateForCaseInsensitiveSet) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (m useStateForCaseInsensitiveSet) PlanModifySet(ctx context.Context, req planmodifier.SetRequest, resp *planmodifier.SetResponse) {
-	// During Create there is no prior state, let the plan be the config value.
-	if req.StateValue.IsNull() || req.StateValue.IsUnknown() {
-		return
-	}
-	if resp.PlanValue.IsNull() || resp.PlanValue.IsUnknown() {
-		return
-	}
-
-	planElems := resp.PlanValue.Elements()
-	stateElems := req.StateValue.Elements()
-
-	if len(planElems) != len(stateElems) {
-		return
-	}
-
-	stateUpper := make(map[string]struct{}, len(stateElems))
-	for _, e := range stateElems {
-		if sv, ok := e.(basetypes.StringValuable); ok {
-			s, d := sv.ToStringValue(ctx)
-			resp.Diagnostics.Append(d...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			stateUpper[strings.ToUpper(s.ValueString())] = struct{}{}
-		}
-	}
-
-	for _, e := range planElems {
-		if sv, ok := e.(basetypes.StringValuable); ok {
-			s, d := sv.ToStringValue(ctx)
-			resp.Diagnostics.Append(d...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			if _, found := stateUpper[strings.ToUpper(s.ValueString())]; !found {
-				return // Real difference, keep plan from config
-			}
-		}
-	}
-
-	// Sets are case-insensitively equal; use prior state to prevent drift.
-	resp.PlanValue = req.StateValue
-}
-
-// useStateForCaseInsensitiveString is a plan modifier that prevents drift caused
-// by case differences between config and state for individual string attributes.
-type useStateForCaseInsensitiveString struct{}
-
-func UseStateForCaseInsensitiveString() planmodifier.String {
-	return useStateForCaseInsensitiveString{}
-}
-
-func (m useStateForCaseInsensitiveString) Description(ctx context.Context) string {
-	return "Uses the prior state value when the planned string differs only in case."
-}
-
-func (m useStateForCaseInsensitiveString) MarkdownDescription(ctx context.Context) string {
-	return m.Description(ctx)
-}
-
-func (m useStateForCaseInsensitiveString) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
-	if req.StateValue.IsNull() || req.StateValue.IsUnknown() {
-		return
-	}
-	if resp.PlanValue.IsNull() || resp.PlanValue.IsUnknown() {
-		return
-	}
-
-	if strings.EqualFold(req.StateValue.ValueString(), resp.PlanValue.ValueString()) {
-		resp.PlanValue = req.StateValue
-	}
+	return true
 }

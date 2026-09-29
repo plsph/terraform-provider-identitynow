@@ -21,6 +21,7 @@ import (
 
 var _ resource.Resource = &AccessProfileResource{}
 var _ resource.ResourceWithImportState = &AccessProfileResource{}
+var _ resource.ResourceWithModifyPlan = &AccessProfileResource{}
 
 func NewAccessProfileResource() resource.Resource {
 	return &AccessProfileResource{}
@@ -87,6 +88,13 @@ type ProvisioningCriteriaModel struct {
 	Attribute types.String `tfsdk:"attribute"`
 	Value     types.String `tfsdk:"value"`
 	Children  types.List   `tfsdk:"children"`
+}
+
+// ProvisioningCriteriaLeafModel is the third criteria level, which has no children.
+type ProvisioningCriteriaLeafModel struct {
+	Operation types.String `tfsdk:"operation"`
+	Attribute types.String `tfsdk:"attribute"`
+	Value     types.String `tfsdk:"value"`
 }
 
 func provisioningCriteriaObjectType() types.ObjectType {
@@ -184,10 +192,7 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 						},
 						"name": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Entitlement name",
-							PlanModifiers: []planmodifier.String{
-								UseStateForCaseInsensitiveString(),
-							},
+							MarkdownDescription: "Entitlement name. Read keeps the configured casing when the API name differs only in case.",
 						},
 						"type": schema.StringAttribute{
 							Optional:            true,
@@ -289,14 +294,14 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 								Attributes: map[string]schema.Attribute{
 									"key":         schema.StringAttribute{Required: true},
 									"name":        schema.StringAttribute{Required: true},
-									"multiselect": schema.BoolAttribute{Optional: true},
-									"status":      schema.StringAttribute{Optional: true},
-									"type":        schema.StringAttribute{Optional: true},
-									"description": schema.StringAttribute{Optional: true},
+									"multiselect": schema.BoolAttribute{Optional: true, Computed: true},
+									"status":      schema.StringAttribute{Optional: true, Computed: true},
+									"type":        schema.StringAttribute{Optional: true, Computed: true},
+									"description": schema.StringAttribute{Optional: true, Computed: true},
 								},
 								Blocks: map[string]schema.Block{
 									"object_types": schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"value": schema.StringAttribute{Required: true}}}},
-									"values":       schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"value": schema.StringAttribute{Required: true}, "name": schema.StringAttribute{Optional: true}, "status": schema.StringAttribute{Optional: true}}}},
+									"values":       schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"value": schema.StringAttribute{Required: true}, "name": schema.StringAttribute{Optional: true, Computed: true}, "status": schema.StringAttribute{Optional: true, Computed: true}}}},
 								},
 							},
 						},
@@ -341,6 +346,28 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 	}
 }
 
+// ModifyPlan warns when access_model_metadata changes on an existing access profile. The access
+// profile API only accepts metadata on creation, so such changes are not applied.
+func (r *AccessProfileResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+		return
+	}
+	var planned, prior types.List
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, path.Root("access_model_metadata"), &planned)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("access_model_metadata"), &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !equalIgnoringUnknown(planned, prior) {
+		resp.Diagnostics.AddAttributeWarning(
+			path.Root("access_model_metadata"),
+			"Access model metadata is not updated",
+			"The access profile API does not support changing access model metadata of an existing access profile. "+
+				"The change is not applied in IdentityNow, recreate the access profile to change its metadata.",
+		)
+	}
+}
+
 func (r *AccessProfileResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
@@ -360,15 +387,44 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
+	ap := r.apiFromModel(ctx, data, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Info(ctx, "Creating Access Profile", map[string]interface{}{"name": ap.Name})
+
+	client, err := r.client.IdentityNowClient(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", err.Error())
+		return
+	}
+
+	newAP, err := client.CreateAccessProfile(ctx, ap)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", err.Error())
+		return
+	}
+
+	data.ID = types.StringValue(newAP.ID)
+	data.Enabled = computedBoolFromAPI(data.Enabled, newAP.Enabled)
+	data.Requestable = computedBoolFromAPI(data.Requestable, newAP.Requestable)
+	data.AccessModelMetadata = accessModelMetadataFillUnknown(ctx, data.AccessModelMetadata, newAP.AccessModelMetadata, &resp.Diagnostics)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// apiFromModel converts the Terraform model to the API AccessProfile struct.
+func (r *AccessProfileResource) apiFromModel(ctx context.Context, data AccessProfileResourceModel, diags *diag.Diagnostics) *AccessProfile {
 	ap := &AccessProfile{
 		Name:        data.Name.ValueString(),
 		Description: data.Description.ValueString(),
 	}
 
 	var owners []OwnerModel
-	resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
-	if resp.Diagnostics.HasError() {
-		return
+	diags.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
+	if diags.HasError() {
+		return nil
 	}
 	if len(owners) > 0 {
 		ap.AccessProfileOwner = &ObjectInfo{
@@ -379,9 +435,9 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 	}
 
 	var sources []OwnerModel
-	resp.Diagnostics.Append(data.Source.ElementsAs(ctx, &sources, false)...)
-	if resp.Diagnostics.HasError() {
-		return
+	diags.Append(data.Source.ElementsAs(ctx, &sources, false)...)
+	if diags.HasError() {
+		return nil
 	}
 	if len(sources) > 0 {
 		ap.AccessProfileSource = &ObjectInfo{
@@ -391,12 +447,12 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 		}
 	}
 
-	if !data.Enabled.IsNull() {
+	if !data.Enabled.IsNull() && !data.Enabled.IsUnknown() {
 		enabled := data.Enabled.ValueBool()
 		ap.Enabled = &enabled
 	}
 
-	if !data.Requestable.IsNull() {
+	if !data.Requestable.IsNull() && !data.Requestable.IsUnknown() {
 		requestable := data.Requestable.ValueBool()
 		ap.Requestable = &requestable
 	}
@@ -404,9 +460,9 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 	// Entitlements
 	if !data.Entitlements.IsNull() && len(data.Entitlements.Elements()) > 0 {
 		var entModels []EntitlementRefModel
-		resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &entModels, false)...)
-		if resp.Diagnostics.HasError() {
-			return
+		diags.Append(data.Entitlements.ElementsAs(ctx, &entModels, false)...)
+		if diags.HasError() {
+			return nil
 		}
 		for _, em := range entModels {
 			ent := &ObjectInfo{
@@ -425,9 +481,9 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 	// Access Request Config
 	if !data.AccessRequestConfig.IsNull() && len(data.AccessRequestConfig.Elements()) > 0 {
 		var arcModels []AccessRequestConfigModel
-		resp.Diagnostics.Append(data.AccessRequestConfig.ElementsAs(ctx, &arcModels, false)...)
-		if resp.Diagnostics.HasError() {
-			return
+		diags.Append(data.AccessRequestConfig.ElementsAs(ctx, &arcModels, false)...)
+		if diags.HasError() {
+			return nil
 		}
 		if len(arcModels) > 0 {
 			arc := arcModels[0]
@@ -446,9 +502,9 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 			}
 			if !arc.ApprovalSchemes.IsNull() && len(arc.ApprovalSchemes.Elements()) > 0 {
 				var schemes []ApprovalSchemeModel
-				resp.Diagnostics.Append(arc.ApprovalSchemes.ElementsAs(ctx, &schemes, false)...)
-				if resp.Diagnostics.HasError() {
-					return
+				diags.Append(arc.ApprovalSchemes.ElementsAs(ctx, &schemes, false)...)
+				if diags.HasError() {
+					return nil
 				}
 				for _, s := range schemes {
 					config.ApprovalSchemes = append(config.ApprovalSchemes, &ApprovalSchemes{
@@ -459,9 +515,9 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 			}
 			if !arc.MaxPermittedAccessDuration.IsNull() && len(arc.MaxPermittedAccessDuration.Elements()) > 0 {
 				var durModels []MaxPermittedAccessDurationModel
-				resp.Diagnostics.Append(arc.MaxPermittedAccessDuration.ElementsAs(ctx, &durModels, false)...)
-				if resp.Diagnostics.HasError() {
-					return
+				diags.Append(arc.MaxPermittedAccessDuration.ElementsAs(ctx, &durModels, false)...)
+				if diags.HasError() {
+					return nil
 				}
 				if len(durModels) > 0 {
 					config.MaxPermittedAccessDuration = &MaxPermittedAccessDuration{
@@ -474,35 +530,35 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 		}
 	}
 
-	if !data.Segments.IsNull() {
+	if !data.Segments.IsNull() && !data.Segments.IsUnknown() {
 		var segments []string
-		resp.Diagnostics.Append(data.Segments.ElementsAs(ctx, &segments, false)...)
-		if resp.Diagnostics.HasError() {
-			return
+		diags.Append(data.Segments.ElementsAs(ctx, &segments, false)...)
+		if diags.HasError() {
+			return nil
 		}
 		ap.Segments = segments
 	}
 
 	if !data.AccessModelMetadata.IsNull() {
-		ap.AccessModelMetadata = accessModelMetadataModelToAPI(ctx, data.AccessModelMetadata, &resp.Diagnostics)
-		if resp.Diagnostics.HasError() {
-			return
+		ap.AccessModelMetadata = accessModelMetadataModelToAPI(ctx, data.AccessModelMetadata, diags)
+		if diags.HasError() {
+			return nil
 		}
 	}
 
 	if !data.RevocationRequestConfig.IsNull() {
 		var revocationModels []AccessProfileRevocationRequestConfigModel
-		resp.Diagnostics.Append(data.RevocationRequestConfig.ElementsAs(ctx, &revocationModels, false)...)
-		if resp.Diagnostics.HasError() {
-			return
+		diags.Append(data.RevocationRequestConfig.ElementsAs(ctx, &revocationModels, false)...)
+		if diags.HasError() {
+			return nil
 		}
 		if len(revocationModels) > 0 {
 			var schemes []*ApprovalSchemes
 			if !revocationModels[0].ApprovalSchemes.IsNull() {
 				var schemeModels []ApprovalSchemeModel
-				resp.Diagnostics.Append(revocationModels[0].ApprovalSchemes.ElementsAs(ctx, &schemeModels, false)...)
-				if resp.Diagnostics.HasError() {
-					return
+				diags.Append(revocationModels[0].ApprovalSchemes.ElementsAs(ctx, &schemeModels, false)...)
+				if diags.HasError() {
+					return nil
 				}
 				for _, s := range schemeModels {
 					schemes = append(schemes, &ApprovalSchemes{ApproverType: s.ApproverType.ValueString(), ApproverId: s.ApproverID.ValueString()})
@@ -512,41 +568,13 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 		}
 	}
 
-	if !data.ProvisioningCriteria.IsNull() {
-		var criteria []ProvisioningCriteriaModel
-		resp.Diagnostics.Append(data.ProvisioningCriteria.ElementsAs(ctx, &criteria, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if len(criteria) > 0 {
-			first := criteria[0]
-			ap.ProvisioningCriteria = &ProvisioningCriteriaLevel1{
-				Operation: first.Operation.ValueString(),
-				Attribute: first.Attribute.ValueString(),
-				Value:     first.Value.ValueString(),
-			}
-			if !first.Children.IsNull() {
-				var childModels []ProvisioningCriteriaModel
-				resp.Diagnostics.Append(first.Children.ElementsAs(ctx, &childModels, false)...)
-				if !resp.Diagnostics.HasError() {
-					ap.ProvisioningCriteria.Children = make([]*ProvisioningCriteriaLevel2, 0, len(childModels))
-					for _, child := range childModels {
-						ap.ProvisioningCriteria.Children = append(ap.ProvisioningCriteria.Children, &ProvisioningCriteriaLevel2{
-							Operation: child.Operation.ValueString(),
-							Attribute: child.Attribute.ValueString(),
-							Value:     child.Value.ValueString(),
-						})
-					}
-				}
-			}
-		}
-	}
+	ap.ProvisioningCriteria = provisioningCriteriaModelToAPI(ctx, data.ProvisioningCriteria, diags)
 
 	if !data.AdditionalOwners.IsNull() {
 		var owners []AdditionalOwnerModel
-		resp.Diagnostics.Append(data.AdditionalOwners.ElementsAs(ctx, &owners, false)...)
-		if resp.Diagnostics.HasError() {
-			return
+		diags.Append(data.AdditionalOwners.ElementsAs(ctx, &owners, false)...)
+		if diags.HasError() {
+			return nil
 		}
 		ap.AdditionalOwners = make([]*AdditionalOwnerRef, 0, len(owners))
 		for _, owner := range owners {
@@ -558,29 +586,49 @@ func (r *AccessProfileResource) Create(ctx context.Context, req resource.CreateR
 		}
 	}
 
-	tflog.Info(ctx, "Creating Access Profile", map[string]interface{}{"name": ap.Name})
+	return ap
+}
 
-	client, err := r.client.IdentityNowClient(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", err.Error())
-		return
+// provisioningCriteriaModelToAPI converts up to three levels of provisioning criteria.
+func provisioningCriteriaModelToAPI(ctx context.Context, list types.List, diags *diag.Diagnostics) *ProvisioningCriteriaLevel1 {
+	if list.IsNull() || list.IsUnknown() || len(list.Elements()) == 0 {
+		return nil
 	}
-
-	newAP, err := client.CreateAccessProfile(ctx, ap)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", err.Error())
-		return
+	var criteria []ProvisioningCriteriaModel
+	diags.Append(list.ElementsAs(ctx, &criteria, false)...)
+	if len(criteria) == 0 {
+		return nil
 	}
-
-	data.ID = types.StringValue(newAP.ID)
-	if newAP.Enabled != nil {
-		data.Enabled = types.BoolValue(*newAP.Enabled)
+	level1 := &ProvisioningCriteriaLevel1{
+		Operation: criteria[0].Operation.ValueString(),
+		Attribute: criteria[0].Attribute.ValueString(),
+		Value:     criteria[0].Value.ValueString(),
 	}
-	if newAP.Requestable != nil {
-		data.Requestable = types.BoolValue(*newAP.Requestable)
+	if criteria[0].Children.IsNull() || criteria[0].Children.IsUnknown() {
+		return level1
 	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	var children []ProvisioningCriteriaModel
+	diags.Append(criteria[0].Children.ElementsAs(ctx, &children, false)...)
+	for _, child := range children {
+		level2 := &ProvisioningCriteriaLevel2{
+			Operation: child.Operation.ValueString(),
+			Attribute: child.Attribute.ValueString(),
+			Value:     child.Value.ValueString(),
+		}
+		if !child.Children.IsNull() && !child.Children.IsUnknown() {
+			var leaves []ProvisioningCriteriaLeafModel
+			diags.Append(child.Children.ElementsAs(ctx, &leaves, false)...)
+			for _, leaf := range leaves {
+				level2.Children = append(level2.Children, &ProvisioningCriteriaLevel3{
+					Operation: leaf.Operation.ValueString(),
+					Attribute: leaf.Attribute.ValueString(),
+					Value:     leaf.Value.ValueString(),
+				})
+			}
+		}
+		level1.Children = append(level1.Children, level2)
+	}
+	return level1
 }
 
 func (r *AccessProfileResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -598,7 +646,7 @@ func (r *AccessProfileResource) Read(ctx context.Context, req resource.ReadReque
 
 	ap, err := client.GetAccessProfile(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -624,139 +672,79 @@ func (r *AccessProfileResource) Update(ctx context.Context, req resource.UpdateR
 		return
 	}
 
-	// Build update patches
-	updatePatches := []*UpdateAccessProfile{
-		{Op: "replace", Path: "/description", Value: data.Description.ValueString()},
-	}
-
-	// Owner
-	if !data.Owner.IsNull() {
-		var owners []OwnerModel
-		resp.Diagnostics.Append(data.Owner.ElementsAs(ctx, &owners, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if len(owners) > 0 {
-			updatePatches = append(updatePatches, &UpdateAccessProfile{
-				Op:   "replace",
-				Path: "/owner",
-				Value: map[string]interface{}{
-					"id":   owners[0].ID.ValueString(),
-					"type": owners[0].Type.ValueString(),
-					"name": owners[0].Name.ValueString(),
-				},
-			})
-		}
-	}
-
-	// Enabled
-	if !data.Enabled.IsNull() {
-		updatePatches = append(updatePatches, &UpdateAccessProfile{
-			Op: "replace", Path: "/enabled", Value: data.Enabled.ValueBool(),
-		})
-	}
-
-	// Requestable
-	if !data.Requestable.IsNull() {
-		updatePatches = append(updatePatches, &UpdateAccessProfile{
-			Op: "replace", Path: "/requestable", Value: data.Requestable.ValueBool(),
-		})
-	}
-
-	// Entitlements - always send patch, use empty array when no entitlements are defined
-	{
-		ents := make([]map[string]interface{}, 0)
-		if !data.Entitlements.IsNull() {
-			var entModels []EntitlementRefModel
-			resp.Diagnostics.Append(data.Entitlements.ElementsAs(ctx, &entModels, false)...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			for _, em := range entModels {
-				entType := em.Type.ValueString()
-				if entType == "" {
-					entType = "ENTITLEMENT"
-				}
-				ents = append(ents, map[string]interface{}{
-					"id":   em.ID.ValueString(),
-					"name": em.Name.ValueString(),
-					"type": entType,
-				})
-			}
-		}
-		updatePatches = append(updatePatches, &UpdateAccessProfile{
-			Op: "replace", Path: "/entitlements", Value: ents,
-		})
-	}
-
-	// Access Request Config
-	if !data.AccessRequestConfig.IsNull() {
-		var arcModels []AccessRequestConfigModel
-		resp.Diagnostics.Append(data.AccessRequestConfig.ElementsAs(ctx, &arcModels, false)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if len(arcModels) > 0 {
-			arc := arcModels[0]
-			arcValue := map[string]interface{}{
-				"commentsRequired":        arc.CommentsRequired.ValueBool(),
-				"denialCommentsRequired":  arc.DenialCommentsRequired.ValueBool(),
-				"reauthorizationRequired": arc.ReauthorizationRequired.ValueBool(),
-				"requireEndDate":          arc.RequireEndDate.ValueBool(),
-			}
-
-			if !arc.ApprovalSchemes.IsNull() {
-				var schemes []ApprovalSchemeModel
-				resp.Diagnostics.Append(arc.ApprovalSchemes.ElementsAs(ctx, &schemes, false)...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				var schemeValues []map[string]interface{}
-				for _, s := range schemes {
-					schemeValues = append(schemeValues, map[string]interface{}{
-						"approverType": s.ApproverType.ValueString(),
-						"approverId":   s.ApproverID.ValueString(),
-					})
-				}
-				arcValue["approvalSchemes"] = schemeValues
-			}
-
-			if !arc.MaxPermittedAccessDuration.IsNull() {
-				var durModels []MaxPermittedAccessDurationModel
-				resp.Diagnostics.Append(arc.MaxPermittedAccessDuration.ElementsAs(ctx, &durModels, false)...)
-				if resp.Diagnostics.HasError() {
-					return
-				}
-				if len(durModels) > 0 {
-					arcValue["maxPermittedAccessDuration"] = map[string]interface{}{
-						"value":    durModels[0].Value.ValueInt64(),
-						"timeUnit": durModels[0].TimeUnit.ValueString(),
-					}
-				}
-			}
-
-			updatePatches = append(updatePatches, &UpdateAccessProfile{
-				Op: "replace", Path: "/accessRequestConfig", Value: arcValue,
-			})
-		}
-	}
-
-	_, err = client.UpdateAccessProfile(ctx, updatePatches, data.ID.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error", err.Error())
+	var state AccessProfileResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	ap := r.apiFromModel(ctx, data, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Read back from API to ensure state matches actual values
-	ap, err := client.GetAccessProfile(ctx, data.ID.ValueString())
+	var updated *AccessProfile
+	if updatePatches := accessProfilePatches(data, state, ap); len(updatePatches) > 0 {
+		updated, err = client.UpdateAccessProfile(ctx, updatePatches, data.ID.ValueString())
+	} else {
+		updated, err = client.GetAccessProfile(ctx, data.ID.ValueString())
+	}
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read access profile after update: %s", err))
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update access profile: %s", err))
 		return
 	}
-
-	r.setStateFromAPI(ctx, &data, ap, &resp.Diagnostics)
+	data.Enabled = computedBoolFromAPI(data.Enabled, updated.Enabled)
+	data.Requestable = computedBoolFromAPI(data.Requestable, updated.Requestable)
+	data.AccessModelMetadata = accessModelMetadataFillUnknown(ctx, data.AccessModelMetadata, updated.AccessModelMetadata, &resp.Diagnostics)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// accessProfilePatches builds replace operations for the fields that differ between plan and state.
+// access_model_metadata is not patchable through the access profile API, see ModifyPlan.
+func accessProfilePatches(plan, state AccessProfileResourceModel, ap *AccessProfile) []*UpdateAccessProfile {
+	var patches []*UpdateAccessProfile
+	add := func(changed bool, path string, value interface{}) {
+		if changed {
+			patches = append(patches, &UpdateAccessProfile{Op: "replace", Path: path, Value: value})
+		}
+	}
+	entitlements := ap.Entitlements
+	if entitlements == nil {
+		entitlements = []*ObjectInfo{}
+	}
+	segments := ap.Segments
+	if segments == nil {
+		segments = []string{}
+	}
+	additionalOwners := ap.AdditionalOwners
+	if additionalOwners == nil {
+		additionalOwners = []*AdditionalOwnerRef{}
+	}
+	sourceChanged := !plan.Source.Equal(state.Source)
+
+	add(!plan.Name.Equal(state.Name), "/name", ap.Name)
+	add(!plan.Description.Equal(state.Description), "/description", ap.Description)
+	add(!plan.Owner.Equal(state.Owner), "/owner", ap.AccessProfileOwner)
+	// The source can only change together with entitlements of the new source.
+	add(sourceChanged, "/source", ap.AccessProfileSource)
+	add(sourceChanged || !plan.Entitlements.Equal(state.Entitlements), "/entitlements", entitlements)
+	add(ap.Enabled != nil && !plan.Enabled.Equal(state.Enabled), "/enabled", ap.Enabled)
+	add(ap.Requestable != nil && !plan.Requestable.Equal(state.Requestable), "/requestable", ap.Requestable)
+	add(!equalIgnoringUnknown(plan.AccessRequestConfig, state.AccessRequestConfig), "/accessRequestConfig", ap.AccessRequestConfig)
+	add(!plan.RevocationRequestConfig.Equal(state.RevocationRequestConfig), "/revocationRequestConfig", ap.RevocationRequestConfig)
+	add(!plan.Segments.Equal(state.Segments), "/segments", segments)
+	add(!plan.ProvisioningCriteria.Equal(state.ProvisioningCriteria), "/provisioningCriteria", ap.ProvisioningCriteria)
+	add(!plan.AdditionalOwners.Equal(state.AdditionalOwners), "/additionalOwners", additionalOwners)
+	return patches
+}
+
+// computedBoolFromAPI resolves an optional and computed boolean after apply: a known planned
+// value is kept, an unknown one is taken from the API response or defaults to false.
+func computedBoolFromAPI(planned types.Bool, api *bool) types.Bool {
+	if !planned.IsUnknown() {
+		return planned
+	}
+	if api != nil {
+		return types.BoolValue(*api)
+	}
+	return types.BoolValue(false)
 }
 
 func (r *AccessProfileResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -774,7 +762,7 @@ func (r *AccessProfileResource) Delete(ctx context.Context, req resource.DeleteR
 
 	ap, err := client.GetAccessProfile(ctx, data.ID.ValueString())
 	if err != nil {
-		if _, notFound := err.(*NotFoundError); notFound {
+		if isNotFound(err) {
 			return
 		}
 		resp.Diagnostics.AddError("Client Error", err.Error())
@@ -791,7 +779,12 @@ func (r *AccessProfileResource) Delete(ctx context.Context, req resource.DeleteR
 		}
 
 		apId := data.ID.ValueString()
+		apSourceID := fmt.Sprintf("%v", ap.AccessProfileSource.ID)
 		for _, sa := range sourceApps {
+			// Source apps can only hold access profiles of their account source.
+			if sa.SourceAppSource != nil && sa.SourceAppSource.ID != nil && fmt.Sprintf("%v", sa.SourceAppSource.ID) != apSourceID {
+				continue
+			}
 			attachment, err := client.GetAccessProfileAttachment(ctx, sa.ID)
 			if err != nil {
 				resp.Diagnostics.AddError("Client Error",
@@ -886,28 +879,20 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		"type": types.StringType,
 	}}
 	if ap.Entitlements != nil {
-		existingOrder := make([]string, 0, len(ap.Entitlements))
-		existingEntsByID := make(map[string]EntitlementRefModel, len(ap.Entitlements))
-		if !data.Entitlements.IsNull() {
-			var existingEnts []EntitlementRefModel
-			if d := data.Entitlements.ElementsAs(ctx, &existingEnts, false); d.HasError() {
-				diags.Append(d...)
-			} else {
-				for _, existing := range existingEnts {
-					id := existing.ID.ValueString()
-					if id == "" {
-						continue
-					}
-					existingOrder = append(existingOrder, id)
-					existingEntsByID[id] = existing
-				}
-			}
+		var prior []EntitlementRefModel
+		if !data.Entitlements.IsNull() && !data.Entitlements.IsUnknown() {
+			diags.Append(data.Entitlements.ElementsAs(ctx, &prior, false)...)
+		}
+		priorByID := make(map[string]EntitlementRefModel, len(prior))
+		for _, p := range prior {
+			priorByID[p.ID.ValueString()] = p
 		}
 
 		apiModels := make([]EntitlementRefModel, 0, len(ap.Entitlements))
 		for _, e := range ap.Entitlements {
+			// Keep the configured casing when the API name differs only in case
 			name := e.Name
-			if existing, ok := existingEntsByID[fmt.Sprintf("%v", e.ID)]; ok && strings.EqualFold(existing.Name.ValueString(), name) {
+			if existing, ok := priorByID[fmt.Sprintf("%v", e.ID)]; ok && strings.EqualFold(existing.Name.ValueString(), name) {
 				name = existing.Name.ValueString()
 			}
 
@@ -922,28 +907,7 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 				Type: types.StringValue(entType),
 			})
 		}
-
-		if len(existingOrder) > 0 {
-			apiByID := make(map[string]EntitlementRefModel, len(apiModels))
-			for _, model := range apiModels {
-				apiByID[model.ID.ValueString()] = model
-			}
-			ordered := make([]EntitlementRefModel, 0, len(apiModels))
-			seen := make(map[string]struct{}, len(apiModels))
-			for _, id := range existingOrder {
-				if model, ok := apiByID[id]; ok {
-					ordered = append(ordered, model)
-					seen[id] = struct{}{}
-				}
-			}
-			for _, model := range apiModels {
-				if _, ok := seen[model.ID.ValueString()]; ok {
-					continue
-				}
-				ordered = append(ordered, model)
-			}
-			apiModels = ordered
-		}
+		apiModels = orderByPriorIDs(apiModels, prior, func(m EntitlementRefModel) string { return m.ID.ValueString() })
 
 		entList, d := types.ListValueFrom(ctx, entObjType, apiModels)
 		diags.Append(d...)
@@ -969,7 +933,7 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		"approval_schemes":              types.ListType{ElemType: approvalSchemeObjType},
 		"max_permitted_access_duration": types.ListType{ElemType: maxDurationObjType},
 	}}
-	if ap.AccessRequestConfig != nil {
+	if ap.AccessRequestConfig != nil && !(accessRequestConfigIsDefault(ap.AccessRequestConfig) && len(data.AccessRequestConfig.Elements()) == 0) {
 		arc := ap.AccessRequestConfig
 
 		var approvalSchemesList types.List
@@ -1024,6 +988,9 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		segmentList, d := types.ListValueFrom(ctx, types.StringType, ap.Segments)
 		diags.Append(d...)
 		data.Segments = segmentList
+	} else if data.Segments.IsNull() || data.Segments.IsUnknown() {
+		// segments is optional, keep it null when it is not configured
+		data.Segments = types.ListNull(types.StringType)
 	} else {
 		data.Segments, _ = types.ListValue(types.StringType, []attr.Value{})
 	}
@@ -1052,34 +1019,32 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		data.RevocationRequestConfig, _ = types.ListValue(revocationObjType, []attr.Value{})
 	}
 
-	if ap.AccessModelMetadata != nil {
-		data.AccessModelMetadata = accessModelMetadataAPIToState(ctx, ap.AccessModelMetadata, diags)
-	} else {
-		data.AccessModelMetadata = types.ListNull(accessModelMetadataObjectType())
-	}
+	data.AccessModelMetadata = accessModelMetadataReconcile(ctx, data.AccessModelMetadata, ap.AccessModelMetadata, diags)
 
-	if ap.ProvisioningCriteria != nil {
-		provisioningObjType := provisioningCriteriaObjectType()
-		criteriaModels := []ProvisioningCriteriaModel{{
-			Operation: types.StringValue(ap.ProvisioningCriteria.Operation),
-			Attribute: types.StringValue(ap.ProvisioningCriteria.Attribute),
-			Value:     types.StringValue(ap.ProvisioningCriteria.Value),
-			Children:  types.ListNull(provisioningCriteriaChildObjectType()),
-		}}
-		list, d := types.ListValueFrom(ctx, provisioningObjType, criteriaModels)
-		diags.Append(d...)
-		data.ProvisioningCriteria = list
-	} else {
-		data.ProvisioningCriteria, _ = types.ListValue(provisioningCriteriaObjectType(), []attr.Value{})
-	}
+	data.ProvisioningCriteria = provisioningCriteriaAPIToState(ctx, ap.ProvisioningCriteria, diags)
 
 	if ap.AdditionalOwners != nil {
+		// name is optional, keep it null for owners configured without a name
+		unnamed := map[string]bool{}
+		var priorOwners []AdditionalOwnerModel
+		if !data.AdditionalOwners.IsNull() && !data.AdditionalOwners.IsUnknown() {
+			diags.Append(data.AdditionalOwners.ElementsAs(ctx, &priorOwners, false)...)
+		}
+		for _, owner := range priorOwners {
+			if owner.Name.IsNull() {
+				unnamed[owner.ID.ValueString()] = true
+			}
+		}
 		ownerModels := make([]AdditionalOwnerModel, 0, len(ap.AdditionalOwners))
 		for _, owner := range ap.AdditionalOwners {
+			name := stringValueOrNull(owner.Name)
+			if unnamed[owner.ID] {
+				name = types.StringNull()
+			}
 			ownerModels = append(ownerModels, AdditionalOwnerModel{
 				Type: types.StringValue(owner.Type),
 				ID:   types.StringValue(owner.ID),
-				Name: types.StringValue(owner.Name),
+				Name: name,
 			})
 		}
 		additionalOwnersObjType := types.ObjectType{AttrTypes: map[string]attr.Type{"type": types.StringType, "id": types.StringType, "name": types.StringType}}
@@ -1089,4 +1054,47 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 	} else {
 		data.AdditionalOwners, _ = types.ListValue(types.ObjectType{AttrTypes: map[string]attr.Type{"type": types.StringType, "id": types.StringType, "name": types.StringType}}, []attr.Value{})
 	}
+}
+
+// accessRequestConfigIsDefault reports whether the API returned only default access request settings.
+func accessRequestConfigIsDefault(arc *AccessRequestConfigList) bool {
+	return !arc.CommentsRequired && !arc.DenialCommentsRequired && !arc.ReauthorizationRequired && !arc.RequireEndDate &&
+		len(arc.ApprovalSchemes) == 0 && arc.MaxPermittedAccessDuration == nil
+}
+
+// provisioningCriteriaAPIToState maps up to three levels of provisioning criteria to state.
+func provisioningCriteriaAPIToState(ctx context.Context, criteria *ProvisioningCriteriaLevel1, diags *diag.Diagnostics) types.List {
+	if criteria == nil {
+		list, _ := types.ListValue(provisioningCriteriaObjectType(), []attr.Value{})
+		return list
+	}
+	children := make([]ProvisioningCriteriaModel, 0, len(criteria.Children))
+	for _, child := range criteria.Children {
+		leaves := make([]ProvisioningCriteriaLeafModel, 0, len(child.Children))
+		for _, leaf := range child.Children {
+			leaves = append(leaves, ProvisioningCriteriaLeafModel{
+				Operation: types.StringValue(leaf.Operation),
+				Attribute: stringValueOrNull(leaf.Attribute),
+				Value:     stringValueOrNull(leaf.Value),
+			})
+		}
+		leafList, d := types.ListValueFrom(ctx, provisioningCriteriaLeafObjectType(), leaves)
+		diags.Append(d...)
+		children = append(children, ProvisioningCriteriaModel{
+			Operation: types.StringValue(child.Operation),
+			Attribute: stringValueOrNull(child.Attribute),
+			Value:     stringValueOrNull(child.Value),
+			Children:  leafList,
+		})
+	}
+	childList, d := types.ListValueFrom(ctx, provisioningCriteriaChildObjectType(), children)
+	diags.Append(d...)
+	list, d := types.ListValueFrom(ctx, provisioningCriteriaObjectType(), []ProvisioningCriteriaModel{{
+		Operation: types.StringValue(criteria.Operation),
+		Attribute: stringValueOrNull(criteria.Attribute),
+		Value:     stringValueOrNull(criteria.Value),
+		Children:  childList,
+	}})
+	diags.Append(d...)
+	return list
 }

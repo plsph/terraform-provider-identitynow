@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -20,16 +21,22 @@ type Client struct {
 	BaseURL      string
 	clientId     string
 	clientSecret string
-	accessToken  string
 	HTTPClient   *http.Client
-	tokenExpiry  time.Time
-	loggerCtx    context.Context
 	rateLimiter  *rate.Limiter
+
+	// tokenMux guards accessToken and tokenExpiry, refreshMux serializes token refreshes.
+	tokenMux    sync.Mutex
+	refreshMux  sync.Mutex
+	accessToken string
+	tokenExpiry time.Time
 }
 
 type errorResponse struct {
 	DetailCode string `json:"detailCode"`
-	Messages   []struct {
+	// Error and ErrorDescription are set by OAuth and authentication errors instead of Messages.
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+	Messages         []struct {
 		Locale       string `json:"locale"`
 		LocaleOrigen string `json:"localeOrigin"`
 		Text         string `json:"text"`
@@ -37,13 +44,12 @@ type errorResponse struct {
 }
 
 func NewClient(ctx context.Context, baseURL string, clientId string, secret string, rateLimit int) *Client {
-	subctx := tflog.NewSubsystem(ctx, "identitynow")
-	// Mask the client_secret if it ever appears as a field
-	subctx = tflog.MaskFieldValuesWithFieldKeys(subctx, "client_secret")
-
 	// Normalize baseURL by removing trailing slash
 	baseURL = strings.TrimSuffix(baseURL, "/")
 
+	if rateLimit < 1 {
+		rateLimit = 1
+	}
 	// Create rate limiter: [rateLimit] requests per second with burst of 1
 	limiter := rate.NewLimiter(rate.Limit(rateLimit), 1)
 
@@ -51,12 +57,42 @@ func NewClient(ctx context.Context, baseURL string, clientId string, secret stri
 		BaseURL:      baseURL,
 		clientId:     clientId,
 		clientSecret: secret,
-		loggerCtx:    subctx,
 		rateLimiter:  limiter,
 		HTTPClient: &http.Client{
 			Timeout: time.Minute,
 		},
 	}
+}
+
+// token returns the current access token.
+func (c *Client) token() string {
+	c.tokenMux.Lock()
+	defer c.tokenMux.Unlock()
+	return c.accessToken
+}
+
+// isTokenValid reports whether the access token is set and not expired.
+func (c *Client) isTokenValid() bool {
+	c.tokenMux.Lock()
+	defer c.tokenMux.Unlock()
+	return c.accessToken != "" && time.Now().Before(c.tokenExpiry)
+}
+
+// invalidateToken forces the next ensureToken call to fetch a new token.
+func (c *Client) invalidateToken() {
+	c.tokenMux.Lock()
+	defer c.tokenMux.Unlock()
+	c.tokenExpiry = time.Time{}
+}
+
+// ensureToken fetches a new access token if the current one is missing or expired.
+func (c *Client) ensureToken(ctx context.Context) error {
+	c.refreshMux.Lock()
+	defer c.refreshMux.Unlock()
+	if c.isTokenValid() {
+		return nil
+	}
+	return c.GetToken(ctx)
 }
 
 func (c *Client) GetToken(ctx context.Context) error {
@@ -68,21 +104,23 @@ func (c *Client) GetToken(ctx context.Context) error {
 		return fmt.Errorf("rate limiting failed: %w", err)
 	}
 
-	tflog.Debug(ctx, "Obtaining OAuth token from IdentityNow", map[string]interface{}{
-		"base_url":  c.BaseURL,
+	tokenURL := fmt.Sprintf("%s/oauth/token", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request for OAuth token", map[string]interface{}{
+		"method":    "POST",
+		"url":       tokenURL,
 		"client_id": c.clientId,
 	})
-
-	tokenURL := fmt.Sprintf("%s/oauth/token?grant_type=client_credentials&client_id=%s&client_secret=%s", c.BaseURL, c.clientId, c.clientSecret)
-	tflog.Debug(ctx, "Creating HTTP request for OAuth token", map[string]interface{}{
-		"method": "POST",
-		"url":    c.BaseURL + "/oauth/token", // Don't log credentials in URL
-	})
-	req, err := http.NewRequest("POST", tokenURL, nil)
+	// Credentials go in the form body, so they are never part of a URL that may appear in errors or logs.
+	form := url.Values{}
+	form.Set("grant_type", "client_credentials")
+	form.Set("client_id", c.clientId)
+	form.Set("client_secret", c.clientSecret)
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return err
 	}
 
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req = req.WithContext(ctx)
 
@@ -99,8 +137,15 @@ func (c *Client) GetToken(ctx context.Context) error {
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
 		var errRes errorResponse
 		err = json.NewDecoder(res.Body).Decode(&errRes)
-		if err == nil && len(errRes.Messages) > 0 {
-			return errors.New(errRes.Messages[0].Text)
+		if err == nil {
+			switch {
+			case len(errRes.Messages) > 0:
+				return fmt.Errorf("failed to get token (HTTP %d): %s", res.StatusCode, errRes.Messages[0].Text)
+			case errRes.ErrorDescription != "":
+				return fmt.Errorf("failed to get token (HTTP %d): %s", res.StatusCode, errRes.ErrorDescription)
+			case errRes.Error != "":
+				return fmt.Errorf("failed to get token (HTTP %d): %s", res.StatusCode, errRes.Error)
+			}
 		}
 		tflog.Debug(ctx, "Failed to get OAuth token", map[string]interface{}{
 			"status_code": res.StatusCode,
@@ -121,9 +166,12 @@ func (c *Client) GetToken(ctx context.Context) error {
 		"token_type": tokenRes.TokenType,
 	})
 
-	c.accessToken = tokenRes.AccessToken
+	if tokenRes.AccessToken == "" {
+		return errors.New("access token is empty in OAuth token response")
+	}
 
 	// Set expiry with a safety margin and better validation
+	var tokenExpiry time.Time
 	if tokenRes.ExpiresIn > 0 {
 		expirationDuration := time.Duration(tokenRes.ExpiresIn) * time.Second
 		// Subtract 5 minutes as safety margin to refresh before actual expiry
@@ -131,27 +179,31 @@ func (c *Client) GetToken(ctx context.Context) error {
 		if expirationDuration > safetyMargin {
 			expirationDuration -= safetyMargin
 		}
-		c.tokenExpiry = time.Now().Add(expirationDuration)
+		tokenExpiry = time.Now().Add(expirationDuration)
 
 		tflog.Debug(ctx, "Token expiry set", map[string]interface{}{
 			"expires_in_seconds": tokenRes.ExpiresIn,
-			"token_expiry":       c.tokenExpiry.Format(time.RFC3339),
+			"token_expiry":       tokenExpiry.Format(time.RFC3339),
 		})
 	} else {
 		// Fallback: set a default expiry of 1 hour if expires_in is missing or invalid
-		c.tokenExpiry = time.Now().Add(1 * time.Hour)
+		tokenExpiry = time.Now().Add(1 * time.Hour)
 		tflog.Warn(ctx, "expires_in field missing or invalid, using default 1 hour expiry", map[string]interface{}{
 			"expires_in_received": tokenRes.ExpiresIn,
-			"default_expiry":      c.tokenExpiry.Format(time.RFC3339),
+			"default_expiry":      tokenExpiry.Format(time.RFC3339),
 		})
 	}
+
+	c.tokenMux.Lock()
+	c.accessToken = tokenRes.AccessToken
+	c.tokenExpiry = tokenExpiry
+	c.tokenMux.Unlock()
 
 	return nil
 }
 
 func (c *Client) GetSourceByName(ctx context.Context, name string) ([]*Source, error) {
-	filter := fmt.Sprintf("name eq \"%s\"", name)
-	sourceURL := fmt.Sprintf("%s/v2026/sources?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	sourceURL := fmt.Sprintf("%s/v2026/sources?filters=%s", c.BaseURL, url.QueryEscape(eqFilter("name", name)))
 	tflog.Debug(ctx, "Creating HTTP request to get source", map[string]interface{}{
 		"method":      "GET",
 		"url":         sourceURL,
@@ -278,10 +330,6 @@ func (c *Client) AddConnectorAttributesToMicrosoftEntraSource(ctx context.Contex
 		})
 		return nil, fmt.Errorf("failed to marshal updateSource: %w", err)
 	}
-	tflog.Debug(ctx, "UpdateSource request body", map[string]interface{}{
-		"body": string(body),
-	})
-
 	// Create the HTTP PATCH request
 	patchURL := fmt.Sprintf("%s/v2026/sources/%s", c.BaseURL, source.ID)
 	tflog.Debug(ctx, "Creating HTTP request to add connector attributes to Microsoft Entra source", map[string]interface{}{
@@ -309,18 +357,13 @@ func (c *Client) AddConnectorAttributesToMicrosoftEntraSource(ctx context.Contex
 		return nil, fmt.Errorf("failed to update source: %w", err)
 	}
 
-	resBody, _ := json.MarshalIndent(res, "", "  ")
-	tflog.Debug(ctx, "Response body received", map[string]interface{}{
-		"response": string(resBody),
-	})
-
 	return &res, nil
 }
 
 func (c *Client) CreateSource(ctx context.Context, source *Source) (*Source, error) {
 	var res *Source
 
-	if source.Connector == "Microsoft-Entra" {
+	if source.Connector == "Microsoft-Entra" && source.ConnectorAttributes != nil {
 		newSource := *source
 		newSource.ConnectorAttributes = nil
 
@@ -330,10 +373,11 @@ func (c *Client) CreateSource(ctx context.Context, source *Source) (*Source, err
 			return nil, err
 		}
 		source.ID = sourceResponse.ID
-		// Add connector attributes
+		// Add connector attributes. On failure the created source is returned with the error,
+		// so the caller can track it instead of leaving it orphaned.
 		res, err = c.AddConnectorAttributesToMicrosoftEntraSource(ctx, source)
 		if err != nil {
-			return nil, err
+			return sourceResponse, err
 		}
 	} else {
 		var err error
@@ -346,36 +390,30 @@ func (c *Client) CreateSource(ctx context.Context, source *Source) (*Source, err
 	return res, nil
 }
 
-func (c *Client) UpdateSource(ctx context.Context, source *Source) (*Source, error) {
-	body, err := json.Marshal(&source)
+func (c *Client) UpdateSource(ctx context.Context, id string, patches []*UpdateSource) (*Source, error) {
+	body, err := json.Marshal(patches)
 	if err != nil {
 		return nil, err
 	}
-	updateURL := fmt.Sprintf("%s/v2026/sources/%s", c.BaseURL, source.ID)
+	updateURL := fmt.Sprintf("%s/v2026/sources/%s", c.BaseURL, url.PathEscape(id))
 	tflog.Debug(ctx, "Creating HTTP request to update source", map[string]interface{}{
-		"method":    "PUT",
+		"method":    "PATCH",
 		"url":       updateURL,
-		"source_id": source.ID,
+		"source_id": id,
 	})
-	req, err := http.NewRequest("PUT", updateURL, bytes.NewBuffer(body))
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
 	if err != nil {
-		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{
-			"error": err.Error(),
-		})
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
 	req.Header.Set("Accept", "application/json; charset=utf-8")
-
 	req = req.WithContext(ctx)
 
 	res := Source{}
 	if err := c.sendRequest(ctx, req, &res); err != nil {
-		tflog.Error(ctx, "Failed source update", map[string]interface{}{
-			"error":    err.Error(),
-			"response": fmt.Sprintf("%+v", res),
-		})
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
 		return nil, err
 	}
 
@@ -414,153 +452,76 @@ func (c *Client) DeleteSource(ctx context.Context, source *Source) error {
 }
 
 func (c *Client) GetAccessProfileByName(ctx context.Context, name string) ([]*AccessProfile, error) {
-	filter := fmt.Sprintf("name eq \"%s\"", name)
-	profileURL := fmt.Sprintf("%s/v2026/access-profiles?filters=%s", c.BaseURL, url.QueryEscape(filter))
-	tflog.Debug(ctx, "Creating HTTP request to get access profile", map[string]interface{}{
+	requestURL := fmt.Sprintf("%s/v2026/access-profiles?filters=%s", c.BaseURL, url.QueryEscape(eqFilter("name", name)))
+	tflog.Debug(ctx, "Creating HTTP request for GetAccessProfileByName", map[string]interface{}{
 		"method": "GET",
-		"url":    profileURL,
+		"url":    requestURL,
 		"name":   name,
 	})
-	maxRetries := 3
-	retryDelay := 3 * time.Second
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest("GET", profileURL, nil)
-		if err != nil {
-			tflog.Error(ctx, "Failed to create HTTP request for access profile", map[string]interface{}{
-				"name":  name,
-				"error": err.Error(),
-			})
-			return nil, err
-		}
-
-		req = req.WithContext(ctx)
-
-		res := []*AccessProfile{}
-		if err := c.sendRequest(ctx, req, &res); err != nil {
-			tflog.Error(ctx, "Failed to get access profile", map[string]interface{}{
-				"name":  name,
-				"error": err.Error(),
-			})
-			if (attempt < maxRetries) &&
-				(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-				backoffDelay := time.Duration(attempt) * retryDelay
-				time.Sleep(backoffDelay)
-				continue
-			}
-			return nil, err
-		}
-		tflog.Debug(ctx, "Successfully retrieved access profile", map[string]interface{}{
-			"name": name,
-		})
-
-		return res, nil
-	}
-	return nil, errors.New("dead code")
-}
-
-func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfile, error) {
-	profileURL := fmt.Sprintf("%s/v2026/access-profiles/%s", c.BaseURL, id)
-	tflog.Debug(ctx, "Creating HTTP request to get access profile", map[string]interface{}{
-		"method":     "GET",
-		"url":        profileURL,
-		"profile_id": id,
-	})
-	maxRetries := 3
-	retryDelay := 3 * time.Second
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest("GET", profileURL, nil)
-		if err != nil {
-			tflog.Error(ctx, "Failed to create HTTP request for access profile", map[string]interface{}{
-				"profile_id": id,
-				"error":      err.Error(),
-			})
-			return nil, err
-		}
-
-		req = req.WithContext(ctx)
-
-		res := AccessProfile{}
-		if err := c.sendRequest(ctx, req, &res); err != nil {
-			tflog.Error(ctx, "Failed to get access profile", map[string]interface{}{
-				"profile_id": id,
-				"error":      err.Error(),
-			})
-			if (attempt < maxRetries) &&
-				(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-				backoffDelay := time.Duration(attempt) * retryDelay
-				time.Sleep(backoffDelay)
-				continue
-			}
-			return nil, err
-		}
-		tflog.Debug(ctx, "Successfully retrieved access profile", map[string]interface{}{
-			"profile_id": id,
-		})
-
-		return &res, nil
-	}
-	return nil, errors.New("dead code")
-}
-
-func (c *Client) GetSourceEntitlements(ctx context.Context, id string) ([]*SourceEntitlement, error) {
-	entitlementsURL := fmt.Sprintf("%s/v2026/entitlements?filters=source.id", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", id)
-	tflog.Debug(ctx, "Creating HTTP request to get source entitlements", map[string]interface{}{
-		"method":    "GET",
-		"url":       entitlementsURL,
-		"source_id": id,
-	})
-	req, err := http.NewRequest("GET", entitlementsURL, nil)
+	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
 
-	req = req.WithContext(ctx)
+	req.Header.Set("Accept", "application/json; charset=utf-8")
 
-	var res []*SourceEntitlement
+	res := []*AccessProfile{}
 	if err := c.sendRequest(ctx, req, &res); err != nil {
-		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-		// Error already logged above
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
+
 	return res, nil
 }
 
+func (c *Client) GetAccessProfile(ctx context.Context, id string) (*AccessProfile, error) {
+	requestURL := fmt.Sprintf("%s/v2026/access-profiles/%s", c.BaseURL, url.PathEscape(id))
+	tflog.Debug(ctx, "Creating HTTP request for GetAccessProfile", map[string]interface{}{
+		"method":     "GET",
+		"url":        requestURL,
+		"profile_id": id,
+	})
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	res := AccessProfile{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
 func (c *Client) GetSourceEntitlement(ctx context.Context, id string, nameFilter string) ([]*SourceEntitlement, error) {
-	filter := fmt.Sprintf("source.id eq \"%s\" and (name eq \"%s\")", id, nameFilter)
-	entitlementURL := fmt.Sprintf("%s/v2026/entitlements?filters=%s", c.BaseURL, url.QueryEscape(filter))
-	tflog.Debug(ctx, "Creating HTTP request to get source entitlement", map[string]interface{}{
+	requestURL := fmt.Sprintf("%s/v2026/entitlements?filters=%s", c.BaseURL, url.QueryEscape(fmt.Sprintf("%s and (%s)", eqFilter("source.id", id), eqFilter("name", nameFilter))))
+	tflog.Debug(ctx, "Creating HTTP request for GetSourceEntitlement", map[string]interface{}{
 		"method":      "GET",
-		"url":         entitlementURL,
+		"url":         requestURL,
 		"source_id":   id,
 		"name_filter": nameFilter,
 	})
-
-	maxRetries := 3
-	retryDelay := 3 * time.Second
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest("GET", entitlementURL, nil)
-		if err != nil {
-			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error(), "attempt": attempt})
-			return nil, err
-		}
-
-		req = req.WithContext(ctx)
-
-		var res []*SourceEntitlement
-		if err := c.sendRequest(ctx, req, &res); err != nil {
-			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-			if (attempt < maxRetries) &&
-				(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-				backoffDelay := time.Duration(attempt) * retryDelay
-				time.Sleep(backoffDelay)
-				continue
-			}
-			return nil, err
-		}
-		return res, nil
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
 	}
-	return nil, errors.New("dead code")
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	res := []*SourceEntitlement{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c *Client) CreateAccessProfile(ctx context.Context, accessProfile *AccessProfile) (*AccessProfile, error) {
@@ -780,74 +741,51 @@ func (c *Client) DeleteRole(ctx context.Context, role *Role) (*Role, error) {
 }
 
 func (c *Client) GetIdentityByAlias(ctx context.Context, alias string) ([]*Identity, error) {
-	identityURL := fmt.Sprintf("%s/v2026/identities?filters=alias", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", alias)
-	tflog.Debug(ctx, "Creating HTTP request to get identity by alias", map[string]interface{}{
+	requestURL := fmt.Sprintf("%s/v2026/identities?filters=%s", c.BaseURL, url.QueryEscape(eqFilter("alias", alias)))
+	tflog.Debug(ctx, "Creating HTTP request for GetIdentityByAlias", map[string]interface{}{
 		"method": "GET",
-		"url":    identityURL,
+		"url":    requestURL,
 		"alias":  alias,
 	})
-	req, err := http.NewRequest("GET", identityURL, nil)
-
+	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
-	tflog.Debug(ctx, "GetIdentity request details", map[string]interface{}{"request": fmt.Sprintf("%+v", req)})
 
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 
-	req = req.WithContext(ctx)
-
-	var res []*Identity
+	res := []*Identity{}
 	if err := c.sendRequest(ctx, req, &res); err != nil {
-		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-		// Error already logged above
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
 		return nil, err
 	}
-
-	tflog.Debug(ctx, "GetIdentity response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
 
 	return res, nil
 }
 
 func (c *Client) GetIdentityByEmail(ctx context.Context, email string) ([]*Identity, error) {
-	identityURL := fmt.Sprintf("%s/v2026/identities?filters=email", c.BaseURL) + url.QueryEscape(" eq ") + fmt.Sprintf("\"%s\"", email)
-	tflog.Debug(ctx, "Creating HTTP request to get identity by email", map[string]interface{}{
+	requestURL := fmt.Sprintf("%s/v2026/identities?filters=%s", c.BaseURL, url.QueryEscape(eqFilter("email", email)))
+	tflog.Debug(ctx, "Creating HTTP request for GetIdentityByEmail", map[string]interface{}{
 		"method": "GET",
-		"url":    identityURL,
+		"url":    requestURL,
 		"email":  email,
 	})
-
-	maxRetries := 3
-	retryDelay := 3 * time.Second
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest("GET", identityURL, nil)
-		if err != nil {
-			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-			return nil, err
-		}
-		tflog.Debug(ctx, "GetIdentity request details", map[string]interface{}{"request": fmt.Sprintf("%+v", req)})
-
-		req.Header.Set("Accept", "application/json; charset=utf-8")
-
-		req = req.WithContext(ctx)
-
-		var res []*Identity
-		if err := c.sendRequest(ctx, req, &res); err != nil {
-			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-			if (attempt < maxRetries) &&
-				(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-				backoffDelay := time.Duration(attempt) * retryDelay
-				time.Sleep(backoffDelay)
-				continue
-			}
-			return nil, err
-		}
-		tflog.Debug(ctx, "GetIdentity response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-
-		return res, nil
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
 	}
-	return nil, errors.New("dead code")
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	res := []*Identity{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c *Client) GetAccountAggregationSchedule(ctx context.Context, id string) (*AccountAggregationSchedule, error) {
@@ -872,10 +810,16 @@ func (c *Client) GetAccountAggregationSchedule(ctx context.Context, id string) (
 		return nil, err
 	}
 
+	if len(res) == 0 {
+		return nil, &NotFoundError{fmt.Sprintf("no account aggregation schedule for source %q", id)}
+	}
 	return &res[0], nil
 }
 
 func (c *Client) ManageAccountAggregationSchedule(ctx context.Context, scheduleAggregation *AccountAggregationSchedule, enable bool) (*AccountAggregationSchedule, error) {
+	if len(scheduleAggregation.CronExpressions) == 0 {
+		return nil, errors.New("at least one cron expression is required")
+	}
 	endpoint := fmt.Sprintf("%s/cc/api/source/scheduleAggregation/%s", c.BaseURL, scheduleAggregation.SourceID)
 	data := url.Values{}
 	data.Set("enable", fmt.Sprintf("%t", enable))
@@ -965,38 +909,6 @@ func (c *Client) UpdateAccountSchema(ctx context.Context, accountSchema *Account
 	return &res, nil
 }
 
-func (c *Client) DeleteAccountSchema(ctx context.Context, accountSchema *AccountSchema) error {
-	endpoint := fmt.Sprintf("%s/v2026/sources/%s/schemas/%s", c.BaseURL, accountSchema.SourceID, accountSchema.ID)
-
-	client := &http.Client{}
-
-	tflog.Debug(ctx, "Creating HTTP request to delete account schema", map[string]interface{}{
-		"method":    "DELETE",
-		"url":       endpoint,
-		"source_id": accountSchema.SourceID,
-		"schema_id": accountSchema.ID,
-	})
-	req, err := http.NewRequest("DELETE", endpoint, nil)
-
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-	req.Header.Set("Accept", "application/json; charset=utf-8")
-
-	req = req.WithContext(ctx)
-	res, err := client.Do(req)
-
-	if err != nil {
-		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-		// Error already logged above
-		return err
-	}
-
-	return nil
-}
-
 func (c *Client) CreatePasswordPolicy(ctx context.Context, passwordPolicy *PasswordPolicy) (*PasswordPolicy, error) {
 	body, err := json.Marshal(&passwordPolicy)
 	if err != nil {
@@ -1034,10 +946,11 @@ func (c *Client) UpdatePasswordPolicy(ctx context.Context, passwordPolicy *Passw
 	if err != nil {
 		return nil, err
 	}
-	policyURL := fmt.Sprintf("%s/v2026/password-policies", c.BaseURL)
+	policyURL := fmt.Sprintf("%s/v2026/password-policies/%s", c.BaseURL, url.PathEscape(passwordPolicy.ID))
 	tflog.Debug(ctx, "Creating HTTP request to update password policy", map[string]interface{}{
-		"method": "PUT",
-		"url":    policyURL,
+		"method":    "PUT",
+		"url":       policyURL,
+		"policy_id": passwordPolicy.ID,
 	})
 	req, err := http.NewRequest("PUT", policyURL, bytes.NewBuffer(body))
 	if err != nil {
@@ -1102,30 +1015,8 @@ func (c *Client) DeletePasswordPolicy(ctx context.Context, passwordPolicyId stri
 
 	req = req.WithContext(ctx)
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
-	res, err := c.HTTPClient.Do(req)
-	if err != nil {
-		tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
-		return err
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
-		var errRes errorResponse
-		err = json.NewDecoder(res.Body).Decode(&errRes)
-		if err == nil {
-			if res.StatusCode == http.StatusNotFound {
-				return &NotFoundError{errRes.Messages[0].Text}
-			} else {
-				return errors.New(errRes.Messages[0].Text)
-			}
-		}
-
-		return fmt.Errorf("unknown error, status code: %d", res.StatusCode)
-	}
-
-	return nil
+	var res interface{}
+	return c.sendRequest(ctx, req, &res)
 }
 
 func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *GovernanceGroup) (*GovernanceGroup, error) {
@@ -1162,102 +1053,56 @@ func (c *Client) CreateGovernanceGroup(ctx context.Context, governanceGroup *Gov
 }
 
 func (c *Client) GetGovernanceGroupByName(ctx context.Context, name string) ([]*GovernanceGroup, error) {
-	filter := fmt.Sprintf("name eq \"%s\"", name)
-	workgroupURL := fmt.Sprintf("%s/v2026/workgroups?filters=%s", c.BaseURL, url.QueryEscape(filter))
-	tflog.Debug(ctx, "Creating HTTP request to get governance group by name", map[string]interface{}{
+	requestURL := fmt.Sprintf("%s/v2026/workgroups?filters=%s", c.BaseURL, url.QueryEscape(eqFilter("name", name)))
+	tflog.Debug(ctx, "Creating HTTP request for GetGovernanceGroupByName", map[string]interface{}{
 		"method": "GET",
-		"url":    workgroupURL,
+		"url":    requestURL,
 		"name":   name,
 	})
-	maxRetries := 3
-	retryDelay := 3 * time.Second
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest("GET", workgroupURL, nil)
-		if err != nil {
-			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-			return nil, err
-		}
-
-		req.Header.Set("Accept", "application/json; charset=utf-8")
-		req.Header.Set("X-SailPoint-Experimental", "true")
-
-		req = req.WithContext(ctx)
-
-		res := []*GovernanceGroup{}
-		if err := c.sendRequest(ctx, req, &res); err != nil {
-			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-			if (attempt < maxRetries) &&
-				(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-				backoffDelay := time.Duration(attempt) * retryDelay
-				time.Sleep(backoffDelay)
-				continue
-			}
-			return nil, err
-		}
-		tflog.Debug(ctx, "GetGovernanceGroup response details", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-
-		return res, nil
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
 	}
-	return nil, errors.New("dead code")
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	res := []*GovernanceGroup{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (c *Client) GetGovernanceGroups(ctx context.Context, id string) (*GovernanceGroup, error) {
-	limit := 250
-	offset := 0
-	maxRetries := 3
-	retryDelay := 3 * time.Second
-
-	for {
-		filter := fmt.Sprintf("id eq \"%s\"", id)
-		workgroupURL := fmt.Sprintf("%s/v2026/workgroups?filters=%s&limit=%d&offset=%d", c.BaseURL, url.QueryEscape(filter), limit, offset)
-		tflog.Debug(ctx, "Creating HTTP request to get governance groups", map[string]interface{}{
-			"method":   "GET",
-			"url":      workgroupURL,
-			"group_id": id,
-			"limit":    limit,
-			"offset":   offset,
-		})
-
-		pageResult := []*GovernanceGroup{}
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			req, err := http.NewRequest("GET", workgroupURL, nil)
-			if err != nil {
-				tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-				return nil, err
-			}
-
-			req.Header.Set("Accept", "application/json; charset=utf-8")
-			req.Header.Set("X-SailPoint-Experimental", "true")
-
-			req = req.WithContext(ctx)
-
-			if err := c.sendRequest(ctx, req, &pageResult); err != nil {
-				tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", pageResult)})
-				if (attempt < maxRetries) &&
-					(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-					backoffDelay := time.Duration(attempt) * retryDelay
-					time.Sleep(backoffDelay)
-					continue
-				}
-				return nil, err
-			}
-
-			break
-		}
-
-		tflog.Debug(ctx, "GetGovernanceGroups response details", map[string]interface{}{"response": fmt.Sprintf("%+v", pageResult)})
-		if len(pageResult) > 0 {
-			return pageResult[0], nil
-		}
-
-		if len(pageResult) < limit {
-			break
-		}
-
-		offset += limit
+	requestURL := fmt.Sprintf("%s/v2026/workgroups?filters=%s", c.BaseURL, url.QueryEscape(eqFilter("id", id)))
+	tflog.Debug(ctx, "Creating HTTP request for GetGovernanceGroups", map[string]interface{}{
+		"method":   "GET",
+		"url":      requestURL,
+		"group_id": id,
+	})
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
 	}
 
-	return nil, &NotFoundError{"status not found"}
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req.Header.Set("X-SailPoint-Experimental", "true")
+
+	res := []*GovernanceGroup{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	if len(res) == 0 {
+		return nil, &NotFoundError{fmt.Sprintf("governance group %q not found", id)}
+	}
+	return res[0], nil
 }
 
 func (c *Client) UpdateGovernanceGroup(ctx context.Context, governanceGroup []*UpdateGovernanceGroup, id interface{}) (*GovernanceGroup, error) {
@@ -1360,8 +1205,7 @@ func (c *Client) GetSourceAppsAll(ctx context.Context) ([]*SourceApp, error) {
 }
 
 func (c *Client) GetSourceAppByName(ctx context.Context, name string) ([]*SourceApp, error) {
-	filter := fmt.Sprintf("name eq \"%s\"", name)
-	sourceAppURL := fmt.Sprintf("%s/v2026/source-apps/all?filters=%s", c.BaseURL, url.QueryEscape(filter))
+	sourceAppURL := fmt.Sprintf("%s/v2026/source-apps/all?filters=%s", c.BaseURL, url.QueryEscape(eqFilter("name", name)))
 	tflog.Debug(ctx, "Creating HTTP request to get source app by name", map[string]interface{}{
 		"method":   "GET",
 		"url":      sourceAppURL,
@@ -1512,42 +1356,28 @@ func (c *Client) GetAccessProfileAttachment(ctx context.Context, id string) (*Ac
 	var accessProfiles []string
 	offset := 0
 	limit := 250
-	maxRetries := 3
-	retryDelay := 3 * time.Second
 	for {
-		url := fmt.Sprintf("%s/v2026/source-apps/%s/access-profiles?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
+		pageURL := fmt.Sprintf("%s/v2026/source-apps/%s/access-profiles?limit=%d&offset=%d", c.BaseURL, url.PathEscape(id), limit, offset)
+		req, err := http.NewRequest("GET", pageURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+		req.Header.Set("X-SailPoint-Experimental", "true")
+
 		var res []AccessProfileFromSourceApp
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			req, err := http.NewRequest("GET", url, nil)
-			if err != nil {
-				tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-				return nil, err
-			}
-
-			req.Header.Set("X-SailPoint-Experimental", "true")
-			req = req.WithContext(ctx)
-
-			res = nil
-			if err := c.sendRequest(ctx, req, &res); err != nil {
-				tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res), "attempt": attempt})
-				if attempt < maxRetries && (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-					backoffDelay := time.Duration(attempt) * retryDelay
-					time.Sleep(backoffDelay)
-					continue
-				}
-				return nil, err
-			}
-			break
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
+			return nil, err
 		}
 
 		for _, ap := range res {
 			accessProfiles = append(accessProfiles, ap.ID)
 		}
 
-		if len(res) < limit-1 {
+		if len(res) < limit {
 			break
 		}
-
 		offset += limit
 	}
 
@@ -1689,47 +1519,33 @@ func (c *Client) GetGovernanceGroupMembers(ctx context.Context, id string) (*Gov
 	governanceGroupMembersMembers := []*GovernanceGroupMembersMembers{}
 	offset := 0
 	limit := 50
-	maxRetries := 3
-	retryDelay := 3 * time.Second
 	for {
-		url := fmt.Sprintf("%s/v2026/workgroups/%s/members?limit=%d&offset=%d", c.BaseURL, id, limit, offset)
+		pageURL := fmt.Sprintf("%s/v2026/workgroups/%s/members?limit=%d&offset=%d", c.BaseURL, url.PathEscape(id), limit, offset)
 		tflog.Debug(ctx, "Creating HTTP request to get governance group members", map[string]interface{}{
 			"method":              "GET",
-			"url":                 url,
+			"url":                 pageURL,
 			"governance_group_id": id,
 		})
+		req, err := http.NewRequest("GET", pageURL, nil)
+		if err != nil {
+			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
+		req.Header.Set("X-SailPoint-Experimental", "true")
+
 		var res []GovernanceGroupMembersMembers
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			req, err := http.NewRequest("GET", url, nil)
-			if err != nil {
-				tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-				return nil, err
-			}
+		if err := c.sendRequest(ctx, req, &res); err != nil {
+			tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
+			return nil, err
+		}
 
-			req.Header.Set("X-SailPoint-Experimental", "true")
-			req = req.WithContext(ctx)
+		for i := range res {
+			governanceGroupMembersMembers = append(governanceGroupMembersMembers, &res[i])
+		}
 
-			res = nil
-			if err := c.sendRequest(ctx, req, &res); err != nil {
-				tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res), "attempt": attempt})
-				if attempt < maxRetries && (err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-					backoffDelay := time.Duration(attempt) * retryDelay
-					time.Sleep(backoffDelay)
-					continue
-				}
-				return nil, err
-			}
+		if len(res) < limit {
 			break
 		}
-
-		for _, govgmem := range res {
-			governanceGroupMembersMembers = append(governanceGroupMembersMembers, &govgmem)
-		}
-
-		if len(res) < limit-1 {
-			break
-		}
-
 		offset += limit
 	}
 
@@ -1907,9 +1723,10 @@ func (c *Client) DeleteGovernanceGroupMembers(ctx context.Context, governanceGro
 		return err
 	}
 
+	// Members that are already gone (404) count as removed.
 	allSuccessful := true
 	for _, member := range res {
-		if member.Status != 204 {
+		if member.Status != http.StatusNoContent && member.Status != http.StatusNotFound {
 			allSuccessful = false
 			break
 		}
@@ -1932,33 +1749,20 @@ func (c *Client) GetTaggedObject(ctx context.Context, objectType string, objectI
 		"object_id":   objectID,
 	})
 
-	maxRetries := 3
-	retryDelay := 3 * time.Second
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest("GET", taggedObjectURL, nil)
-		if err != nil {
-			tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
-			return nil, err
-		}
-
-		req.Header.Set("Accept", "application/json; charset=utf-8")
-		req = req.WithContext(ctx)
-
-		res := TaggedObject{}
-		if err := c.sendRequest(ctx, req, &res); err != nil {
-			tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
-			if (attempt < maxRetries) &&
-				(err.Error() == "rate limit exceeded (429)" || err.Error() == "Gateway Timeout error (504)") {
-				backoffDelay := time.Duration(attempt) * retryDelay
-				time.Sleep(backoffDelay)
-				continue
-			}
-			return nil, err
-		}
-
-		return &res, nil
+	req, err := http.NewRequest("GET", taggedObjectURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
 	}
-	return nil, errors.New("dead code")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+
+	res := TaggedObject{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	return &res, nil
 }
 
 func (c *Client) SetTaggedObject(ctx context.Context, taggedObject *TaggedObject) (*TaggedObject, error) {
@@ -2062,19 +1866,25 @@ func (c *Client) GetSegment(ctx context.Context, id string) (*Segment, error) {
 }
 
 func (c *Client) GetSegments(ctx context.Context) ([]*Segment, error) {
-	segmentURL := fmt.Sprintf("%s/v2026/segments?limit=250&offset=0", c.BaseURL)
-	req, err := http.NewRequest("GET", segmentURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json; charset=utf-8")
-	req = req.WithContext(ctx)
+	const limit = 250
+	var segments []*Segment
+	for offset := 0; ; offset += limit {
+		segmentURL := fmt.Sprintf("%s/v2026/segments?limit=%d&offset=%d", c.BaseURL, limit, offset)
+		req, err := http.NewRequest("GET", segmentURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Accept", "application/json; charset=utf-8")
 
-	var res []*Segment
-	if err := c.sendRequest(ctx, req, &res); err != nil {
-		return nil, err
+		var page []*Segment
+		if err := c.sendRequest(ctx, req, &page); err != nil {
+			return nil, err
+		}
+		segments = append(segments, page...)
+		if len(page) < limit {
+			return segments, nil
+		}
 	}
-	return res, nil
 }
 
 func (c *Client) GetSegmentByName(ctx context.Context, name string) (*Segment, error) {
@@ -2082,12 +1892,19 @@ func (c *Client) GetSegmentByName(ctx context.Context, name string) (*Segment, e
 	if err != nil {
 		return nil, err
 	}
+	var match *Segment
 	for _, segment := range segments {
 		if segment.Name == name {
-			return segment, nil
+			if match != nil {
+				return nil, fmt.Errorf("multiple segments are named %q", name)
+			}
+			match = segment
 		}
 	}
-	return nil, &NotFoundError{fmt.Sprintf("segment with name %q not found", name)}
+	if match == nil {
+		return nil, &NotFoundError{fmt.Sprintf("segment with name %q not found", name)}
+	}
+	return match, nil
 }
 
 func (c *Client) CreateSegment(ctx context.Context, segment *Segment) (*Segment, error) {
@@ -2282,13 +2099,19 @@ func (c *Client) GetWorkflowByName(ctx context.Context, name string) (*Workflow,
 		return nil, err
 	}
 
+	var match *Workflow
 	for _, w := range res {
 		if w.Name == name {
-			return w, nil
+			if match != nil {
+				return nil, fmt.Errorf("multiple workflows are named %q", name)
+			}
+			match = w
 		}
 	}
-
-	return nil, &NotFoundError{fmt.Sprintf("workflow with name %q not found", name)}
+	if match == nil {
+		return nil, &NotFoundError{fmt.Sprintf("workflow with name %q not found", name)}
+	}
+	return match, nil
 }
 
 func (c *Client) CreateWorkflow(ctx context.Context, workflow *Workflow) (*Workflow, error) {
@@ -2343,6 +2166,38 @@ func (c *Client) UpdateWorkflow(ctx context.Context, id string, workflow *Workfl
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Accept", "application/json; charset=utf-8")
 
+	req = req.WithContext(ctx)
+
+	res := Workflow{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) SetWorkflowEnabled(ctx context.Context, id string, enabled bool) (*Workflow, error) {
+	body, err := json.Marshal([]map[string]interface{}{{"op": "replace", "path": "/enabled", "value": enabled}})
+	if err != nil {
+		return nil, err
+	}
+
+	patchURL := fmt.Sprintf("%s/v2026/workflows/%s", c.BaseURL, url.PathEscape(id))
+	tflog.Debug(ctx, "Creating HTTP request to set workflow enabled", map[string]interface{}{
+		"method":      "PATCH",
+		"url":         patchURL,
+		"workflow_id": id,
+		"enabled":     enabled,
+	})
+	req, err := http.NewRequest("PATCH", patchURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json-patch+json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
 	req = req.WithContext(ctx)
 
 	res := Workflow{}
@@ -2524,108 +2379,5 @@ func (c *Client) DeleteFormDefinition(ctx context.Context, id string) error {
 		return err
 	}
 
-	return nil
-}
-
-func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
-	// Apply rate limiting before making any API requests
-	tflog.Trace(ctx, "Before rate limiter", map[string]interface{}{
-		"url": req.URL.String(),
-	})
-	if err := c.rateLimiter.Wait(ctx); err != nil {
-		tflog.Debug(ctx, "Rate limiting wait failed", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return fmt.Errorf("rate limiting failed: %w", err)
-	}
-
-	tflog.Trace(ctx, "Sending HTTP Request", map[string]interface{}{
-		"method":       req.Method,
-		"url":          req.URL.String(),
-		"headers":      req.Header,
-		"request_body": req.Body,
-	})
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.accessToken))
-
-	res, err := c.HTTPClient.Do(req)
-	if err != nil {
-		tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
-		return err
-	}
-
-	defer res.Body.Close()
-
-	tflog.Trace(ctx, "Received HTTP Response", map[string]interface{}{
-		"status_code":      res.StatusCode,
-		"response_headers": res.Header,
-	})
-
-	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
-		var errRes errorResponse
-		err = json.NewDecoder(res.Body).Decode(&errRes)
-		if err == nil {
-			if res.StatusCode == http.StatusTooManyRequests {
-				tflog.Error(ctx, "API Rate limit exceeded", map[string]interface{}{
-					"status_code": res.StatusCode,
-				})
-				return errors.New("rate limit exceeded (429)")
-			}
-			if res.StatusCode == http.StatusNotFound {
-				// on the return statement, an interface value of type error is created by the compiler and bound to the pointer to satisfy the return argument.
-				return &NotFoundError{"status not found"}
-			}
-			if len(errRes.Messages) == 0 {
-				tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
-					"status_code": res.StatusCode,
-				})
-				return errors.New("unknown error")
-			}
-			return errors.New(errRes.Messages[0].Text)
-		}
-
-		// Handle 429 without error response body
-		if res.StatusCode == http.StatusTooManyRequests {
-			tflog.Error(ctx, "Rate limit exceeded", map[string]interface{}{
-				"status_code": res.StatusCode,
-			})
-			return errors.New("rate limit exceeded (429)")
-		}
-
-		if res.StatusCode == http.StatusBadGateway {
-			tflog.Error(ctx, "Bad Gateway error", map[string]interface{}{
-				"status_code": res.StatusCode,
-			})
-			return errors.New("Bad Gateway error (502)")
-		}
-
-		if res.StatusCode == http.StatusGatewayTimeout {
-			tflog.Error(ctx, "Gateway Timeout error", map[string]interface{}{
-				"status_code": res.StatusCode,
-			})
-			return errors.New("Gateway Timeout error (504)")
-		}
-
-		tflog.Error(ctx, "Unknown error occurred", map[string]interface{}{
-			"status_code": res.StatusCode,
-		})
-		return errors.New(fmt.Sprintf("unknown error, code: %d", res.StatusCode))
-	}
-
-	if res.StatusCode == 204 && req.Method == "DELETE" {
-		tflog.Debug(ctx, "Resource deleted successfully")
-		return nil
-	}
-
-	if err = json.NewDecoder(res.Body).Decode(&v); err != nil {
-		tflog.Error(ctx, "JSON decoder error", map[string]interface{}{
-			"error": err.Error(),
-		})
-		return err
-	}
-
-	tflog.Trace(ctx, "Parsed HTTP Response", map[string]interface{}{
-		"response_body": v,
-	})
 	return nil
 }

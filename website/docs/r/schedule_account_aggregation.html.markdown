@@ -1,0 +1,44 @@
+---
+subcategory: "Source"
+layout: "identitynow"
+page_title: "IdentityNow: identitynow_schedule_account_aggregation"
+description: |-
+  Manages the account aggregation schedule of an IdentityNow Source.
+---
+
+# identitynow_schedule_account_aggregation
+
+Manages the account aggregation schedule of a source. The source must be configured and its connection tested before the schedule can be enabled.
+
+Destroying the resource disables the aggregation schedule of the source. If the schedule is disabled outside Terraform, the resource is removed from the state and is created again on the next apply.
+
+## Example Usage
+
+```hcl
+resource "identitynow_schedule_account_aggregation" "active_directory" {
+  source_id        = "123456"
+  cron_expressions = ["0 0 * * * ?"] # aggregate every hour
+}
+```
+
+## Arguments Reference
+
+The following arguments are supported:
+
+* `source_id` - (Required) ID of the source as used by the legacy `cc/api/source` aggregation schedule endpoints. This is the numeric legacy source ID (usually available as the source's `cloudExternalId` connector attribute), not the source `id` used by the v2026 API. Changing this forces a new resource to be created.
+
+* `cron_expressions` - (Required) List with exactly one cron expression defining the aggregation schedule, e.g. `0 0 * * * ?` for every hour.
+
+## Attributes Reference
+
+In addition to the Arguments listed above - the following Attributes are exported:
+
+* `id` - Schedule ID (same as `source_id`).
+
+## Import
+
+Account aggregation schedules can be imported using the source ID:
+
+```shell
+terraform import identitynow_schedule_account_aggregation.example <source-id>
+```
