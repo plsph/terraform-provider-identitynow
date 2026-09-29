@@ -244,6 +244,7 @@ func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.R
 		NewDimensionResource,
 		NewWorkflowResource,
 		NewSegmentResource,
+		NewFormDefinitionResource,
 	}
 }
 
@@ -260,5 +261,6 @@ func (p *IdentityNowProvider) DataSources(ctx context.Context) []func() datasour
 		NewDimensionDataSource,
 		NewWorkflowDataSource,
 		NewSegmentDataSource,
+		NewFormDefinitionDataSource,
 	}
 }

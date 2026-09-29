@@ -2380,6 +2380,153 @@ func (c *Client) DeleteWorkflow(ctx context.Context, id string) error {
 	return nil
 }
 
+func (c *Client) GetFormDefinition(ctx context.Context, id string) (*FormDefinition, error) {
+	formURL := fmt.Sprintf("%s/v2026/form-definitions/%s", c.BaseURL, url.PathEscape(id))
+	tflog.Debug(ctx, "Creating HTTP request to get form definition", map[string]interface{}{
+		"method":             "GET",
+		"url":                formURL,
+		"form_definition_id": id,
+	})
+	req, err := http.NewRequest("GET", formURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := FormDefinition{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) GetFormDefinitionByName(ctx context.Context, name string) (*FormDefinition, error) {
+	escaped := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(name)
+	query := url.Values{}
+	query.Set("filters", fmt.Sprintf(`name eq "%s"`, escaped))
+	query.Set("limit", "250")
+	query.Set("offset", "0")
+	formURL := fmt.Sprintf("%s/v2026/form-definitions?%s", c.BaseURL, query.Encode())
+	tflog.Debug(ctx, "Creating HTTP request to list form definitions", map[string]interface{}{
+		"method": "GET",
+		"url":    formURL,
+		"name":   name,
+	})
+	req, err := http.NewRequest("GET", formURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := ListFormDefinitionsResponse{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	for _, form := range res.Results {
+		if form.Name == name {
+			return form, nil
+		}
+	}
+
+	return nil, &NotFoundError{fmt.Sprintf("form definition with name %q not found", name)}
+}
+
+func (c *Client) CreateFormDefinition(ctx context.Context, form *FormDefinition) (*FormDefinition, error) {
+	body, err := json.Marshal(form)
+	if err != nil {
+		return nil, err
+	}
+
+	createURL := fmt.Sprintf("%s/v2026/form-definitions", c.BaseURL)
+	tflog.Debug(ctx, "Creating HTTP request to create form definition", map[string]interface{}{
+		"method": "POST",
+		"url":    createURL,
+	})
+	req, err := http.NewRequest("POST", createURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := FormDefinition{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) UpdateFormDefinition(ctx context.Context, id string, patches []*UpdateFormDefinition) (*FormDefinition, error) {
+	body, err := json.Marshal(patches)
+	if err != nil {
+		return nil, err
+	}
+
+	updateURL := fmt.Sprintf("%s/v2026/form-definitions/%s", c.BaseURL, url.PathEscape(id))
+	tflog.Debug(ctx, "Creating HTTP request to update form definition", map[string]interface{}{
+		"method":             "PATCH",
+		"url":                updateURL,
+		"form_definition_id": id,
+	})
+	req, err := http.NewRequest("PATCH", updateURL, bytes.NewBuffer(body))
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	res := FormDefinition{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) DeleteFormDefinition(ctx context.Context, id string) error {
+	deleteURL := fmt.Sprintf("%s/v2026/form-definitions/%s", c.BaseURL, url.PathEscape(id))
+	tflog.Debug(ctx, "Creating HTTP request to delete form definition", map[string]interface{}{
+		"method":             "DELETE",
+		"url":                deleteURL,
+		"form_definition_id": id,
+	})
+	req, err := http.NewRequest("DELETE", deleteURL, nil)
+	if err != nil {
+		tflog.Error(ctx, "Failed to create new HTTP request", map[string]interface{}{"error": err.Error()})
+		return err
+	}
+
+	req.Header.Set("Accept", "application/json; charset=utf-8")
+	req = req.WithContext(ctx)
+
+	var res interface{}
+	if err := c.sendRequest(ctx, req, &res); err != nil {
+		tflog.Error(ctx, "Request failed", map[string]interface{}{"response": fmt.Sprintf("%+v", res)})
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface{}) error {
 	// Apply rate limiting before making any API requests
 	tflog.Trace(ctx, "Before rate limiter", map[string]interface{}{
