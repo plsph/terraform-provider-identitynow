@@ -2,6 +2,14 @@
 
 FEATURES:
 * resource/identitynow_form_definition, data-source/identitynow_form_definition: manage SailPoint custom forms
+* new resources and data sources for the v2026 API configuration objects:
+  * identity: identity profiles, lifecycle states, identity attributes, access model metadata attributes, search attribute config, auth profiles (data source)
+  * sources and connectors: provisioning policies, v2026 source schedules, connector rules, custom connectors, connector customizers, source subtypes, multi-host integrations, password sync groups, transforms
+  * security: OAuth clients, personal access tokens, custom user levels and right sets, parameter storage, custom password instructions, brandings, launchers
+  * governance: SOD policies and schedules, campaign templates and schedules, privilege criteria, data segments, saved and scheduled searches, tags
+  * integrations: service desk and SIM integrations, managed clusters, managed clients, managed cluster types, Data Access Security applications and task schedules
+  * events and notifications: trigger subscriptions, triggers (data source), notification templates, verified from addresses, non-employee sources and schema attributes, work reassignment configurations
+  * tenant settings (one resource per tenant, destroy only removes it from state): access request, org, lockout, session, service provider, network, role propagation, work reassignment, MFA Duo and Okta, campaign reports, recommendations, AI access request recommendations, service desk status check, UI metadata, public identities; tenant, org config and valid time zones data sources
 * resource/identitynow_password_policy, resource/identitynow_account_schema, resource/identitynow_schedule_account_aggregation: import support (`<source_id>/<schema_id>` for account schemas)
 * provider: retries on 429 (and 502/503/504 for GET, PUT and DELETE requests) with Retry-After support, token refresh on 401
 * data sources: fill owner, source, cluster, access profiles, metadata, provisioning criteria and identity attributes that were declared but always empty

@@ -1,0 +1,31 @@
+---
+subcategory: "Password Policy"
+layout: "identitynow"
+page_title: "IdentityNow: Data Source: identitynow_custom_password_instruction"
+description: |-
+  Gets IdentityNow custom password instructions.
+---
+
+# Data Source: identitynow_custom_password_instruction
+
+Use this data source to read the custom password instructions of a page.
+
+~> **Note:** This data source uses an experimental API that may change without notice.
+
+## Example Usage
+
+```hcl
+data "identitynow_custom_password_instruction" "reset_password" {
+  page_id = "reset-password:enter-password"
+}
+```
+
+## Arguments Reference
+
+* `page_id` - (Required) Page the instructions are shown on, e.g. `reset-password:enter-password`.
+* `locale` - (Optional) BCP 47 language tag of the instructions. Defaults to `default`.
+
+## Attributes Reference
+
+* `id` - Identifier in the form `<page_id>/<locale>`.
+* `page_content` - Instructions in basic HTML.

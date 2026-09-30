@@ -1,0 +1,49 @@
+---
+subcategory: "Tenant Settings"
+layout: "identitynow"
+page_title: "IdentityNow: identitynow_recommendations_config"
+description: |-
+  Manages the IdentityNow certification recommendations configuration.
+---
+
+# identitynow_recommendations_config
+
+Manages the tenant-wide configuration of AI certification recommendations.
+
+There is one recommendations configuration per tenant, it cannot be created or deleted. Creating the resource applies the configured settings to the existing recommendations configuration, and destroying it only removes it from Terraform state: the settings are left unchanged in IdentityNow.
+
+Only the settings present in the configuration are managed. Settings that are not configured are never changed or reset; they show the current tenant value. Removing a setting from the configuration stops managing it and leaves its current value in place. The API replaces the whole recommendations configuration on update, so the provider reads the current recommendations configuration, replaces the configured settings and sends it back. The API is experimental; the provider sends the `X-SailPoint-Experimental` header.
+
+## Example Usage
+
+```hcl
+resource "identitynow_recommendations_config" "this" {
+  recommender_features            = ["jobTitle", "department", "location"]
+  peer_group_percentage_threshold = 0.5
+}
+```
+
+## Arguments Reference
+
+All arguments are optional; settings that are not configured keep their current value.
+
+* `recommender_features` - (Optional) Identity attributes used to calculate certification recommendations.
+* `peer_group_percentage_threshold` - (Optional) Fraction between 0 and 1 that the recommendation calculation must exceed to recommend approval.
+* `run_auto_select_once` - (Optional) Whether the next pipeline run selects new attributes and threshold values automatically. One-shot request, see below.
+* `only_tune_threshold` - (Optional) Whether the next pipeline run selects new threshold values automatically. One-shot request, see below.
+
+`run_auto_select_once` and `only_tune_threshold` are one-shot requests: the recommendation pipeline resets them to `false` after its next run. They are treated as write-only. The state keeps the configured value, so the reset does not show as drift, and the value is only sent when the resource is created and when the configured value changes; applying other changes does not repeat the request. To request another run with the same value, replace the resource, e.g. `terraform apply -replace=identitynow_recommendations_config.this`. After an import the value returned by the API is shown.
+
+## Attributes Reference
+
+In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
+
+* `id` - Always `recommendations-config`.
+
+## Import
+
+The settings can be imported with any ID; the ID is always set to `recommendations-config`:
+
+```shell
+terraform import identitynow_recommendations_config.this recommendations-config
+```

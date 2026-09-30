@@ -1,0 +1,37 @@
+---
+subcategory: "SIM Integration"
+layout: "identitynow"
+page_title: "IdentityNow: Data Source: identitynow_sim_integration"
+description: |-
+  Gets information about an existing IdentityNow SIM integration.
+---
+
+# Data Source: identitynow_sim_integration
+
+Use this data source to look up a SIM integration by ID. It uses an experimental API.
+
+## Example Usage
+
+```hcl
+data "identitynow_sim_integration" "servicenow_sim" {
+  id = "<SIM_INTEGRATION_ID>"
+}
+```
+
+## Arguments Reference
+
+* `id` - (Required) SIM integration ID.
+
+## Attributes Reference
+
+* `name` - Name of the integration.
+* `description` - Description of the integration.
+* `type` - Integration type.
+* `sources` - IDs of the sources of the integration.
+* `cluster` - ID of the virtual appliance cluster.
+* `status_map_json` - Status mapping as a JSON object.
+* `request_json` - Ticket request data as a JSON object.
+* `attributes_json` - Integration attributes as a JSON object, as returned by the API. The value is sensitive.
+* `before_provisioning_rule` - Before provisioning rule, a list with at most one item with `id`, `type` and `name`.
+* `created` - Creation date.
+* `modified` - Last modification date.

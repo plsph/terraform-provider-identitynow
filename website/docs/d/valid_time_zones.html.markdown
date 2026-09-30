@@ -1,0 +1,37 @@
+---
+subcategory: "Tenant Settings"
+layout: "identitynow"
+page_title: "IdentityNow: Data Source: identitynow_valid_time_zones"
+description: |-
+  Lists the time zones that can be set in the IdentityNow org configuration.
+---
+
+# Data Source: identitynow_valid_time_zones
+
+Use this data source to list the time zones that can be set as `time_zone` of the [identitynow_org_config](../r/org_config.html) resource. The API is experimental; the provider sends the `X-SailPoint-Experimental` header.
+
+## Example Usage
+
+```hcl
+data "identitynow_valid_time_zones" "all" {}
+
+resource "identitynow_org_config" "this" {
+  time_zone = "Europe/Warsaw"
+
+  lifecycle {
+    precondition {
+      condition     = contains(data.identitynow_valid_time_zones.all.time_zones, "Europe/Warsaw")
+      error_message = "Europe/Warsaw is not a valid time zone."
+    }
+  }
+}
+```
+
+## Arguments Reference
+
+This data source has no arguments.
+
+## Attributes Reference
+
+* `id` - Always `valid-time-zones`.
+* `time_zones` - List of valid time zone names, e.g. `Europe/Warsaw`.

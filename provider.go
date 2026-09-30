@@ -253,7 +253,7 @@ func int64FromEnv(value types.Int64, envVar string, attribute string, defaultVal
 
 // Resources returns the list of resources for this provider
 func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
+	return append([]func() resource.Resource{
 		NewSourceResource,
 		NewAccessProfileResource,
 		NewRoleResource,
@@ -269,12 +269,12 @@ func (p *IdentityNowProvider) Resources(ctx context.Context) []func() resource.R
 		NewWorkflowResource,
 		NewSegmentResource,
 		NewFormDefinitionResource,
-	}
+	}, registeredResources...)
 }
 
 // DataSources returns the list of data sources for this provider
 func (p *IdentityNowProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
+	return append([]func() datasource.DataSource{
 		NewRoleDataSource,
 		NewSourceDataSource,
 		NewAccessProfileDataSource,
@@ -286,5 +286,5 @@ func (p *IdentityNowProvider) DataSources(ctx context.Context) []func() datasour
 		NewWorkflowDataSource,
 		NewSegmentDataSource,
 		NewFormDefinitionDataSource,
-	}
+	}, registeredDataSources...)
 }

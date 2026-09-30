@@ -1,0 +1,91 @@
+---
+subcategory: "Data Access Security"
+layout: "identitynow"
+page_title: "IdentityNow: identitynow_das_application"
+description: |-
+  Manages an IdentityNow Data Access Security application.
+---
+
+# identitynow_das_application
+
+Manages a Data Access Security application, a monitored data store such as a file share or a cloud storage service. Tasks of the application are scheduled with [identitynow_das_task_schedule](das_task_schedule.html).
+
+Updates replace the whole application (PUT) with the configured values. The API does not return the settings (`*_settings_json`) and tags, so the provider cannot detect changes made outside Terraform or send unconfigured values back: an update may reset settings and tags that are not configured. Updates report a warning when settings or tags are not configured.
+
+The API does not return the ID of a new application. After creating it, the provider looks up the application with the configured name that did not exist before; creation fails if it cannot be identified unambiguously, so use unique names.
+
+The API only returns the name, description and read-only attributes of an application. The collector IDs, settings and tags are stored as configured, and changes made to them outside Terraform are not detected.
+
+## Example Usage
+
+```hcl
+resource "identitynow_das_application" "file_share" {
+  name             = "Finance File Share"
+  description      = "Finance department file share"
+  application_type = 8
+
+  application_crawler_settings_json = jsonencode({
+    isEnabled = true
+    clusterId = "<DAS_CLUSTER_ID>"
+  })
+
+  permission_collector_settings_json = jsonencode({
+    isEnabled                     = true
+    clusterId                     = "<DAS_CLUSTER_ID>"
+    calculateEffectivePermissions = true
+  })
+
+  data_classification_settings_json = jsonencode({
+    isEnabled = false
+  })
+
+  activity_configuration_settings_json = jsonencode({
+    isEnabled           = true
+    clusterId           = "<DAS_CLUSTER_ID>"
+    retentionTimePeriod = 90
+    retentionTimeType   = "Days"
+  })
+
+  tag {
+    key   = 1
+    value = "finance"
+  }
+}
+```
+
+## Arguments Reference
+
+* `name` - (Required) Display name of the application. Use a unique name, see above.
+* `application_type` - (Required) Numeric application type, one of `1`, `8`, `9`, `11`, `15`, `20`, `21`, `24`, `25`, `27`, `28`, `29`, `33`, `35` or `37` (e.g. Active Directory or AWS S3). Changing it forces a new application to be created.
+* `description` - (Optional) Description of the application.
+* `identity_collector_id` - (Optional) ID of the identity collector of the application.
+* `ad_identity_collector_id` - (Optional) ID of the Active Directory identity collector.
+* `nis_identity_collector_id` - (Optional) ID of the NIS identity collector.
+* `application_crawler_settings_json` - (Optional) Resource crawler settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `calculateResourceSize`, `crawlSnapshotsFolder`, `excludedPathsByRegex`, `crawlTopLevelShares`, `excludedResources` and `includeResources`.
+* `permission_collector_settings_json` - (Optional) Permission collector settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `analyzeUniquePermissions`, `calculateEffectivePermissions`, `calculateRiskiestPermissions` and `effectivePermissionsSource`.
+* `data_classification_settings_json` - (Optional) Data classification settings as a JSON object, with the keys `isEnabled` and `clusterId`.
+* `activity_configuration_settings_json` - (Optional) Activity monitoring settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `retentionTimePeriod`, `retentionTimeType`, `excludeUsers`, `excludeFolders`, `excludeFileExtensions` and `excludeActions`.
+* `execute_now` - (Optional) Whether the application setup is executed immediately when the application is created or updated. Defaults to `false`.
+* `tag` - (Optional) Tags that categorize the application. Can be repeated:
+    * `key` - (Required) Key of the tag.
+    * `value` - (Optional) Value of the tag.
+
+## Attributes Reference
+
+* `id` - Application ID.
+* `type` - Name of the application type.
+* `test_connection_status` - Status of the last connection test.
+* `test_connection_date` - Time of the last connection test, in milliseconds since the epoch.
+* `rc_cluster_id` - ID of the cluster that crawls resources.
+* `dc_cluster_id` - ID of the cluster that classifies data.
+* `pc_cluster_id` - ID of the cluster that collects permissions.
+
+## Import
+
+Data Access Security applications can be imported using their numeric ID:
+
+```shell
+terraform import identitynow_das_application.example <application-id>
+```
+
+Only the name and description are imported: the API does not return the application type, settings and tags. Configure `application_type` (it is taken over without a replacement after an import) and all settings and tags the application has before the next apply, since the update sends the complete configuration to the API and may reset settings and tags that are not configured.

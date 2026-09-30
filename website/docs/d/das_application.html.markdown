@@ -1,0 +1,35 @@
+---
+subcategory: "Data Access Security"
+layout: "identitynow"
+page_title: "IdentityNow: Data Source: identitynow_das_application"
+description: |-
+  Gets information about an existing IdentityNow Data Access Security application.
+---
+
+# Data Source: identitynow_das_application
+
+Use this data source to look up a Data Access Security application by ID.
+
+## Example Usage
+
+```hcl
+data "identitynow_das_application" "file_share" {
+  id = "42"
+}
+```
+
+## Arguments Reference
+
+* `id` - (Required) Numeric application ID.
+
+## Attributes Reference
+
+* `name` - Display name of the application.
+* `description` - Description of the application.
+* `type` - Name of the application type.
+* `tags` - Tags of the application. Each item contains `id` and `name`.
+* `test_connection_status` - Status of the last connection test.
+* `test_connection_date` - Time of the last connection test, in milliseconds since the epoch.
+* `rc_cluster_id` - ID of the cluster that crawls resources.
+* `dc_cluster_id` - ID of the cluster that classifies data.
+* `pc_cluster_id` - ID of the cluster that collects permissions.

@@ -1,0 +1,59 @@
+---
+subcategory: "Managed Cluster"
+layout: "identitynow"
+page_title: "IdentityNow: identitynow_managed_client"
+description: |-
+  Manages an IdentityNow managed client.
+---
+
+# identitynow_managed_client
+
+Manages a managed client, a virtual appliance (VA) or connector gateway (CCG) registered in a [managed cluster](managed_cluster.html).
+
+Name and description are updated with JSON Patch; changing the cluster or the type forces a new client.
+
+## Example Usage
+
+```hcl
+resource "identitynow_managed_client" "va_1" {
+  cluster_id  = "<CLUSTER_ID>"
+  name        = "VA 1"
+  description = "First virtual appliance of the primary cluster"
+  type        = "VA"
+}
+```
+
+## Arguments Reference
+
+* `cluster_id` - (Required) ID of the managed cluster the client belongs to. Changing this forces a new client to be created.
+* `name` - (Optional) Name of the client. When not set, the API generates one (`VA-<client_id>`). Since the API always has a name, removing the argument keeps the current name instead of clearing it.
+* `description` - (Optional) Description of the client.
+* `type` - (Optional) Client type, `VA` or `CCG`. When not set, the API default is stored. Changing this forces a new client to be created.
+
+## Attributes Reference
+
+* `id` - Managed client ID.
+* `client_id` - Client ID used in API management.
+* `secret` - API key of the client. The value is sensitive. It is taken from the create response and kept in state, since the API does not return it again.
+* `status` - Status of the client, e.g. `NORMAL`, `CONFIGURING` or `ERROR`.
+* `cluster_type` - Type of the cluster the client belongs to.
+* `alert_key` - Key describing any immediate client alerts.
+* `api_gateway_base_url` - API gateway base URL of the client.
+* `ip_address` - Public IP address of the client.
+* `last_seen` - When the client was last seen by the server.
+* `since_last_seen` - Milliseconds since the client last polled the server.
+* `va_download_url` - Virtual appliance download URL.
+* `va_version` - Version of the virtual appliance software the client runs.
+* `provision_status` - Provisioning status of the client, `PROVISIONED` or `DRAFT`.
+* `created_at` - Creation date.
+* `updated_at` - Last update date.
+
+## Import
+
+Managed clients can be imported using their ID:
+
+```shell
+terraform import identitynow_managed_client.example <client-id>
+```
+
+An imported client has no `secret` unless the API returns it.

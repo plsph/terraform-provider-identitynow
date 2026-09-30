@@ -1,0 +1,33 @@
+---
+subcategory: "Connector"
+layout: "identitynow"
+page_title: "IdentityNow: Data Source: identitynow_connector_customizer"
+description: |-
+  Gets information about an existing IdentityNow connector customizer.
+---
+
+# Data Source: identitynow_connector_customizer
+
+Use this data source to look up a connector customizer by ID or name. Lookups by name list all customizers and match the name exactly.
+
+## Example Usage
+
+```hcl
+data "identitynow_connector_customizer" "custom" {
+  name = "My Connector Customizer"
+}
+```
+
+## Arguments Reference
+
+Exactly one of the following must be set:
+
+* `id` - (Optional) Connector customizer ID.
+* `name` - (Optional) Connector customizer name.
+
+## Attributes Reference
+
+* `image_version` - Current image version of the customizer.
+* `image_id` - Current image ID of the customizer.
+* `tenant_id` - Tenant ID of the customizer.
+* `created` - Creation date.

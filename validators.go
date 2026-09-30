@@ -4,8 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // jsonArrayStringValidator checks that a string attribute contains a JSON array.
@@ -112,5 +117,21 @@ func (v int64AtLeastValidator) ValidateInt64(ctx context.Context, req validator.
 	}
 	if req.ConfigValue.ValueInt64() < v.min {
 		resp.Diagnostics.AddAttributeError(req.Path, "Invalid value", fmt.Sprintf("%s, got %d.", v.Description(ctx), req.ConfigValue.ValueInt64()))
+	}
+}
+
+// validateExactlyOneOf reports an error unless exactly one of the string attributes is set in
+// config. Unknown values count as set, since they are known later.
+func validateExactlyOneOf(ctx context.Context, config tfsdk.Config, resp *datasource.ValidateConfigResponse, attributes ...string) {
+	set := 0
+	for _, name := range attributes {
+		var value types.String
+		resp.Diagnostics.Append(config.GetAttribute(ctx, path.Root(name), &value)...)
+		if !value.IsNull() {
+			set++
+		}
+	}
+	if set != 1 {
+		resp.Diagnostics.AddError("Invalid configuration", fmt.Sprintf("Exactly one of %s must be set.", strings.Join(attributes, ", ")))
 	}
 }

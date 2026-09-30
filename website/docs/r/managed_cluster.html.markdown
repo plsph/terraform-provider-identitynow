@@ -1,0 +1,65 @@
+---
+subcategory: "Managed Cluster"
+layout: "identitynow"
+page_title: "IdentityNow: identitynow_managed_cluster"
+description: |-
+  Manages an IdentityNow managed cluster.
+---
+
+# identitynow_managed_cluster
+
+Manages a managed cluster, a group of virtual appliances or other clients that connect IdentityNow to on-premises sources. Clients are added with [identitynow_managed_client](managed_client.html).
+
+Updates are sent as JSON Patch operations for the changed attributes only.
+
+## Example Usage
+
+```hcl
+resource "identitynow_managed_cluster" "va_cluster" {
+  name        = "Primary VA Cluster"
+  type        = "idn"
+  description = "Virtual appliances in the primary data center"
+  configuration = {
+    gmtOffset = "-5"
+  }
+}
+```
+
+## Arguments Reference
+
+* `name` - (Required) Name of the cluster.
+* `type` - (Optional) Cluster type, one of `idn`, `iai`, `spConnectCluster`, `sqsCluster`, `das-rc`, `das-pc`, `das-dc`, `pag`, `das-am` or `standard`. When not set, the API default is stored. Changing this forces a new cluster to be created.
+* `description` - (Optional) Description of the cluster. When not set, the value returned by the API is stored and kept, so removing the argument does not clear the description; set it to `""` to clear it.
+* `configuration` - (Optional) Map of cluster configuration entries, e.g. `gmtOffset`. Only the configured keys are managed: entries added by the API or outside Terraform are neither shown nor removed, and removing a key from the map deletes only that entry.
+* `remove_clients_on_destroy` - (Optional) Whether destroying the resource also deletes the clients of the cluster. Without it, deleting a cluster that still has clients fails. Defaults to `false`.
+
+## Attributes Reference
+
+* `id` - Managed cluster ID.
+* `pod` - Pod of the cluster.
+* `org` - Org (tenant) of the cluster.
+* `client_type` - Type of the clients of the cluster, e.g. `VA` or `CCG`.
+* `ccg_version` - CCG version used by the cluster.
+* `pinned_config` - Whether the cluster configuration is pinned.
+* `operational` - Whether the cluster is operational.
+* `status` - Cluster status, e.g. `NORMAL`, `NO_CLIENTS` or `FAILED`.
+* `public_key` - Public key of the cluster.
+* `public_key_thumbprint` - Public key thumbprint of the cluster.
+* `public_key_certificate` - Public key certificate of the cluster.
+* `alert_key` - Key describing any immediate cluster alerts.
+* `client_ids` - IDs of the clients of the cluster.
+* `service_count` - Number of services bound to the cluster.
+* `created_at` - Creation date.
+* `updated_at` - Last update date.
+* `current_installed_release_version` - Release installed on the cluster.
+* `consolidated_health_indicators_status` - Consolidated health status of the cluster.
+
+## Import
+
+Managed clusters can be imported using their ID:
+
+```shell
+terraform import identitynow_managed_cluster.example <cluster-id>
+```
+
+After an import, `configuration` is empty until keys are configured, and `remove_clients_on_destroy` is `false`.
