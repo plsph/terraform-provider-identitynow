@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -190,5 +191,46 @@ func TestAccessProfileStateKeepsUnsetSegmentsNull(t *testing.T) {
 	}
 	if !data.Segments.IsNull() {
 		t.Fatalf("expected segments to stay null, got %s", data.Segments)
+	}
+}
+
+// Regression test: removing additional owners that exist in IdentityNow (e.g. added in the UI)
+// must send an empty /additionalOwners patch, so the result matches the planned zero blocks.
+func TestAccessProfilePatchesClearAdditionalOwners(t *testing.T) {
+	ownerType := types.ObjectType{AttrTypes: map[string]attr.Type{"type": types.StringType, "id": types.StringType, "name": types.StringType}}
+	owner := types.ObjectValueMust(ownerType.AttrTypes, map[string]attr.Value{
+		"type": types.StringValue("IDENTITY"),
+		"id":   types.StringValue("identity-1"),
+		"name": types.StringNull(),
+	})
+	state := AccessProfileResourceModel{
+		Name:                    types.StringValue("GNC-Read Only"),
+		Description:             types.StringValue("Same"),
+		Owner:                   types.ListNull(types.ObjectType{}),
+		Source:                  types.ListNull(types.ObjectType{}),
+		Entitlements:            types.ListNull(types.ObjectType{}),
+		AccessRequestConfig:     types.ListNull(types.ObjectType{}),
+		RevocationRequestConfig: types.ListNull(types.ObjectType{}),
+		Segments:                types.ListNull(types.StringType),
+		AccessModelMetadata:     types.ListNull(types.ObjectType{}),
+		ProvisioningCriteria:    types.ListNull(types.ObjectType{}),
+		AdditionalOwners:        types.ListValueMust(ownerType, []attr.Value{owner}),
+		Enabled:                 types.BoolValue(true),
+		Requestable:             types.BoolValue(true),
+	}
+	plan := state
+	plan.AdditionalOwners = types.ListValueMust(ownerType, []attr.Value{})
+
+	var diags diag.Diagnostics
+	ap := (&AccessProfileResource{}).apiFromModel(context.Background(), plan, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	patches := accessProfilePatches(plan, state, ap)
+	if len(patches) != 1 || patches[0].Path != "/additionalOwners" {
+		t.Fatalf("expected a single /additionalOwners patch, got %+v", patches)
+	}
+	if owners, ok := patches[0].Value.([]*AdditionalOwnerRef); !ok || owners == nil || len(owners) != 0 {
+		t.Fatalf("expected an empty additional owners list, got %#v", patches[0].Value)
 	}
 }
