@@ -31,7 +31,7 @@ resource "identitynow_dimension" "example" {
     type = "STANDARD"
 
     criteria {
-      operation = "EQUALS"
+      operation    = "EQUALS"
       string_value = "Sales"
 
       key {

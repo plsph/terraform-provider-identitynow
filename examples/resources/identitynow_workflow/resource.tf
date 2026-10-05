@@ -23,10 +23,10 @@ resource "identitynow_workflow" "email_on_manager_change" {
       "Send Email" = {
         actionId = "sp:send-email"
         attributes = {
-          body             = "This is a test"
-          from             = "sailpoint@sailpoint.com"
-          "recipientId.$"  = "$.identity.id"
-          subject          = "test"
+          body            = "This is a test"
+          from            = "sailpoint@sailpoint.com"
+          "recipientId.$" = "$.identity.id"
+          subject         = "test"
         }
         nextStep     = "success"
         selectResult = null
