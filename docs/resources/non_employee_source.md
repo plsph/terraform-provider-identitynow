@@ -1,0 +1,56 @@
+---
+subcategory: "Non-Employee"
+page_title: "IdentityNow: identitynow_non_employee_source"
+description: |-
+  Manages an IdentityNow non-employee source.
+---
+
+# identitynow_non_employee_source
+
+Manages a non-employee source of Non-Employee Lifecycle Management. Creating it also creates the source that holds the non-employee accounts (`source_id`). Custom attributes of the source are managed with [identitynow_non_employee_schema_attribute](non_employee_schema_attribute).
+
+## Example Usage
+
+```hcl
+resource "identitynow_non_employee_source" "contractors" {
+  name                 = "Contractors"
+  description          = "External contractors"
+  management_workgroup = "2c9180867624cbd7017642d8c8c81f68"
+  approvers            = ["2c9180867624cbd7017642d8c8c81f67"]
+  account_managers     = ["2c9180867624cbd7017642d8c8c81f67"]
+
+  owner {
+    id = "2c9180867624cbd7017642d8c8c81f67"
+  }
+}
+```
+
+## Arguments Reference
+
+* `name` - (Required) Name of the non-employee source.
+* `description` - (Required) Description of the non-employee source.
+* `owner` - (Required) Owner of the source. Exactly one block. Contains:
+  * `id` - (Required) Owner identity ID.
+* `management_workgroup` - (Optional) ID of the governance group that contains the source sub-admins.
+* `approvers` - (Optional) IDs of up to 3 identities or governance groups that approve non-employee requests, in approval order.
+* `account_managers` - (Optional) IDs of up to 10 identities or governance groups that manage the non-employee accounts.
+
+Only `name`, `description`, `approvers` and `account_managers` can be changed, with a JSON Patch of the changed fields. `owner` and `management_workgroup` cannot be changed, changing them forces a new source to be created. The API does not return them, so changes made outside Terraform are not detected.
+
+## Attributes Reference
+
+* `id` - Non-employee source ID.
+* `source_id` - ID of the source that backs the non-employee source.
+* `cloud_external_id` - Legacy V1 ID of the source. Only returned when the source is created, so it is empty after an import.
+* `created` - Creation date.
+* `modified` - Last modification date.
+
+## Import
+
+Non-employee sources can be imported using their ID:
+
+```shell
+terraform import identitynow_non_employee_source.example <non-employee-source-id>
+```
+
+Since the API does not return `owner` and `management_workgroup`, the configured values are adopted without replacing the source on the first apply after an import.

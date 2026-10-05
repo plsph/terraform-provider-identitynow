@@ -1,0 +1,58 @@
+---
+subcategory: "Identity"
+page_title: "IdentityNow: Data Identity: identitynow_identity"
+description: |-
+  Gets information about an existing Identity.
+---
+
+# Data Source: identitynow_identity
+
+Use this data source to access information about an existing Identity. The identity is looked up by `alias` or by `email_address`; exactly one of them must be set.
+
+Looking up by email address fails when several identities share the email address. Look up the identity by `alias` in that case.
+
+## Example Usage
+
+```hcl
+data "identitynow_identity" "by_alias" {
+  alias = "john.doe"
+}
+
+data "identitynow_identity" "by_email" {
+  email_address = "john.doe@example.com"
+}
+
+output "identitynow_identity_name" {
+  value = data.identitynow_identity.by_alias.name
+}
+
+output "identitynow_identity_email" {
+  value = data.identitynow_identity.by_email.attributes[0].email
+}
+```
+
+## Arguments Reference
+
+The following arguments are supported:
+
+* `alias` - (Optional) The identity's alternate unique identifier, equivalent to its Account Name on the authoritative source account schema. Conflicts with `email_address`.
+
+* `email_address` - (Optional) The email address of the identity. Conflicts with `alias`.
+
+## Attributes Reference
+
+In addition to the Arguments listed above - the following Attributes are exported:
+
+* `id` - The identity ID.
+
+* `name` - The identity's name, equivalent to its Display Name attribute.
+
+* `description` - The identity description.
+
+* `enabled` - Whether the identity is enabled.
+
+* `is_manager` - Whether this identity is a manager of another identity.
+
+* `identity_status` - The identity's status in the system.
+
+* `attributes` - A list with one object containing identity attributes of the identity: `adp_id`, `email`, `firstname`, `lastname`, `phone`, `uid`, `user_type` and `workday_id`. Reference them with an index, e.g. `data.identitynow_identity.example.attributes[0].email`.

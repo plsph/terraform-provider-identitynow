@@ -1,0 +1,57 @@
+---
+subcategory: "Connector"
+page_title: "IdentityNow: identitynow_connector_rule"
+description: |-
+  Manages an IdentityNow connector rule.
+---
+
+# identitynow_connector_rule
+
+Manages a connector rule, a BeanShell rule that runs on the virtual appliance, e.g. a `ConnectorBeforeCreate` rule. Updates replace the whole rule. The `name` and `type` are immutable, changing them replaces the rule.
+
+## Example Usage
+
+```hcl
+resource "identitynow_connector_rule" "before_create" {
+  name        = "AD Before Create"
+  description = "Logs account creation"
+  type        = "ConnectorBeforeCreate"
+  signature_json = jsonencode({
+    input = [
+      { name = "plan", type = "ProvisioningPlan", description = "The provisioning plan" }
+    ]
+  })
+
+  source_code {
+    version = "1.0"
+    script  = <<-EOT
+      log.info("Creating account for " + application.getName());
+    EOT
+  }
+}
+```
+
+## Arguments Reference
+
+* `name` - (Required) Rule name. Changing this forces a new rule to be created.
+* `type` - (Required) Rule type, e.g. `BuildMap`, `ConnectorAfterCreate`, `ConnectorAfterDelete`, `ConnectorAfterModify`, `ConnectorBeforeCreate`, `ConnectorBeforeDelete`, `ConnectorBeforeModify`, `JDBCBuildMap`, `JDBCOperationProvisioning`, `JDBCProvision`, `PeopleSoftHRMSBuildMap`, `RACFPermissionCustomization`, `SAPBuildMap`, `SapHrManagerRule`, `SapHrOperationProvisioning`, `SapHrProvision`, `SuccessFactorsOperationProvisioning` or `WebServiceAfterOperationRule`. Changing this forces a new rule to be created.
+* `description` - (Optional) Description of the rule's purpose.
+* `source_code` - (Required) Code of the rule. Exactly one block is required:
+  * `version` - (Required) Version of the code, e.g. `1.0`.
+  * `script` - (Required) The BeanShell code. Use `file()` to load it from a file. Differences only in line endings or trailing whitespace are ignored.
+* `signature_json` - (Optional) Function signature of the rule as a JSON object with an `input` array and an optional `output` object; each argument has a `name`, `description` and `type`. Use `jsonencode()` for convenience. The value is compared semantically. When not set, the signature returned by IdentityNow is kept and not managed.
+* `attributes_json` - (Optional) Rule attributes as a JSON object. Use `jsonencode()` for convenience. The value is compared semantically.
+
+## Attributes Reference
+
+* `id` - Connector rule ID.
+* `created` - Creation date.
+* `modified` - Last modification date.
+
+## Import
+
+Connector rules can be imported using their ID:
+
+```shell
+terraform import identitynow_connector_rule.example <rule-id>
+```

@@ -1,0 +1,167 @@
+---
+subcategory: "Role"
+page_title: "IdentityNow: identitynow_dimension"
+description: |-
+  Manages an IdentityNow Dimension.
+---
+
+# identitynow_dimension
+
+Manages an IdentityNow Dimension. A dimension is a sub-division of a role that allows fine-grained access grouping.
+
+All arguments except `role_id` can be updated in place. Removing `description`, `owner` or `membership` from the configuration clears them in IdentityNow.
+
+## Example Usage
+
+### Dimension with Single Value Criteria
+
+```hcl
+resource "identitynow_role" "example" {
+  name        = "Sales Role"
+  description = "Dimensional role for the sales department"
+  dimensional = true
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+}
+
+resource "identitynow_dimension" "example" {
+  role_id     = identitynow_role.example.id
+  name        = "Example Dimension"
+  description = "An example dimension"
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+
+  access_profiles {
+    id   = "2c91808a7813090a017813b6301f0044"
+    type = "ACCESS_PROFILE"
+    name = "Example Access Profile"
+  }
+
+  membership {
+    type = "STANDARD"
+
+    criteria {
+      operation = "EQUALS"
+      string_value = "Sales"
+
+      key {
+        type     = "IDENTITY"
+        property = "attribute.department"
+      }
+    }
+  }
+}
+```
+
+### Dimension with Multi-Value Criteria
+
+```hcl
+resource "identitynow_dimension" "multivalue" {
+  role_id     = "2c91808a7813090a017813b6301fabcd"
+  name        = "Multi-Value Dimension"
+  description = "A dimension matching multiple job codes"
+
+  owner {
+    id   = "2c9180867624cbd7017642d8c8c81f67"
+    type = "IDENTITY"
+    name = "Example Owner"
+  }
+
+  membership {
+    type = "STANDARD"
+
+    criteria {
+      operation = "EQUALS"
+      values    = ["G8244", "G8243", "G8242", "G6644"]
+
+      key {
+        type     = "IDENTITY"
+        property = "attribute.jobcode"
+      }
+    }
+  }
+}
+```
+
+## Arguments Reference
+
+The following arguments are supported:
+
+* `role_id` - (Required) The ID of the role this dimension belongs to. Changing this forces a new resource to be created.
+* `name` - (Required) The name of the dimension. Can be updated in place.
+* `description` - (Optional) A description for the dimension. Removing it clears the description.
+* `owner` - (Optional) An `owner` block as defined below. Removing it clears the owner.
+* `access_profiles` - (Optional) One or more `access_profiles` blocks as defined below.
+* `entitlements` - (Optional) One or more `entitlements` blocks as defined below.
+* `membership` - (Optional) A `membership` block as defined below. Removing it clears the membership criteria.
+
+---
+
+An `owner` block supports:
+
+* `id` - (Required) The owner's ID.
+* `type` - (Required) The owner type (e.g. `IDENTITY`).
+* `name` - (Required) The owner name.
+
+---
+
+An `access_profiles` block supports:
+
+* `id` - (Required) The access profile ID.
+* `type` - (Required) The type (e.g. `ACCESS_PROFILE`).
+* `name` - (Required) The access profile name.
+
+---
+
+An `entitlements` block supports:
+
+* `id` - (Required) The entitlement ID.
+* `type` - (Required) The type (e.g. `ENTITLEMENT`).
+* `name` - (Required) The entitlement name.
+
+---
+
+A `membership` block supports:
+
+* `type` - (Required) The membership type (`STANDARD` or `IDENTITY_LIST`).
+* `criteria` - (Optional) A `criteria` block as defined below.
+
+---
+
+A `criteria` block supports:
+
+* `operation` - (Required) The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).
+* `string_value` - (Optional) A single value to match against.
+* `values` - (Optional) A list of values to match against. Use this when the criteria should match any of multiple values.
+* `key` - (Optional) A `key` block identifying the identity attribute.
+* `children` - (Optional) One or more child `criteria` blocks (supports up to 3 levels of nesting).
+
+---
+
+A `key` block supports:
+
+* `type` - (Required) The key type (`IDENTITY` or `ACCOUNT`).
+* `property` - (Required) The identity or account attribute name (e.g. `attribute.department`).
+* `source_id` - (Optional) The source ID (required when `type` is `ACCOUNT`).
+
+## Attributes Reference
+
+In addition to the Arguments listed above - the following Attributes are exported:
+
+* `id` - The ID of the Dimension.
+
+## Import
+
+Dimensions can be imported using the `role_id/dimension_id`, e.g.
+
+```shell
+terraform import identitynow_dimension.example <role-id>/<dimension-id>
+```

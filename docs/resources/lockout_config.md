@@ -1,0 +1,46 @@
+---
+subcategory: "Tenant Settings"
+page_title: "IdentityNow: identitynow_lockout_config"
+description: |-
+  Manages the IdentityNow authentication lockout configuration.
+---
+
+# identitynow_lockout_config
+
+Manages the tenant-wide lockout of users after failed authentication attempts.
+
+There is one lockout configuration per tenant, it cannot be created or deleted. Creating the resource applies the configured settings to the existing lockout configuration, and destroying it only removes it from Terraform state: the settings are left unchanged in IdentityNow.
+
+Only the settings present in the configuration are managed. Settings that are not configured are never changed or reset; they show the current tenant value. Removing a setting from the configuration stops managing it and leaves its current value in place. Updates are sent as JSON Patch operations for the configured settings that changed.
+
+## Example Usage
+
+```hcl
+resource "identitynow_lockout_config" "this" {
+  maximum_attempts = 5
+  lockout_duration = 15
+  lockout_window   = 5
+}
+```
+
+## Arguments Reference
+
+All arguments are optional; settings that are not configured keep their current value.
+
+* `maximum_attempts` - (Optional) Maximum number of failed authentication attempts before the user is locked out.
+* `lockout_duration` - (Optional) Time in minutes a user is locked out.
+* `lockout_window` - (Optional) Rolling window in minutes in which failed attempts count towards the maximum.
+
+## Attributes Reference
+
+In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
+
+* `id` - Always `lockout-config`.
+
+## Import
+
+The settings can be imported with any ID; the ID is always set to `lockout-config`:
+
+```shell
+terraform import identitynow_lockout_config.this lockout-config
+```

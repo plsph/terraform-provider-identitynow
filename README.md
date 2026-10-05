@@ -150,6 +150,13 @@ To find how you can declare resources see [documentation](https://registry.terra
 Note: The `identitynow_source_entitlement` data source returns all entitlements of the source with the given `name` in the computed `entitlements` list, e.g. `data.identitynow_source_entitlement.example.entitlements[0].id`.
 
 # Development
+The repository follows the layout of the [Terraform provider scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding-framework):
+
+- `main.go` starts the provider server.
+- `internal/provider` contains the provider, the API client, and one `<name>_resource.go` or `<name>_data_source.go` file per resource and data source, with tests next to them.
+- `docs` contains the registry documentation: `index.md`, `resources/<name>.md` and `data-sources/<name>.md`.
+- `examples` contains an example Terraform configuration.
+
 Edit the Go files that make up the provider, and rebuild the provider.
 
 ```bash

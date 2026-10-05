@@ -6,6 +6,8 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	"github.com/plsph/terraform-provider-identitynow/internal/provider"
 )
 
 // version is set via -ldflags during build
@@ -22,7 +24,7 @@ func main() {
 		Debug:   debug,
 	}
 
-	err := providerserver.Serve(context.Background(), New(version), opts)
+	err := providerserver.Serve(context.Background(), provider.New(version), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())

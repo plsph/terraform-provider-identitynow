@@ -1,0 +1,37 @@
+---
+subcategory: "Parameter Storage"
+page_title: "IdentityNow: Data Source: identitynow_parameter"
+description: |-
+  Gets information about an existing IdentityNow parameter storage parameter.
+---
+
+# Data Source: identitynow_parameter
+
+Use this data source to look up a parameter in parameter storage by ID or name. Only the public fields are returned, the private fields are never available.
+
+## Example Usage
+
+```hcl
+data "identitynow_parameter" "db_credential" {
+  name = "Database service account"
+}
+```
+
+## Arguments Reference
+
+Exactly one of the following must be set:
+
+* `id` - (Optional) Parameter ID.
+* `name` - (Optional) Parameter name.
+
+## Attributes Reference
+
+* `description` - Description of the parameter.
+* `type` - Parameter type.
+* `owner_id` - Identity ID of the parameter owner.
+* `public_fields_json` - Public fields of the parameter as a JSON object.
+* `primary_field` - Name of the primary field in the public fields.
+* `last_modified_at` - Date any field of the parameter was last changed.
+* `last_modified_by` - ID of the user who last changed the parameter.
+* `private_fields_last_modified_at` - Date the private fields were last changed.
+* `private_fields_last_modified_by` - ID of the user who last changed the private fields.

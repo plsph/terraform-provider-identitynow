@@ -1,0 +1,31 @@
+---
+subcategory: "Tagged Object"
+page_title: "IdentityNow: Data Source: identitynow_tag"
+description: |-
+  Gets information about an existing IdentityNow tag.
+---
+
+# Data Source: identitynow_tag
+
+Use this data source to look up a tag by ID or name.
+
+## Example Usage
+
+```hcl
+data "identitynow_tag" "pci" {
+  name = "PCI"
+}
+```
+
+## Arguments Reference
+
+Exactly one of the following must be set:
+
+* `id` - (Optional) Tag ID.
+* `name` - (Optional) Tag name.
+
+## Attributes Reference
+
+* `created` - Creation date.
+* `modified` - Last modification date.
+* `tag_category_refs` - Objects the tag is assigned to. Each item contains `id`, `type` and `name`.

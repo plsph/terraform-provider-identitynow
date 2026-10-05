@@ -3,6 +3,9 @@ default: build
 build:
 	@go build -o /dev/null ./...
 
+install:
+	@go install -v ./...
+
 test:
 	@go test ./...
 
@@ -21,4 +24,4 @@ fmtcheck:
 testacc:
 	@sh -c "'$(CURDIR)/scripts/gotestacc.sh'"
 
-.PHONY: default build test testrace vet fmt fmtcheck testacc
+.PHONY: default build install test testrace vet fmt fmtcheck testacc
