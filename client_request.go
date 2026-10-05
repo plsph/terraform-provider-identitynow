@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"strconv"
 	"strings"
 	"time"
@@ -65,7 +66,8 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 
 	for attempt := 1; ; attempt++ {
 		if attempt > 1 {
-			if req.Body != nil && req.GetBody == nil {
+			// httputil.DumpRequestOut replaces a nil body with http.NoBody, which needs no resend.
+			if req.Body != nil && req.Body != http.NoBody && req.GetBody == nil {
 				return fmt.Errorf("%s %s: request body cannot be sent again for a retry", req.Method, req.URL.Path)
 			}
 			if req.GetBody != nil {
@@ -83,12 +85,14 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 		if err := c.ensureToken(ctx); err != nil {
 			return err
 		}
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.token()))
+		token := c.token()
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 		tflog.Trace(ctx, "Sending HTTP Request", map[string]interface{}{
 			"method":  req.Method,
 			"url":     req.URL.String(),
 			"attempt": attempt,
+			"request": dumpRequest(req, token),
 		})
 
 		res, err := c.HTTPClient.Do(req)
@@ -96,15 +100,17 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 			tflog.Error(ctx, "HTTP client operation failed", map[string]interface{}{"error": err.Error()})
 			return err
 		}
+
+		tflog.Trace(ctx, "Received HTTP Response", map[string]interface{}{
+			"status_code": res.StatusCode,
+			"response":    dumpResponse(res),
+		})
+
 		body, err := io.ReadAll(res.Body)
 		res.Body.Close()
 		if err != nil {
 			return fmt.Errorf("%s %s: reading response body: %w", req.Method, req.URL.Path, err)
 		}
-
-		tflog.Trace(ctx, "Received HTTP Response", map[string]interface{}{
-			"status_code": res.StatusCode,
-		})
 
 		if res.StatusCode == http.StatusUnauthorized && !tokenRefreshed {
 			tflog.Debug(ctx, "Access token rejected, refreshing token")
@@ -139,6 +145,29 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 		}
 		return decodeResponse(req, res.StatusCode, body, v)
 	}
+}
+
+// dumpRequest returns the full outgoing request for trace logging, with the access token redacted.
+// The request body is read and replaced with an identical copy, so the request can still be sent.
+func dumpRequest(req *http.Request, token string) string {
+	dump, err := httputil.DumpRequestOut(req, true)
+	if err != nil {
+		return fmt.Sprintf("<failed to dump request: %s>", err)
+	}
+	if token == "" {
+		return string(dump)
+	}
+	return strings.ReplaceAll(string(dump), token, "<redacted>")
+}
+
+// dumpResponse returns the full response for trace logging. The response body is read and
+// replaced with an identical copy, so it can still be read by the caller.
+func dumpResponse(res *http.Response) string {
+	dump, err := httputil.DumpResponse(res, true)
+	if err != nil {
+		return fmt.Sprintf("<failed to dump response: %s>", err)
+	}
+	return string(dump)
 }
 
 // isRetryableStatus reports whether a response status is retried. Rate limited requests were not

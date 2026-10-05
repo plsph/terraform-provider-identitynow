@@ -50,6 +50,27 @@ func TestSendRequestRetriesRateLimitedRequests(t *testing.T) {
 	}
 }
 
+func TestSendRequestRetriesRequestsWithoutBody(t *testing.T) {
+	withFastRetries(t)
+	var calls int32
+	server := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if atomic.AddInt32(&calls, 1) == 1 {
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"form-1"}`))
+	})
+	client := NewClient(context.Background(), server.URL, "id", "secret", 1000)
+
+	if _, err := client.GetFormDefinition(context.Background(), "form-1"); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if calls != 2 {
+		t.Fatalf("expected 2 calls, got %d", calls)
+	}
+}
+
 func TestSendRequestRetriesOnlyIdempotentRequestsOnGatewayTimeout(t *testing.T) {
 	withFastRetries(t)
 	var calls int32
