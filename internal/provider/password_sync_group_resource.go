@@ -126,7 +126,7 @@ func (r *PasswordSyncGroupResource) Schema(ctx context.Context, req resource.Sch
 				Optional:            true,
 			},
 			"source_ids": schema.SetAttribute{
-				MarkdownDescription: "IDs of the password managed sources in the sync group.",
+				MarkdownDescription: "Set of IDs of the password managed sources in the sync group.",
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
@@ -320,7 +320,7 @@ func (d *PasswordSyncGroupDataSource) Schema(ctx context.Context, req datasource
 			"id":                 dsschema.StringAttribute{MarkdownDescription: "Password sync group ID. Exactly one of `id` or `name` must be set.", Optional: true, Computed: true},
 			"name":               dsschema.StringAttribute{MarkdownDescription: "Name of the sync group. Exactly one of `id` or `name` must be set.", Optional: true, Computed: true},
 			"password_policy_id": dsschema.StringAttribute{MarkdownDescription: "ID of the password policy of the sync group.", Computed: true},
-			"source_ids":         dsschema.SetAttribute{MarkdownDescription: "IDs of the sources in the sync group.", ElementType: types.StringType, Computed: true},
+			"source_ids":         dsschema.SetAttribute{MarkdownDescription: "Set of IDs of the sources in the sync group.", ElementType: types.StringType, Computed: true},
 			"created":            dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
 			"modified":           dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 		},

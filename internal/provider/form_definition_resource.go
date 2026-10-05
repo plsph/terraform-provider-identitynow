@@ -84,95 +84,95 @@ func (r *FormDefinitionResource) Schema(ctx context.Context, req resource.Schema
 		MarkdownDescription: "Manages a SailPoint custom form definition.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Form definition ID",
+				MarkdownDescription: "Form definition ID.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Form definition name",
+				MarkdownDescription: "The name of the form definition.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Form definition description",
+				MarkdownDescription: "The description of the form definition.",
 				Optional:            true,
 			},
 			"form_elements_json": schema.StringAttribute{
-				MarkdownDescription: "List of nested form elements as a JSON array. Root elements must be of type `SECTION`.",
+				MarkdownDescription: "List of nested form elements as a JSON array. Root elements must have `elementType` `SECTION`, and child elements go inside the section's `config.formElements`. Use `jsonencode()` for convenience.",
 				Optional:            true,
 				Validators:          []validator.String{jsonArrayStringValidator{}},
 			},
 			"form_conditions_json": schema.StringAttribute{
-				MarkdownDescription: "Conditional logic that dynamically modifies the form, as a JSON array.",
+				MarkdownDescription: "Conditional logic that dynamically modifies the form as the recipient interacts with it, as a JSON array. Use `jsonencode()` for convenience.",
 				Optional:            true,
 				Validators:          []validator.String{jsonArrayStringValidator{}},
 			},
 			"used_by": schema.ListNestedAttribute{
-				MarkdownDescription: "Systems currently using the form definition",
+				MarkdownDescription: "Systems currently using the form definition. Each item contains `id`, `type` (`WORKFLOW`, `SOURCE` or `MySailPoint`) and `name`.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.List{
 					listplanmodifier.UseStateForUnknown(),
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "ID of the system using the form definition."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Type of the system using the form definition: `WORKFLOW`, `SOURCE` or `MySailPoint`."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Name of the system using the form definition."},
 					},
 				},
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "The date and time the form definition was created",
+				MarkdownDescription: "The date and time the form definition was created.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "The date and time the form definition was modified",
+				MarkdownDescription: "The date and time the form definition was last modified.",
 				Computed:            true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				MarkdownDescription: "Form definition owner. Exactly one owner is required.",
+				MarkdownDescription: "Owner of the form definition. Exactly one block is required.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Owner identity ID",
+							MarkdownDescription: "Owner identity ID.",
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Owner type (IDENTITY)",
+							MarkdownDescription: "Owner type. Must be `IDENTITY`.",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Owner name",
+							MarkdownDescription: "Owner name. If omitted, the name returned by the API is not tracked.",
 							Optional:            true,
 						},
 					},
 				},
 			},
 			"form_input": schema.ListNestedBlock{
-				MarkdownDescription: "Form inputs required when creating a form instance",
+				MarkdownDescription: "Form inputs that must be provided when creating a form instance.",
 				PlanModifiers:       []planmodifier.List{formInputIDsFromState{}},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Form input identifier, assigned by the API",
+							MarkdownDescription: "Form input identifier, assigned by the API.",
 							Computed:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Form input type (STRING or ARRAY)",
+							MarkdownDescription: "Form input type. One of `STRING` or `ARRAY`.",
 							Required:            true,
 						},
 						"label": schema.StringAttribute{
-							MarkdownDescription: "Form input name",
+							MarkdownDescription: "Form input name.",
 							Optional:            true,
 						},
 						"description": schema.StringAttribute{
-							MarkdownDescription: "Form input description",
+							MarkdownDescription: "Form input description.",
 							Optional:            true,
 						},
 					},

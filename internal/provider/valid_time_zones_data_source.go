@@ -52,9 +52,9 @@ func (d *ValidTimeZonesDataSource) Schema(ctx context.Context, req datasource.Sc
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Lists the time zones that can be set in the org configuration (`identitynow_org_config`).",
 		Attributes: map[string]dsschema.Attribute{
-			"id": dsschema.StringAttribute{MarkdownDescription: "Always `" + validTimeZonesID + "`", Computed: true},
+			"id": dsschema.StringAttribute{MarkdownDescription: "Always `" + validTimeZonesID + "`.", Computed: true},
 			"time_zones": dsschema.ListAttribute{
-				MarkdownDescription: "Valid time zone names, e.g. `Europe/Warsaw`",
+				MarkdownDescription: "List of valid time zone names, e.g. `Europe/Warsaw`.",
 				ElementType:         types.StringType,
 				Computed:            true,
 			},

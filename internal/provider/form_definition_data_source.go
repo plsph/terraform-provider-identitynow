@@ -43,65 +43,65 @@ func (d *FormDefinitionDataSource) Schema(ctx context.Context, req datasource.Sc
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Form definition ID",
+				MarkdownDescription: "The form definition ID.",
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Form definition name",
+				MarkdownDescription: "The name of the form definition.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Form definition description",
+				MarkdownDescription: "The form definition description.",
 			},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Form definition owner",
+				MarkdownDescription: "The form definition owner. Contains `id`, `type` and `name`.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Owner identity ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
 			"form_input": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Form inputs required when creating a form instance",
+				MarkdownDescription: "Form inputs required when creating a form instance. Each item contains `id`, `type`, `label` and `description`.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":          schema.StringAttribute{Computed: true},
-						"type":        schema.StringAttribute{Computed: true},
-						"label":       schema.StringAttribute{Computed: true},
-						"description": schema.StringAttribute{Computed: true},
+						"id":          schema.StringAttribute{Computed: true, MarkdownDescription: "Form input identifier."},
+						"type":        schema.StringAttribute{Computed: true, MarkdownDescription: "Form input type."},
+						"label":       schema.StringAttribute{Computed: true, MarkdownDescription: "Form input name."},
+						"description": schema.StringAttribute{Computed: true, MarkdownDescription: "Form input description."},
 					},
 				},
 			},
 			"form_elements_json": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "List of nested form elements as JSON",
+				MarkdownDescription: "The form elements as a JSON array.",
 			},
 			"form_conditions_json": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Form conditions as JSON",
+				MarkdownDescription: "The form conditions as a JSON array.",
 			},
 			"used_by": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Systems currently using the form definition",
+				MarkdownDescription: "Systems currently using the form definition. Each item contains `id`, `type` and `name`.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "ID of the system using the form definition."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Type of the system using the form definition."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Name of the system using the form definition."},
 					},
 				},
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The date and time the form definition was created",
+				MarkdownDescription: "The date and time the form definition was created.",
 			},
 			"modified": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The date and time the form definition was modified",
+				MarkdownDescription: "The date and time the form definition was last modified.",
 			},
 		},
 	}

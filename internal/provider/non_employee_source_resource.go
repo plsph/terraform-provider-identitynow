@@ -175,12 +175,12 @@ func (r *NonEmployeeSourceResource) Schema(ctx context.Context, req resource.Sch
 		MarkdownDescription: "Manages a non-employee source used by Non-Employee Lifecycle Management. Creating it also creates the backing source.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Non-employee source ID",
+				MarkdownDescription: "Non-employee source ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"source_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the source that backs the non-employee source",
+				MarkdownDescription: "ID of the source that backs the non-employee source.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
@@ -190,11 +190,11 @@ func (r *NonEmployeeSourceResource) Schema(ctx context.Context, req resource.Sch
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Name of the non-employee source",
+				MarkdownDescription: "Name of the non-employee source.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Description of the non-employee source",
+				MarkdownDescription: "Description of the non-employee source.",
 				Required:            true,
 			},
 			"management_workgroup": schema.StringAttribute{
@@ -203,36 +203,36 @@ func (r *NonEmployeeSourceResource) Schema(ctx context.Context, req resource.Sch
 				PlanModifiers:       []planmodifier.String{nonEmployeeSourceRequiresReplaceString},
 			},
 			"approvers": schema.ListAttribute{
-				MarkdownDescription: "IDs of up to 3 identities or governance groups that approve non-employee requests, in approval order",
+				MarkdownDescription: "IDs of up to 3 identities or governance groups that approve non-employee requests, in approval order.",
 				Optional:            true,
 				ElementType:         types.StringType,
 				Validators:          []validator.List{listSizeBetween(0, 3)},
 			},
 			"account_managers": schema.SetAttribute{
-				MarkdownDescription: "IDs of up to 10 identities or governance groups that manage the non-employee accounts",
+				MarkdownDescription: "IDs of up to 10 identities or governance groups that manage the non-employee accounts.",
 				Optional:            true,
 				ElementType:         types.StringType,
 				Validators:          []validator.Set{nonEmployeeSourceSetSizeValidator{max: 10}},
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "Creation date",
+				MarkdownDescription: "Creation date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				MarkdownDescription: "Owner identity of the source. Exactly one block. It cannot be changed and is not returned by the API: changing it forces a new source, and changes made outside Terraform are not detected.",
+				MarkdownDescription: "Owner of the source. Exactly one block is required. It cannot be changed and is not returned by the API: changing it forces a new source, and changes made outside Terraform are not detected.",
 				Validators:          []validator.List{listSizeBetween(1, 1)},
 				PlanModifiers:       []planmodifier.List{nonEmployeeSourceRequiresReplaceList},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Owner identity ID",
+							MarkdownDescription: "Owner identity ID.",
 							Required:            true,
 						},
 					},
@@ -531,24 +531,24 @@ func (d *NonEmployeeSourceDataSource) Schema(ctx context.Context, req datasource
 				Computed:            true,
 			},
 			"name": dsschema.StringAttribute{
-				MarkdownDescription: "Non-employee source name. Exactly one of `id` or `name` must be set.",
+				MarkdownDescription: "Non-employee source name. All non-employee sources are listed and matched by exact name. Exactly one of `id` or `name` must be set.",
 				Optional:            true,
 				Computed:            true,
 			},
-			"source_id":   dsschema.StringAttribute{MarkdownDescription: "ID of the source that backs the non-employee source", Computed: true},
-			"description": dsschema.StringAttribute{MarkdownDescription: "Description of the non-employee source", Computed: true},
+			"source_id":   dsschema.StringAttribute{MarkdownDescription: "ID of the source that backs the non-employee source.", Computed: true},
+			"description": dsschema.StringAttribute{MarkdownDescription: "Description of the non-employee source.", Computed: true},
 			"approvers": dsschema.ListAttribute{
-				MarkdownDescription: "IDs of the approvers, in approval order",
+				MarkdownDescription: "IDs of the approvers, in approval order.",
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
 			"account_managers": dsschema.SetAttribute{
-				MarkdownDescription: "IDs of the account managers",
+				MarkdownDescription: "IDs of the account managers.",
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
-			"created":  dsschema.StringAttribute{MarkdownDescription: "Creation date", Computed: true},
-			"modified": dsschema.StringAttribute{MarkdownDescription: "Last modification date", Computed: true},
+			"created":  dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
+			"modified": dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 		},
 	}
 }

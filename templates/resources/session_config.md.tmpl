@@ -17,19 +17,9 @@ Only the settings present in the configuration are managed. Settings that are no
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `max_idle_time` - (Optional) Maximum time in minutes a session can be idle.
-* `max_session_time` - (Optional) Maximum session time in minutes.
-* `remember_me` - (Optional) Whether 'remember me' is enabled on the login page.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `session-config`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

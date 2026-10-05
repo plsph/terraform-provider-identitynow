@@ -13,21 +13,6 @@ Use this data source to look up a connector rule by ID or name. Lookups by name 
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Exactly one of `id` and `name` must be set.
 
-Exactly one of the following must be set:
-
-* `id` - (Optional) Connector rule ID.
-* `name` - (Optional) Rule name.
-
-## Attributes Reference
-
-* `description` - Description of the rule's purpose.
-* `type` - Rule type.
-* `signature_json` - Function signature of the rule as a JSON object.
-* `source_code` - Code of the rule, a list with one element:
-  * `version` - Version of the code.
-  * `script` - The BeanShell code.
-* `attributes_json` - Rule attributes as a JSON object.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}

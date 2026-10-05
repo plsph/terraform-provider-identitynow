@@ -128,7 +128,7 @@ func (r *ParameterResource) Schema(ctx context.Context, req resource.SchemaReque
 				Optional:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Parameter type, see the parameter storage specification. Cannot be changed, changing it forces a new parameter.",
+				MarkdownDescription: "Parameter type, see `GET /parameter-storage/specification` for the types and their fields. Cannot be changed, changing it forces a new parameter to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -137,12 +137,12 @@ func (r *ParameterResource) Schema(ctx context.Context, req resource.SchemaReque
 				Required:            true,
 			},
 			"public_fields_json": schema.StringAttribute{
-				MarkdownDescription: "Public fields of the parameter as a JSON object, as defined by the type specification. Compared semantically.",
+				MarkdownDescription: "Public fields of the parameter as a JSON object, as defined by the type specification. The value is compared semantically.",
 				Optional:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},
 			"private_fields": schema.StringAttribute{
-				MarkdownDescription: "Private (secret) fields of the parameter as a JWE AES256 encrypted blob containing a JSON object. The provider does not encrypt the value. The API never returns it; removing the attribute leaves the stored private fields unchanged.",
+				MarkdownDescription: "Private fields as a JWE encrypted blob containing a JSON object, as defined by the type specification. Write-only in the API. Removing the argument leaves the stored private fields unchanged. The blob is JWE AES256 encrypted and the provider does not encrypt the value.",
 				Optional:            true,
 				Sensitive:           true,
 			},

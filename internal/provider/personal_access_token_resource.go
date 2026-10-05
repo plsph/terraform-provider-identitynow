@@ -187,21 +187,21 @@ func (r *PersonalAccessTokenResource) Schema(ctx context.Context, req resource.S
 				Required:            true,
 			},
 			"scope": schema.SetAttribute{
-				MarkdownDescription: "Scopes of the token. Defaults to `sp:scopes:all`, all rights of the owner. Scope changes apply to access tokens generated after the change.",
+				MarkdownDescription: "Scopes of the token. Defaults to `sp:scopes:all`, all rights of the owner. Scope changes only apply to access tokens generated after the change, which can take up to 20 minutes.",
 				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
 				PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 			},
 			"access_token_validity_seconds": schema.Int64Attribute{
-				MarkdownDescription: "Number of seconds an access token generated with this token is valid, between 15 and 43200 (the default). Cannot be updated, changing it forces a new token.",
+				MarkdownDescription: "Number of seconds an access token generated with this token is valid, between 15 and 43200. Defaults to 43200. Cannot be updated, changing it forces a new token to be created.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Int64{int64AtLeastValidator{min: 15}},
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown(), int64planmodifier.RequiresReplace()},
 			},
 			"expiration_date": schema.StringAttribute{
-				MarkdownDescription: "Date and time (RFC 3339) when the token expires, must be in the future. When not set the token never expires, which requires `user_aware_token_never_expires = true`.",
+				MarkdownDescription: "Date and time in RFC 3339 format when the token expires. It must be in the future. When not set, the token never expires and `user_aware_token_never_expires` must be `true`. Dates that denote the same instant do not produce a diff.",
 				Optional:            true,
 			},
 			"user_aware_token_never_expires": schema.BoolAttribute{
@@ -222,7 +222,7 @@ func (r *PersonalAccessTokenResource) Schema(ctx context.Context, req resource.S
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"secret": schema.StringAttribute{
-				MarkdownDescription: "Token secret, used as the client secret. It is only returned when the token is created, so it is null for imported tokens.",
+				MarkdownDescription: "Token secret, used as the client secret. Only available for tokens created by Terraform. It is only returned when the token is created, so it is null for imported tokens.",
 				Computed:            true,
 				Sensitive:           true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -520,7 +520,7 @@ func (d *PersonalAccessTokenDataSource) Schema(ctx context.Context, req datasour
 			},
 			"managed":   dsschema.BoolAttribute{MarkdownDescription: "Whether the token is managed by the SailPoint platform.", Computed: true},
 			"created":   dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
-			"last_used": dsschema.StringAttribute{MarkdownDescription: "Date the token was last used to generate an access token, updated once a day.", Computed: true},
+			"last_used": dsschema.StringAttribute{MarkdownDescription: "Date the token was last used to generate an access token. It is updated once a day.", Computed: true},
 		},
 	}
 }

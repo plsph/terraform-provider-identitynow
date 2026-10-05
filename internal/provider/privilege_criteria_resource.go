@@ -92,30 +92,30 @@ func (r *PrivilegeCriteriaResource) Schema(ctx context.Context, req resource.Sch
 		MarkdownDescription: "Manages a custom privilege criteria, which assigns a privilege level to the entitlements of a source that match the criteria.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Privilege criteria ID",
+				MarkdownDescription: "Privilege criteria ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"source_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the source the criteria applies to",
+				MarkdownDescription: "ID of the source the criteria applies to.",
 				Required:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Criteria type, always `CUSTOM` for criteria managed with this resource",
+				MarkdownDescription: "Criteria type, always `CUSTOM` for criteria managed with this resource.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"operator": schema.StringAttribute{
-				MarkdownDescription: "Logical operator between the groups: `AND` or `OR`",
+				MarkdownDescription: "Logical operator between the groups, `AND` or `OR`.",
 				Required:            true,
 			},
 			"groups_json": schema.StringAttribute{
-				MarkdownDescription: "Criteria groups as a JSON array. Each group has an `operator` (`AND` or `OR`) between its `criteriaItems`; each item has a `targetType` (`group`), a `property` (`displayName`, `description`, `value` or `attributes.<name>`), an `operator` (`IN`, `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `DOES_NOT_CONTAIN`, `STARTS_WITH` or `ENDS_WITH`), 1 to 50 `values` and `ignoreCase`. Use `jsonencode()`. Fields the API adds do not cause a diff.",
+				MarkdownDescription: "Criteria groups as a JSON array. Each group has an `operator` (`AND` or `OR`) between its `criteriaItems`. Each item has a `targetType` (`group`), a `property` (`displayName`, `description`, `value` or `attributes.<name>`), an `operator` (`IN`, `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `DOES_NOT_CONTAIN`, `STARTS_WITH` or `ENDS_WITH`), 1 to 50 `values` and `ignoreCase`. Use `jsonencode()`. The value is compared on the configured fields only, so formatting, key order and defaults IdentityNow adds do not produce a diff.",
 				Required:            true,
 				Validators:          []validator.String{jsonArrayStringValidator{}},
 			},
 			"privilege_level": schema.StringAttribute{
-				MarkdownDescription: "Privilege level assigned by the criteria: `HIGH`, `MEDIUM` or `LOW`",
+				MarkdownDescription: "Privilege level assigned by the criteria, `HIGH`, `MEDIUM` or `LOW`.",
 				Required:            true,
 			},
 		},
@@ -277,12 +277,12 @@ func (d *PrivilegeCriteriaDataSource) Schema(ctx context.Context, req datasource
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up a privilege criteria by ID. Connector and single level criteria can be read as well as custom criteria.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":              dsschema.StringAttribute{MarkdownDescription: "Privilege criteria ID", Required: true},
-			"source_id":       dsschema.StringAttribute{MarkdownDescription: "ID of the source the criteria applies to", Computed: true},
-			"type":            dsschema.StringAttribute{MarkdownDescription: "Criteria type: `CUSTOM`, `CONNECTOR` or `SINGLE_LEVEL`", Computed: true},
-			"operator":        dsschema.StringAttribute{MarkdownDescription: "Logical operator between the groups", Computed: true},
-			"groups_json":     dsschema.StringAttribute{MarkdownDescription: "Criteria groups as a JSON array", Computed: true},
-			"privilege_level": dsschema.StringAttribute{MarkdownDescription: "Privilege level assigned by the criteria", Computed: true},
+			"id":              dsschema.StringAttribute{MarkdownDescription: "Privilege criteria ID.", Required: true},
+			"source_id":       dsschema.StringAttribute{MarkdownDescription: "ID of the source the criteria applies to.", Computed: true},
+			"type":            dsschema.StringAttribute{MarkdownDescription: "Criteria type, `CUSTOM`, `CONNECTOR` or `SINGLE_LEVEL`.", Computed: true},
+			"operator":        dsschema.StringAttribute{MarkdownDescription: "Logical operator between the groups.", Computed: true},
+			"groups_json":     dsschema.StringAttribute{MarkdownDescription: "Criteria groups as a JSON array.", Computed: true},
+			"privilege_level": dsschema.StringAttribute{MarkdownDescription: "Privilege level assigned by the criteria.", Computed: true},
 		},
 	}
 }

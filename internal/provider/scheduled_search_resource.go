@@ -123,63 +123,63 @@ func (r *ScheduledSearchResource) Schema(ctx context.Context, req resource.Schem
 		MarkdownDescription: "Manages a scheduled search, which runs a saved search on a schedule and emails the results. The scheduled search is owned by the identity the provider authenticates as.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Scheduled search ID",
+				MarkdownDescription: "Scheduled search ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Scheduled search name",
+				MarkdownDescription: "Scheduled search name.",
 				Optional:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Scheduled search description",
+				MarkdownDescription: "Scheduled search description.",
 				Optional:            true,
 			},
 			"saved_search_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the saved search that is run",
+				MarkdownDescription: "ID of the saved search that is run.",
 				Required:            true,
 			},
 			"schedule_json": schema.StringAttribute{
-				MarkdownDescription: "Schedule as a JSON object with `type` (`DAILY`, `WEEKLY`, `MONTHLY`, `CALENDAR` or `ANNUALLY`), the `months`, `days` and `hours` selectors (`type` `LIST` or `RANGE`, `values`, `interval`), `expiration` and `timeZoneId`. `hours` is required. Use `jsonencode()`. Fields the API adds do not cause a diff.",
+				MarkdownDescription: "Schedule as a JSON object with `type` (`DAILY`, `WEEKLY`, `MONTHLY`, `CALENDAR` or `ANNUALLY`), the `months`, `days` and `hours` selectors (each with `type` `LIST` or `RANGE`, `values` and an optional `interval`), `expiration` and `timeZoneId`. `hours` is required. Use `jsonencode()`. The value is compared on the configured fields only, so formatting, key order and fields IdentityNow adds do not produce a diff.",
 				Required:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},
 			"enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether the scheduled search is enabled. When not set, the value chosen by the API is kept.",
+				MarkdownDescription: "Whether the scheduled search is enabled. When not set, the value chosen by IdentityNow is kept.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"email_empty_results": schema.BoolAttribute{
-				MarkdownDescription: "Whether an email is sent when the search returns no results. When not set, the value chosen by the API is kept.",
+				MarkdownDescription: "Whether an email is sent when the search returns no results. When not set, the value chosen by IdentityNow is kept.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"display_query_details": schema.BoolAttribute{
-				MarkdownDescription: "Whether the email includes the query and a preview of the results, which can contain personal data. When not set, the value chosen by the API is kept.",
+				MarkdownDescription: "Whether the email includes the query and a preview of the results, which can contain personal data. When not set, the value chosen by IdentityNow is kept.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"owner": schema.ListNestedAttribute{
-				MarkdownDescription: "Owner of the scheduled search, set by the API to the identity that created it",
+				MarkdownDescription: "Owner of the scheduled search, with `type` and `id`. Set by the API to the identity that created it.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"type": schema.StringAttribute{MarkdownDescription: "Owner type", Computed: true},
-						"id":   schema.StringAttribute{MarkdownDescription: "Owner identity ID", Computed: true},
+						"type": schema.StringAttribute{MarkdownDescription: "Owner type.", Computed: true},
+						"id":   schema.StringAttribute{MarkdownDescription: "Owner identity ID.", Computed: true},
 					},
 				},
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "Creation date",
+				MarkdownDescription: "Creation date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 			},
 		},
@@ -189,9 +189,9 @@ func (r *ScheduledSearchResource) Schema(ctx context.Context, req resource.Schem
 				Validators:          []validator.List{listSizeBetween(1, 0)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{MarkdownDescription: "Identity ID", Required: true},
+						"id": schema.StringAttribute{MarkdownDescription: "Identity ID.", Required: true},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Recipient type, `IDENTITY` (default)",
+							MarkdownDescription: "Recipient type, `IDENTITY` (default).",
 							Optional:            true,
 							Computed:            true,
 							Default:             stringdefault.StaticString("IDENTITY"),
@@ -438,8 +438,8 @@ func scheduledSearchRefDataSourceAttribute(description string) dsschema.ListNest
 		Computed:            true,
 		NestedObject: dsschema.NestedAttributeObject{
 			Attributes: map[string]dsschema.Attribute{
-				"type": dsschema.StringAttribute{MarkdownDescription: "Identity type", Computed: true},
-				"id":   dsschema.StringAttribute{MarkdownDescription: "Identity ID", Computed: true},
+				"type": dsschema.StringAttribute{MarkdownDescription: "Identity type.", Computed: true},
+				"id":   dsschema.StringAttribute{MarkdownDescription: "Identity ID.", Computed: true},
 			},
 		},
 	}
@@ -449,18 +449,18 @@ func (d *ScheduledSearchDataSource) Schema(ctx context.Context, req datasource.S
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up a scheduled search by ID.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":                    dsschema.StringAttribute{MarkdownDescription: "Scheduled search ID", Required: true},
-			"name":                  dsschema.StringAttribute{MarkdownDescription: "Scheduled search name", Computed: true},
-			"description":           dsschema.StringAttribute{MarkdownDescription: "Scheduled search description", Computed: true},
-			"saved_search_id":       dsschema.StringAttribute{MarkdownDescription: "ID of the saved search that is run", Computed: true},
-			"schedule_json":         dsschema.StringAttribute{MarkdownDescription: "Schedule as a JSON object", Computed: true},
-			"recipient":             scheduledSearchRefDataSourceAttribute("Identities that receive the search results"),
-			"enabled":               dsschema.BoolAttribute{MarkdownDescription: "Whether the scheduled search is enabled", Computed: true},
-			"email_empty_results":   dsschema.BoolAttribute{MarkdownDescription: "Whether an email is sent when the search returns no results", Computed: true},
-			"display_query_details": dsschema.BoolAttribute{MarkdownDescription: "Whether the email includes the query and a preview of the results", Computed: true},
-			"owner":                 scheduledSearchRefDataSourceAttribute("Owner of the scheduled search"),
-			"created":               dsschema.StringAttribute{MarkdownDescription: "Creation date", Computed: true},
-			"modified":              dsschema.StringAttribute{MarkdownDescription: "Last modification date", Computed: true},
+			"id":                    dsschema.StringAttribute{MarkdownDescription: "Scheduled search ID.", Required: true},
+			"name":                  dsschema.StringAttribute{MarkdownDescription: "Scheduled search name.", Computed: true},
+			"description":           dsschema.StringAttribute{MarkdownDescription: "Scheduled search description.", Computed: true},
+			"saved_search_id":       dsschema.StringAttribute{MarkdownDescription: "ID of the saved search that is run.", Computed: true},
+			"schedule_json":         dsschema.StringAttribute{MarkdownDescription: "Schedule as a JSON object.", Computed: true},
+			"recipient":             scheduledSearchRefDataSourceAttribute("Identities that receive the search results, with `type` and `id`."),
+			"enabled":               dsschema.BoolAttribute{MarkdownDescription: "Whether the scheduled search is enabled.", Computed: true},
+			"email_empty_results":   dsschema.BoolAttribute{MarkdownDescription: "Whether an email is sent when the search returns no results.", Computed: true},
+			"display_query_details": dsschema.BoolAttribute{MarkdownDescription: "Whether the email includes the query and a preview of the results.", Computed: true},
+			"owner":                 scheduledSearchRefDataSourceAttribute("Owner of the scheduled search, with `type` and `id`."),
+			"created":               dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
+			"modified":              dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 		},
 	}
 }

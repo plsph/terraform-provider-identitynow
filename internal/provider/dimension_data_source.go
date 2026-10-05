@@ -41,50 +41,50 @@ func (d *DimensionDataSource) Schema(ctx context.Context, req datasource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Dimension ID",
+				MarkdownDescription: "The ID of the dimension.",
 			},
 			"role_id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "The ID of the role this dimension belongs to",
+				MarkdownDescription: "The ID of the role this dimension belongs to.",
 			},
 			"name": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Dimension name",
+				MarkdownDescription: "The name of the dimension.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Dimension description",
+				MarkdownDescription: "The description of the dimension.",
 			},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Dimension owner",
+				MarkdownDescription: "List with the owner of the dimension.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Owner ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
 			"access_profiles": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access profiles assigned to this dimension",
+				MarkdownDescription: "The access profiles assigned to this dimension.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Access profile ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Access profile type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Access profile name."},
 					},
 				},
 			},
 			"entitlements": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Entitlements assigned to this dimension",
+				MarkdownDescription: "The entitlements assigned to this dimension.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Entitlement ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Entitlement type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Entitlement name."},
 					},
 				},
 			},

@@ -13,15 +13,6 @@ Use this data source to look up a tag by ID or name.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Exactly one of `id` and `name` must be set.
 
-Exactly one of the following must be set:
-
-* `id` - (Optional) Tag ID.
-* `name` - (Optional) Tag name.
-
-## Attributes Reference
-
-* `created` - Creation date.
-* `modified` - Last modification date.
-* `tag_category_refs` - Objects the tag is assigned to. Each item contains `id`, `type` and `name`.
+{{ .SchemaMarkdown | trimspace }}

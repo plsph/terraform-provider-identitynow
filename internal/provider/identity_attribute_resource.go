@@ -103,12 +103,12 @@ func (r *IdentityAttributeResource) Schema(ctx context.Context, req resource.Sch
 		MarkdownDescription: "Manages an identity attribute.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Identity attribute ID, the same as `name`",
+				MarkdownDescription: "Identity attribute ID, the same as `name`.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Technical name of the identity attribute. It identifies the attribute, changing it forces a new identity attribute.",
+				MarkdownDescription: "Technical name of the identity attribute. It identifies the attribute, changing this forces a new identity attribute to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -120,20 +120,20 @@ func (r *IdentityAttributeResource) Schema(ctx context.Context, req resource.Sch
 			},
 			"standard": optionalComputedBool("Whether the attribute is a standard (default) attribute. Standard attributes cannot be deleted."),
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Identity attribute type, e.g. `string`. The API fills it in when not set.",
+				MarkdownDescription: "Type of the identity attribute, e.g. `string`. The API fills it in when not set.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"multi":      optionalComputedBool("Whether the attribute is multi-valued"),
+			"multi":      optionalComputedBool("Whether the attribute is multi-valued."),
 			"searchable": optionalComputedBool("Whether the attribute is searchable. Searchable attributes must not be `standard` or `multi`."),
 			"system": schema.BoolAttribute{
-				MarkdownDescription: "Whether the attribute is a system attribute that has no source and is not configurable",
+				MarkdownDescription: "Whether the attribute is a system attribute that has no source and is not configurable.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"sources_json": schema.StringAttribute{
-				MarkdownDescription: "Sources the attribute value is derived from, as a JSON array of objects with `type` (e.g. `rule`) and `properties`.",
+				MarkdownDescription: "Sources the attribute value is derived from, as a JSON array of objects with `type` (e.g. `rule`) and `properties`. The value is compared semantically.",
 				Optional:            true,
 				Validators:          []validator.String{jsonArrayStringValidator{}},
 			},
@@ -312,15 +312,15 @@ func (d *IdentityAttributeDataSource) Schema(ctx context.Context, req datasource
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up an identity attribute by its technical name.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":           dsschema.StringAttribute{MarkdownDescription: "Identity attribute ID, the same as `name`", Computed: true},
-			"name":         dsschema.StringAttribute{MarkdownDescription: "Technical name of the identity attribute", Required: true},
-			"display_name": dsschema.StringAttribute{MarkdownDescription: "Business-friendly name of the identity attribute", Computed: true},
-			"standard":     dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is a standard attribute", Computed: true},
-			"type":         dsschema.StringAttribute{MarkdownDescription: "Identity attribute type", Computed: true},
-			"multi":        dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is multi-valued", Computed: true},
-			"searchable":   dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is searchable", Computed: true},
-			"system":       dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is a system attribute", Computed: true},
-			"sources_json": dsschema.StringAttribute{MarkdownDescription: "Sources of the attribute value as a JSON array", Computed: true},
+			"id":           dsschema.StringAttribute{MarkdownDescription: "Identity attribute ID, the same as `name`.", Computed: true},
+			"name":         dsschema.StringAttribute{MarkdownDescription: "Technical name of the identity attribute.", Required: true},
+			"display_name": dsschema.StringAttribute{MarkdownDescription: "Business-friendly name of the identity attribute.", Computed: true},
+			"standard":     dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is a standard attribute.", Computed: true},
+			"type":         dsschema.StringAttribute{MarkdownDescription: "Type of the identity attribute.", Computed: true},
+			"multi":        dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is multi-valued.", Computed: true},
+			"searchable":   dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is searchable.", Computed: true},
+			"system":       dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is a system attribute.", Computed: true},
+			"sources_json": dsschema.StringAttribute{MarkdownDescription: "Sources of the attribute value as a JSON array.", Computed: true},
 		},
 	}
 }

@@ -17,26 +17,9 @@ A new user level is created in `DRAFT` status. Set `publish = true` to publish i
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Name of the user level.
-* `description` - (Required) Description of the user level.
-* `owner` - (Required) Identity that owns the user level. Exactly one block. Contains:
-  * `id` - (Required) Owner identity ID.
-  * `type` - (Optional) Owner type. Defaults to `IDENTITY`.
-  * `name` - (Optional) Owner display name. When not set, the name returned by IdentityNow is used. A configured name (and type) is kept in state as long as the owner `id` does not change, so a name that differs from the display name returned by IdentityNow does not produce a diff.
-* `right_sets` - (Optional) IDs of the right sets assigned to the user level, see [identitynow_authorization_right_sets](../data-sources/authorization_right_sets). When only a parent right set is listed, IdentityNow assigns all of its children as well. These children are listed in `assigned_right_sets` and do not produce a diff. A listed parent that IdentityNow only returns through its assigned children does not produce a diff either.
-* `publish` - (Optional) Publish the user level after it is created or updated. Defaults to `false`, which leaves a new user level in `DRAFT` status. Setting it to `false` on a published user level has no effect.
-
 All arguments are updated in place.
 
-## Attributes Reference
-
-* `id` - User level ID.
-* `assigned_right_sets` - IDs of all right sets assigned to the user level, including children assigned automatically.
-* `status` - Status of the user level, `DRAFT` or `ACTIVE`.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

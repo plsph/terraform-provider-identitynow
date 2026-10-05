@@ -17,17 +17,9 @@ Only the settings present in the configuration are managed. Settings that are no
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `identity_attribute_columns` - (Optional) Identity attributes added as custom columns to campaign reports.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `campaign-reports-config`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

@@ -13,14 +13,4 @@ Use this data source to list the supported service desk integration types, e.g. 
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-This data source has no arguments.
-
-## Attributes Reference
-
-* `id` - Fixed identifier of the data source, `service-desk-integration-types`.
-* `types` - Supported service desk integration types. Each item contains:
-    * `name` - Display name of the type.
-    * `type` - Type value, used as `type` of the integration.
-    * `script_name` - Script name of the integration template of the type.
+{{ .SchemaMarkdown | trimspace }}

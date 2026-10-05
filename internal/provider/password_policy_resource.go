@@ -80,23 +80,23 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Password Policy ID",
+				MarkdownDescription: "Password policy ID.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Password policy name",
+				MarkdownDescription: "Password policy name.",
 			},
 			"description": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Password policy description",
+				MarkdownDescription: "Password policy description.",
 			},
 			"account_id_min_word_length": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Char length that disallow account ID fragments",
+				MarkdownDescription: "Minimum length of the account ID fragments that are disallowed.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -104,7 +104,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"account_name_min_word_length": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Char length that disallow display name fragments",
+				MarkdownDescription: "Minimum length of the display name fragments that are disallowed.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -112,7 +112,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"default_policy": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Is the password policy default policy?",
+				MarkdownDescription: "Whether this is the default password policy.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -120,7 +120,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"enable_password_expiration": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Enable password expiration",
+				MarkdownDescription: "Whether passwords expire.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -128,7 +128,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"first_expiration_reminder": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "First expiration reminder",
+				MarkdownDescription: "Number of days before expiration when the first reminder is sent.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -136,7 +136,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"max_length": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Password max length",
+				MarkdownDescription: "Maximum password length.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -144,7 +144,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"max_repeated_chars": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Max repeated characters",
+				MarkdownDescription: "Maximum number of repeated characters.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -152,7 +152,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"min_alpha": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Minimum letters in password",
+				MarkdownDescription: "Minimum number of letters in the password.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -160,7 +160,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"min_character_types": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Minimum character types",
+				MarkdownDescription: "Minimum number of character types the password must contain.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -168,7 +168,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"min_length": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Minimum password length",
+				MarkdownDescription: "Minimum password length.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -176,7 +176,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"min_lower": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Minimum number of lowercase characters",
+				MarkdownDescription: "Minimum number of lowercase characters.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -184,7 +184,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"min_numeric": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Minimum number in password",
+				MarkdownDescription: "Minimum number of digits.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -192,7 +192,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"min_special": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Minimum special characters",
+				MarkdownDescription: "Minimum number of special characters.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -200,7 +200,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"min_upper": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Minimum uppercase characters",
+				MarkdownDescription: "Minimum number of uppercase characters.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -208,7 +208,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"password_expiration": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Password expiration in days",
+				MarkdownDescription: "Number of days after which the password expires.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -216,7 +216,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"require_strong_auth_off_network": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Require strong authentication off network",
+				MarkdownDescription: "Whether strong authentication is required off network.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -224,7 +224,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"require_strong_auth_untrusted_geographies": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Require strong authentication for untrusted geographies",
+				MarkdownDescription: "Whether strong authentication is required from untrusted geographies.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -232,7 +232,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"require_strong_authn": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Require strong authentication",
+				MarkdownDescription: "Whether strong authentication is required.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -240,7 +240,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"use_account_attributes": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Prevent use of account attributes?",
+				MarkdownDescription: "Whether the use of account attributes in the password is prevented.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -248,7 +248,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"use_dictionary": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Prevent use of words in this site's password dictionary?",
+				MarkdownDescription: "Whether words in the password dictionary of the tenant are prevented.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -256,7 +256,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"use_history": schema.Int64Attribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Use history",
+				MarkdownDescription: "Number of previous passwords that can't be reused.",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -264,7 +264,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"use_identity_attributes": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Prevent use of identity attributes?",
+				MarkdownDescription: "Whether the use of identity attributes in the password is prevented.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -272,7 +272,7 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"validate_against_account_id": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Disallow account ID fragments?",
+				MarkdownDescription: "Whether fragments of the account ID are disallowed in the password.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -280,54 +280,54 @@ func (r *PasswordPolicyResource) Schema(ctx context.Context, req resource.Schema
 			"validate_against_account_name": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Disallow account name fragments?",
+				MarkdownDescription: "Whether fragments of the account name are disallowed in the password.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"source_ids": schema.ListAttribute{
 				Optional:            true,
-				MarkdownDescription: "List of source IDs",
+				MarkdownDescription: "List of IDs of the sources the policy applies to.",
 				ElementType:         types.StringType,
 			},
 			"connected_services": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Connected services",
+				MarkdownDescription: "Sources the password policy is connected to.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							Computed:            true,
-							MarkdownDescription: "Source ID",
+							MarkdownDescription: "Source ID.",
 						},
 						"external_id": schema.StringAttribute{
 							Computed:            true,
-							MarkdownDescription: "Source external ID",
+							MarkdownDescription: "Source external ID.",
 						},
 						"name": schema.StringAttribute{
 							Computed:            true,
-							MarkdownDescription: "Source name",
+							MarkdownDescription: "Source name.",
 						},
 						"supports_password_set_date": schema.BoolAttribute{
 							Computed:            true,
-							MarkdownDescription: "Supports password set date",
+							MarkdownDescription: "Whether the source supports the password set date.",
 						},
 						"app_count": schema.Int64Attribute{
 							Computed:            true,
-							MarkdownDescription: "App count",
+							MarkdownDescription: "App count.",
 						},
 					},
 				},
 			},
 			"date_created": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Date created",
+				MarkdownDescription: "The date and time the password policy was created.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"last_updated": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Last updated",
+				MarkdownDescription: "The date and time the password policy was last updated.",
 			},
 		},
 	}

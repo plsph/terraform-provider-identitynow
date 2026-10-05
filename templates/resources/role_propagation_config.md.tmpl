@@ -17,20 +17,9 @@ Only the settings present in the configuration are managed. Settings that are no
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `enabled` - (Optional) Whether the role change propagation process is enabled.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `role-propagation-config`.
-* `enabled_date` - Time when role change propagation was last enabled.
-* `created_date` - Time when the configuration was first created.
-* `modified_date` - Time when the configuration was last updated.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

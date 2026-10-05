@@ -149,27 +149,27 @@ func (r *ReassignmentConfigurationResource) Schema(ctx context.Context, req reso
 		MarkdownDescription: "Manages the reassignment of one work type of an identity to another identity (work reassignment, e.g. during an absence). Uses an experimental API.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Resource ID in the form `<identity_id>/<config_type>`",
+				MarkdownDescription: "Resource ID in the form `<identity_id>/<config_type>`.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"identity_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the identity whose work is reassigned. Changing it forces a new reassignment.",
+				MarkdownDescription: "ID of the identity whose work is reassigned. Changing this forces a new reassignment to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"config_type": schema.StringAttribute{
-				MarkdownDescription: "Work type to reassign: `ACCESS_REQUESTS`, `CERTIFICATIONS`, `MANUAL_TASKS` or `GENERIC_APPROVALS`. Changing it forces a new reassignment.",
+				MarkdownDescription: "Work type to reassign: `ACCESS_REQUESTS`, `CERTIFICATIONS`, `MANUAL_TASKS` or `GENERIC_APPROVALS`. Changing this forces a new reassignment to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 				Validators:          []validator.String{triggerSubscriptionOneOfValidator{values: []string{"ACCESS_REQUESTS", "CERTIFICATIONS", "MANUAL_TASKS", "GENERIC_APPROVALS"}}},
 			},
 			"reassigned_to_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the identity that receives the work items",
+				MarkdownDescription: "ID of the identity that receives the work items.",
 				Required:            true,
 			},
 			"start_date": schema.StringAttribute{
-				MarkdownDescription: "RFC 3339 date-time from which work items are reassigned. Defaults to the API default when not set. Equal times in a different format do not show a difference.",
+				MarkdownDescription: "RFC 3339 date-time from which work items are reassigned. When not set, the API default is used and kept. Equal times in a different format do not show a difference.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -181,12 +181,12 @@ func (r *ReassignmentConfigurationResource) Schema(ctx context.Context, req reso
 				Validators:          []validator.String{reassignmentConfigurationDateValidator{}},
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "Creation date",
+				MarkdownDescription: "Creation date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 			},
 		},

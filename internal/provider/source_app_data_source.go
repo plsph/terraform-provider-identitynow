@@ -39,32 +39,32 @@ func (d *SourceAppDataSource) Schema(ctx context.Context, req datasource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Source App ID",
+				MarkdownDescription: "The source app ID.",
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Source App name",
+				MarkdownDescription: "Name of the source app.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Source App description",
+				MarkdownDescription: "The description of the source app.",
 			},
 			"enabled": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether enabled",
+				MarkdownDescription: "Whether the source app is enabled.",
 			},
 			"match_all_accounts": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether to match all accounts",
+				MarkdownDescription: "Whether the source app matches all accounts of the source.",
 			},
 			"source": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Account source",
+				MarkdownDescription: "List with the account source of the source app.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Source ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Source type, `SOURCE`."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Source name."},
 					},
 				},
 			},

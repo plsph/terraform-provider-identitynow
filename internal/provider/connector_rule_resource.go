@@ -149,7 +149,7 @@ func (r *ConnectorRuleResource) Schema(ctx context.Context, req resource.SchemaR
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Rule name. The name is immutable, changing it forces a new rule.",
+				MarkdownDescription: "Rule name. The name is immutable. Changing this forces a new rule to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -158,19 +158,19 @@ func (r *ConnectorRuleResource) Schema(ctx context.Context, req resource.SchemaR
 				Optional:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Rule type, e.g. `BuildMap`, `ConnectorAfterCreate`, `ConnectorBeforeCreate`, `JDBCBuildMap`, `JDBCProvision` or `WebServiceBeforeOperationRule`. The type is immutable, changing it forces a new rule.",
+				MarkdownDescription: "Rule type, e.g. `BuildMap`, `ConnectorAfterCreate`, `ConnectorAfterDelete`, `ConnectorAfterModify`, `ConnectorBeforeCreate`, `ConnectorBeforeDelete`, `ConnectorBeforeModify`, `JDBCBuildMap`, `JDBCOperationProvisioning`, `JDBCProvision`, `PeopleSoftHRMSBuildMap`, `RACFPermissionCustomization`, `SAPBuildMap`, `SapHrManagerRule`, `SapHrOperationProvisioning`, `SapHrProvision`, `SuccessFactorsOperationProvisioning`, `WebServiceAfterOperationRule` or `WebServiceBeforeOperationRule`. The type is immutable. Changing this forces a new rule to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"signature_json": schema.StringAttribute{
-				MarkdownDescription: "Function signature of the rule as a JSON object with an `input` array and an optional `output` object; each argument has a `name`, `description` and `type`. Use `jsonencode()` for convenience. When not set, the signature is not managed.",
+				MarkdownDescription: "Function signature of the rule as a JSON object with an `input` array and an optional `output` object; each argument has a `name`, `description` and `type`. Use `jsonencode()` for convenience. The value is compared semantically. When not set, the signature returned by IdentityNow is kept and not managed.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"attributes_json": schema.StringAttribute{
-				MarkdownDescription: "Rule attributes as a JSON object. Use `jsonencode()` for convenience.",
+				MarkdownDescription: "Rule attributes as a JSON object. Use `jsonencode()` for convenience. The value is compared semantically.",
 				Optional:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},

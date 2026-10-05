@@ -52,21 +52,21 @@ func (r *AccessProfileAttachmentResource) Schema(ctx context.Context, req resour
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access Profile Attachment ID (same as source_app_id)",
+				MarkdownDescription: "Access profile attachment ID (same as `source_app_id`).",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"source_app_id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Source App ID",
+				MarkdownDescription: "ID of the source app. Changing this forces a new resource to be created.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"access_profiles": schema.ListAttribute{
 				Required:            true,
-				MarkdownDescription: "List of access profile IDs to attach",
+				MarkdownDescription: "List of IDs of the access profiles attached to the source app.",
 				ElementType:         types.StringType,
 			},
 		},

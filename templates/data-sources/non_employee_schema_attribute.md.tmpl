@@ -13,22 +13,6 @@ Use this data source to look up a schema attribute of a non-employee source by I
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Exactly one of `id` and `technical_name` must be set.
 
-* `non_employee_source_id` - (Required) ID of the non-employee source.
-
-Exactly one of the following must be set:
-
-* `id` - (Optional) Schema attribute ID.
-* `technical_name` - (Optional) Technical name of the attribute.
-
-## Attributes Reference
-
-* `type` - Attribute type: `TEXT`, `DATE` or `IDENTITY`.
-* `label` - Label displayed in the UI.
-* `help_text` - Help text displayed in the UI.
-* `placeholder` - Hint text shown in the empty input field.
-* `required` - Whether the attribute is required for all non-employees.
-* `system` - Whether this is a mandatory system attribute.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}

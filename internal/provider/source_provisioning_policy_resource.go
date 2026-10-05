@@ -95,12 +95,12 @@ func (r *SourceProvisioningPolicyResource) Schema(ctx context.Context, req resou
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"source_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the source. Changing it forces a new provisioning policy.",
+				MarkdownDescription: "ID of the source. Changing this forces a new provisioning policy to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"usage_type": schema.StringAttribute{
-				MarkdownDescription: "Provisioning operation the policy applies to, e.g. `CREATE`, `UPDATE`, `ENABLE`, `DISABLE`, `DELETE`, `ASSIGN`, `UNASSIGN`, `CREATE_GROUP`, `UPDATE_GROUP`, `DELETE_GROUP`, `REGISTER`, `CREATE_IDENTITY`, `UPDATE_IDENTITY`, `EDIT_GROUP`, `UNLOCK` or `CHANGE_PASSWORD`. Changing it forces a new provisioning policy.",
+				MarkdownDescription: "Provisioning operation the policy applies to: `CREATE`, `UPDATE`, `ENABLE`, `DISABLE`, `DELETE`, `ASSIGN`, `UNASSIGN`, `CREATE_GROUP`, `UPDATE_GROUP`, `DELETE_GROUP`, `REGISTER`, `CREATE_IDENTITY`, `UPDATE_IDENTITY`, `EDIT_GROUP`, `UNLOCK` or `CHANGE_PASSWORD`. Changing this forces a new provisioning policy to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -113,7 +113,7 @@ func (r *SourceProvisioningPolicyResource) Schema(ctx context.Context, req resou
 				Optional:            true,
 			},
 			"fields_json": schema.StringAttribute{
-				MarkdownDescription: "Policy fields as a JSON array. Each field has a `name`, a `type`, and optionally a `transform`, `attributes` and `isMultiValued`. Use `jsonencode()` for convenience. The value is compared semantically; keys that hold the API defaults (`transform` and `attributes` as empty objects, `isRequired` and `isMultiValued` false, null values) are ignored.",
+				MarkdownDescription: "Policy fields as a JSON array. Each field has a `name`, a `type` (`string`, `int`, `long`, `date`, `boolean` or `secret`) and optionally a `transform`, `attributes` and `isMultiValued`. Use `jsonencode()` for convenience. The value is compared semantically, so formatting and key order do not produce a diff, and keys that hold the API defaults (`transform` and `attributes` as empty objects, `isRequired` and `isMultiValued` set to false, null values) are ignored. When not set, the policy has no fields.",
 				Optional:            true,
 				Validators:          []validator.String{jsonArrayStringValidator{}},
 			},

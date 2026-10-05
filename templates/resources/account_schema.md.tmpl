@@ -25,49 +25,9 @@ Destroying the resource only removes it from the Terraform state. The schema and
 
 {{ tffile "examples/resources/identitynow_account_schema/manage_the_full_list_of_attributes.tf" }}
 
-## Arguments Reference
+See the [SailPoint API documentation](https://developer.sailpoint.com/docs/api/v3/put-source-schema) for details.
 
-The following arguments are supported:
-
-As per developer guide: (https://developer.sailpoint.com/docs/api/v3/put-source-schema)
-
-* `source_id` - (Required) ID of the source the schema belongs to. Changing this forces a new resource to be created.
-
-* `schema_id` - (Required) ID of the existing schema. Changing this forces a new resource to be created.
-
-* `name` - (Optional) Name of the schema, e.g. `account`. The name can't be changed after the schema is created. If not set, the existing name is used.
-
-* `native_object_type` - (Optional) Name of the object type on the source system, e.g. `User`. If not set, the existing value is kept.
-
-* `identity_attribute` - (Optional) Name of the attribute that uniquely identifies an account on the source. If not set, the existing value is kept.
-
-* `display_attribute` - (Optional) Name of the attribute used to display the account. If not set, the existing value is kept.
-
-* `hierarchy_attribute` - (Optional) Name of the attribute used to build group hierarchies. If not set, the existing value is kept.
-
-* `include_permissions` - (Optional) Whether permissions are included in the schema. If not set, the existing value is kept.
-
-* `attributes` - (Optional) Attributes of the schema. When at least one block is configured the list is authoritative. Can be repeated. Contains:
-  * `name` - (Required) Attribute name.
-  * `type` - (Optional) Attribute type, e.g. `STRING`, `LONG`, `INT`, `BOOLEAN` or `DATE`. If not set, the existing value is kept.
-  * `description` - (Optional) Attribute description. If not set, the existing value is kept.
-  * `is_multi_valued` - (Optional) Whether the attribute is multi-valued. If not set, the existing value is kept.
-  * `is_entitlement` - (Optional) Whether the attribute is an entitlement. If not set, the existing value is kept.
-  * `is_group` - (Optional) Whether the attribute refers to a group. If not set, the existing value is kept.
-  * `schema` - (Optional) Reference to the schema of the objects the attribute refers to, e.g. the `group` schema for a group membership attribute. Contains:
-    * `id` - (Required) Schema ID.
-    * `name` - (Required) Schema name.
-    * `type` - (Required) Reference type, `CONNECTOR_SCHEMA`.
-
-## Attributes Reference
-
-In addition to the Arguments listed above - the following Attributes are exported:
-
-* `id` - Schema ID (same as `schema_id`).
-
-* `created` - The date and time the schema was created.
-
-* `modified` - The date and time the schema was last modified.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

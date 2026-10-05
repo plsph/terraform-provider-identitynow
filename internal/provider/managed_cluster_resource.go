@@ -168,19 +168,19 @@ func (r *ManagedClusterResource) Schema(ctx context.Context, req resource.Schema
 			Required:            true,
 		},
 		"type": schema.StringAttribute{
-			MarkdownDescription: "Cluster type, one of `idn`, `iai`, `spConnectCluster`, `sqsCluster`, `das-rc`, `das-pc`, `das-dc`, `pag`, `das-am` or `standard`. When not set, the API default is used. Changing it forces a new cluster.",
+			MarkdownDescription: "Cluster type, one of `idn`, `iai`, `spConnectCluster`, `sqsCluster`, `das-rc`, `das-pc`, `das-dc`, `pag`, `das-am` or `standard`. When not set, the API default is stored. Changing this forces a new cluster to be created.",
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()},
 		},
 		"description": schema.StringAttribute{
-			MarkdownDescription: "Description of the cluster. When not set, the value returned by the API is used and kept, so removing the argument does not clear the description; set it to an empty string to clear it.",
+			MarkdownDescription: "Description of the cluster. When not set, the value returned by the API is stored and kept, so removing the argument does not clear the description; set it to `\"\"` to clear it.",
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"configuration": schema.MapAttribute{
-			MarkdownDescription: "Cluster configuration entries, e.g. `gmtOffset`. Only the configured keys are managed: keys added by the API or outside Terraform are neither shown nor removed.",
+			MarkdownDescription: "Map of cluster configuration entries, e.g. `gmtOffset`. Only the configured keys are managed: entries added by the API or outside Terraform are neither shown nor removed, and removing a key from the map deletes only that entry.",
 			ElementType:         types.StringType,
 			Optional:            true,
 		},
@@ -504,7 +504,7 @@ func (d *ManagedClusterDataSource) Schema(ctx context.Context, req datasource.Sc
 		"type":        dsschema.StringAttribute{MarkdownDescription: "Cluster type.", Computed: true},
 		"description": dsschema.StringAttribute{MarkdownDescription: "Description of the cluster.", Computed: true},
 		"configuration": dsschema.MapAttribute{
-			MarkdownDescription: "Cluster configuration entries.",
+			MarkdownDescription: "Map of all cluster configuration entries.",
 			ElementType:         types.StringType,
 			Computed:            true,
 		},

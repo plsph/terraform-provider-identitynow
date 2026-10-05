@@ -62,25 +62,25 @@ func (r *WorkflowResource) Metadata(ctx context.Context, req resource.MetadataRe
 
 func (r *WorkflowResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Workflow resource",
+		MarkdownDescription: "Manages an IdentityNow Workflow.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Workflow ID",
+				MarkdownDescription: "Workflow ID (UUID).",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Workflow name",
+				MarkdownDescription: "The name of the workflow.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Workflow description",
+				MarkdownDescription: "Description of what the workflow accomplishes.",
 				Optional:            true,
 			},
 			"enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether the workflow is enabled",
+				MarkdownDescription: "Enable or disable the workflow. If not set, the workflow is created disabled and the value returned by the API is used afterwards.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Bool{
@@ -90,38 +90,38 @@ func (r *WorkflowResource) Schema(ctx context.Context, req resource.SchemaReques
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				MarkdownDescription: "Workflow owner",
+				MarkdownDescription: "Owner of the workflow. The IdentityNow API requires an owner.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Owner ID",
+							MarkdownDescription: "Owner identity ID.",
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Owner type",
+							MarkdownDescription: "Owner type (e.g. `IDENTITY`).",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Owner name",
+							MarkdownDescription: "Owner name.",
 							Required:            true,
 						},
 					},
 				},
 			},
 			"trigger": schema.ListNestedBlock{
-				MarkdownDescription: "Workflow trigger configuration",
+				MarkdownDescription: "Trigger configuration for the workflow.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Trigger type (EVENT, SCHEDULED, or EXTERNAL)",
+							MarkdownDescription: "Trigger type. One of `EVENT`, `SCHEDULED`, or `EXTERNAL`.",
 							Required:            true,
 						},
 						"display_name": schema.StringAttribute{
-							MarkdownDescription: "Trigger display name",
+							MarkdownDescription: "Display name for the trigger.",
 							Optional:            true,
 						},
 						"attributes_json": schema.StringAttribute{
-							MarkdownDescription: "Trigger attributes as a JSON string",
+							MarkdownDescription: "Trigger attributes as a JSON object string. Use `jsonencode()` for convenience.",
 							Optional:            true,
 							Validators:          []validator.String{jsonObjectStringValidator{}},
 						},
@@ -129,15 +129,15 @@ func (r *WorkflowResource) Schema(ctx context.Context, req resource.SchemaReques
 				},
 			},
 			"definition": schema.ListNestedBlock{
-				MarkdownDescription: "Workflow definition",
+				MarkdownDescription: "Workflow definition.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"start": schema.StringAttribute{
-							MarkdownDescription: "The name of the starting step",
+							MarkdownDescription: "The name of the starting step. Must be the name of a step in `steps_json`.",
 							Required:            true,
 						},
 						"steps_json": schema.StringAttribute{
-							MarkdownDescription: "Workflow steps as a JSON string",
+							MarkdownDescription: "Workflow steps as a JSON object string, keyed by step name. Use `jsonencode()` for convenience.",
 							Required:            true,
 							Validators:          []validator.String{jsonObjectStringValidator{}},
 						},

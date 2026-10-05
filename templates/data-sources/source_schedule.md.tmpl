@@ -13,12 +13,4 @@ Use this data source to look up an aggregation schedule of a source by type.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `source_id` - (Required) ID of the source.
-* `type` - (Required) Schedule type, `ACCOUNT_AGGREGATION` or `GROUP_AGGREGATION`.
-
-## Attributes Reference
-
-* `id` - ID in the format `<source_id>/<type>`.
-* `cron_expression` - Cron expression of the schedule.
+{{ .SchemaMarkdown | trimspace }}

@@ -17,22 +17,9 @@ The default branding item of the tenant is named `default` and already exists; m
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Name of the branding item. Changing it forces a new branding item to be created.
-* `product_name` - (Required) Product name shown in the UI and in emails.
-* `action_button_color` - (Optional) Hex color of action buttons, e.g. `0074D9`.
-* `active_link_color` - (Optional) Hex color of links.
-* `navigation_color` - (Optional) Hex color of the navigation bar.
-* `email_from_address` - (Optional) Sender address of emails.
-* `login_informational_message` - (Optional) Informational message shown on the login page.
-
 Optional arguments that are not set are not sent to the API and are stored as null. Removing an optional argument from the configuration sends an empty value, which clears it. All arguments except `name` are updated in place.
 
-## Attributes Reference
-
-* `id` - Name of the branding item.
-* `standard_logo_url` - URL of the standard logo. The logo is not managed by this resource, see the note above.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

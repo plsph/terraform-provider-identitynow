@@ -38,21 +38,21 @@ func (d *SegmentDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Looks up a SailPoint identity segment by name.",
 		Attributes: map[string]schema.Attribute{
-			"id":                  schema.StringAttribute{Computed: true},
-			"name":                schema.StringAttribute{Required: true},
-			"description":         schema.StringAttribute{Computed: true},
+			"id":                  schema.StringAttribute{Computed: true, MarkdownDescription: "The segment ID."},
+			"name":                schema.StringAttribute{Required: true, MarkdownDescription: "The segment business name."},
+			"description":         schema.StringAttribute{Computed: true, MarkdownDescription: "The segment description."},
 			"visibility_criteria": visibilityCriteriaAttribute(segmentVisibilityDepth),
-			"active":              schema.BoolAttribute{Computed: true},
-			"created":             schema.StringAttribute{Computed: true},
-			"modified":            schema.StringAttribute{Computed: true},
+			"active":              schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether the segment is active."},
+			"created":             schema.StringAttribute{Computed: true, MarkdownDescription: "The segment creation timestamp."},
+			"modified":            schema.StringAttribute{Computed: true, MarkdownDescription: "The segment modification timestamp."},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "The segment owner.",
+				MarkdownDescription: "List with the segment owner.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Owner identity ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner type, `IDENTITY`."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
@@ -62,7 +62,8 @@ func (d *SegmentDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 
 func visibilityCriteriaAttribute(depth int) schema.Attribute {
 	return schema.ListNestedAttribute{
-		Computed: true,
+		Computed:            true,
+		MarkdownDescription: "The segment visibility criteria as structured nested attributes.",
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"expression": visibilityExpressionAttribute(depth),
@@ -73,25 +74,27 @@ func visibilityCriteriaAttribute(depth int) schema.Attribute {
 
 func visibilityExpressionAttribute(depth int) schema.Attribute {
 	attributes := map[string]schema.Attribute{
-		"operator":  schema.StringAttribute{Computed: true},
-		"attribute": schema.StringAttribute{Computed: true},
+		"operator":  schema.StringAttribute{Computed: true, MarkdownDescription: "Operator, e.g. `EQUALS`, `AND` or `OR`."},
+		"attribute": schema.StringAttribute{Computed: true, MarkdownDescription: "Identity attribute to compare, for comparison operators."},
 		"value": schema.ListNestedAttribute{
-			Computed: true,
+			Computed:            true,
+			MarkdownDescription: "Value to compare with.",
 			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-				"type":  schema.StringAttribute{Computed: true},
-				"value": schema.StringAttribute{Computed: true},
+				"type":  schema.StringAttribute{Computed: true, MarkdownDescription: "Value type, e.g. `STRING`."},
+				"value": schema.StringAttribute{Computed: true, MarkdownDescription: "The value."},
 			}},
 		},
 	}
 	if depth > 1 {
 		attributes["children"] = schema.ListNestedAttribute{
-			Computed: true,
+			Computed:            true,
+			MarkdownDescription: "Child criteria for `AND` and `OR` operators, each with a nested `expression` (up to 3 levels).",
 			NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
 				"expression": visibilityExpressionAttribute(depth - 1),
 			}},
 		}
 	}
-	return schema.ListNestedAttribute{Computed: true, NestedObject: schema.NestedAttributeObject{Attributes: attributes}}
+	return schema.ListNestedAttribute{Computed: true, MarkdownDescription: "Expression of the visibility criteria.", NestedObject: schema.NestedAttributeObject{Attributes: attributes}}
 }
 
 func (d *SegmentDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {

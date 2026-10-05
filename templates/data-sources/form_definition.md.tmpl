@@ -13,18 +13,4 @@ Use this data source to look up an existing IdentityNow custom form definition b
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) The name of the form definition.
-
-## Attributes Reference
-
-* `id` - The form definition ID.
-* `description` - The form definition description.
-* `owner` - The form definition owner. Contains `id`, `type` and `name`.
-* `form_input` - Form inputs required when creating a form instance. Each item contains `id`, `type`, `label` and `description`.
-* `form_elements_json` - The form elements as a JSON array.
-* `form_conditions_json` - The form conditions as a JSON array.
-* `used_by` - Systems currently using the form definition. Each item contains `id`, `type` and `name`.
-* `created` - The date and time the form definition was created.
-* `modified` - The date and time the form definition was last modified.
+{{ .SchemaMarkdown | trimspace }}

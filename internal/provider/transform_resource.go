@@ -90,27 +90,27 @@ func (r *TransformResource) Schema(ctx context.Context, req resource.SchemaReque
 		MarkdownDescription: "Manages a transform, used in identity profile attribute mappings.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Transform ID",
+				MarkdownDescription: "Transform ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Unique name of the transform. Changing it forces a new transform.",
+				MarkdownDescription: "Unique name of the transform. Changing this forces a new transform to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Transform operation type, e.g. `lookup` or `concat`. Changing it forces a new transform.",
+				MarkdownDescription: "Transform operation type, e.g. `lookup`, `concat` or `dateFormat`. See the [transform operations](https://developer.sailpoint.com/docs/extensibility/transforms/operations). Changing this forces a new transform to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"attributes_json": schema.StringAttribute{
-				MarkdownDescription: "Transform attributes as a JSON object. The attributes depend on the transform type. Use `jsonencode()` for convenience.",
+				MarkdownDescription: "Transform attributes as a JSON object. The attributes depend on the transform type. Use `jsonencode()` for convenience. The value is compared semantically, so formatting and key order do not produce a diff.",
 				Optional:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},
 			"internal": schema.BoolAttribute{
-				MarkdownDescription: "Whether this is a SailPoint internal transform",
+				MarkdownDescription: "Whether this is a SailPoint internal transform.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},

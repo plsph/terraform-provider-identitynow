@@ -83,34 +83,34 @@ func (r *TagResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 		MarkdownDescription: "Manages a tag that can be assigned to objects with `identitynow_tagged_object`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Tag ID",
+				MarkdownDescription: "Tag ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Tag name. Tags cannot be renamed, changing it forces a new tag.",
+				MarkdownDescription: "Tag name. Tags cannot be renamed, changing this forces a new tag to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "Creation date",
+				MarkdownDescription: "Creation date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"tag_category_refs": schema.ListNestedAttribute{
-				MarkdownDescription: "Objects the tag is assigned to",
+				MarkdownDescription: "Objects the tag is assigned to.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Object ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Object type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Object name."},
 					},
 				},
 			},
@@ -238,16 +238,16 @@ func (d *TagDataSource) Schema(ctx context.Context, req datasource.SchemaRequest
 				Optional:            true,
 				Computed:            true,
 			},
-			"created":  dsschema.StringAttribute{MarkdownDescription: "Creation date", Computed: true},
-			"modified": dsschema.StringAttribute{MarkdownDescription: "Last modification date", Computed: true},
+			"created":  dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
+			"modified": dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 			"tag_category_refs": dsschema.ListNestedAttribute{
-				MarkdownDescription: "Objects the tag is assigned to",
+				MarkdownDescription: "Objects the tag is assigned to.",
 				Computed:            true,
 				NestedObject: dsschema.NestedAttributeObject{
 					Attributes: map[string]dsschema.Attribute{
-						"id":   dsschema.StringAttribute{Computed: true},
-						"type": dsschema.StringAttribute{Computed: true},
-						"name": dsschema.StringAttribute{Computed: true},
+						"id":   dsschema.StringAttribute{Computed: true, MarkdownDescription: "Object ID."},
+						"type": dsschema.StringAttribute{Computed: true, MarkdownDescription: "Object type."},
+						"name": dsschema.StringAttribute{Computed: true, MarkdownDescription: "Object name."},
 					},
 				},
 			},

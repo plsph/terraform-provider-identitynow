@@ -17,18 +17,9 @@ Only the settings present in the configuration are managed. Settings that are no
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `provisioning_status_check_interval_minutes` - (Optional) Interval in minutes between status checks.
-* `provisioning_max_status_check_days` - (Optional) Maximum number of days the status is checked.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `sdi-status-check-config`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

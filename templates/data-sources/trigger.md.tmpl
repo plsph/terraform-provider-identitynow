@@ -13,16 +13,6 @@ Use this data source to look up an event trigger available in the tenant by ID o
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Exactly one of `id` and `name` must be set.
 
-Exactly one of the following must be set:
-
-* `id` - (Optional) Trigger ID, e.g. `idn:identity-created`.
-* `name` - (Optional) Trigger name. All triggers are listed and matched by exact name.
-
-## Attributes Reference
-
-* `type` - Trigger type: `REQUEST_RESPONSE` or `FIRE_AND_FORGET`.
-* `description` - Trigger description.
-* `input_schema` - JSON schema of the payload sent by the trigger to subscribers.
-* `example_input_json` - Example payload sent by the trigger, as a JSON document.
+{{ .SchemaMarkdown | trimspace }}

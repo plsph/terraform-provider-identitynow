@@ -15,19 +15,7 @@ Destroying the resource disables the aggregation schedule of the source. If the 
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-The following arguments are supported:
-
-* `source_id` - (Required) ID of the source as used by the legacy `cc/api/source` aggregation schedule endpoints. This is the numeric legacy source ID (usually available as the source's `cloudExternalId` connector attribute), not the source `id` used by the v2026 API. Changing this forces a new resource to be created.
-
-* `cron_expressions` - (Required) List with exactly one cron expression defining the aggregation schedule, e.g. `0 0 * * * ?` for every hour.
-
-## Attributes Reference
-
-In addition to the Arguments listed above - the following Attributes are exported:
-
-* `id` - Schedule ID (same as `source_id`).
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

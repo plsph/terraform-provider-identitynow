@@ -20,30 +20,7 @@ Updates use JSON Patch. The API only supports adding and replacing values, so:
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Name of the Multi-Host Integration.
-* `description` - (Required) Description of the Multi-Host Integration.
-* `connector` - (Required) Connector script name, e.g. `multihost-microsoft-sql-server`. Changing this forces a new Multi-Host Integration to be created, which also deletes its sources.
-* `owner` - (Required) Identity that owns the Multi-Host Integration. Exactly one block is required:
-  * `id` - (Required) Identity ID.
-  * `name` - Identity name, resolved by IdentityNow.
-* `cluster` - (Optional) Virtual appliance cluster of the Multi-Host Integration. At most one block:
-  * `id` - (Required) Cluster ID.
-  * `name` - Cluster name, resolved by IdentityNow.
-* `management_workgroup` - (Optional) Governance group that manages the Multi-Host Integration. At most one block:
-  * `id` - (Required) Governance group ID.
-  * `name` - Governance group name, resolved by IdentityNow.
-* `connector_attributes_json` - (Optional) Connector attributes as a JSON object, e.g. `multiHostAttributes` with `authType`, `user` and `password`. Use `jsonencode()` for convenience. This value is sensitive, since it may contain credentials. Only the configured keys are managed and compared, also inside nested objects such as `multiHostAttributes`: attributes added by IdentityNow are ignored, and configured values that the API does not return, or returns masked or encrypted, keep the configured value. Use `max_sources_per_agg_group` and `max_allowed_sources` instead of the `maxSourcesPerAggGroup` and `maxAllowedSources` keys. After import the value is null until it is configured.
-* `max_sources_per_agg_group` - (Optional) Maximum number of sources per aggregation group (connector attribute `maxSourcesPerAggGroup`). When not set, the value is not managed.
-* `max_allowed_sources` - (Optional) Maximum number of sources in the Multi-Host Integration (connector attribute `maxAllowedSources`). When not set, the value is not managed.
-
-## Attributes Reference
-
-* `id` - Multi-Host Integration ID.
-* `type` - Type of system managed, e.g. `Multi-Host - Microsoft SQL Server`.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

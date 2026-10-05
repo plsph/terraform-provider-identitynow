@@ -15,17 +15,7 @@ Updates replace the whole policy, so the policy is fully managed by Terraform. I
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `source_id` - (Required) ID of the source. Changing this forces a new provisioning policy to be created.
-* `usage_type` - (Required) Provisioning operation the policy applies to: `CREATE`, `UPDATE`, `ENABLE`, `DISABLE`, `DELETE`, `ASSIGN`, `UNASSIGN`, `CREATE_GROUP`, `UPDATE_GROUP`, `DELETE_GROUP`, `REGISTER`, `CREATE_IDENTITY`, `UPDATE_IDENTITY`, `EDIT_GROUP`, `UNLOCK` or `CHANGE_PASSWORD`. Changing this forces a new provisioning policy to be created.
-* `name` - (Required) Provisioning policy name.
-* `description` - (Optional) Provisioning policy description.
-* `fields_json` - (Optional) Policy fields as a JSON array. Each field has a `name`, a `type` (`string`, `int`, `long`, `date`, `boolean` or `secret`) and optionally a `transform`, `attributes` and `isMultiValued`. Use `jsonencode()` for convenience. The value is compared semantically, so formatting and key order do not produce a diff, and keys that hold the API defaults (`transform` and `attributes` as empty objects, `isRequired` and `isMultiValued` set to false, null values) are ignored. When not set, the policy has no fields.
-
-## Attributes Reference
-
-* `id` - Resource ID in the format `<source_id>/<usage_type>`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

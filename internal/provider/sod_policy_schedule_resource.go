@@ -89,66 +89,66 @@ func (r *SodPolicyScheduleResource) Schema(ctx context.Context, req resource.Sch
 		MarkdownDescription: "Manages the schedule on which the violation report of a SOD policy is run and emailed. A policy has at most one schedule.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "SOD policy ID, the schedule has no ID of its own",
+				MarkdownDescription: "SOD policy ID, the schedule has no ID of its own.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"policy_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the scheduled SOD policy. Changing it forces a new schedule.",
+				MarkdownDescription: "ID of the scheduled SOD policy. Changing this forces a new schedule to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Schedule name",
+				MarkdownDescription: "Schedule name.",
 				Optional:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Schedule description",
+				MarkdownDescription: "Schedule description.",
 				Optional:            true,
 			},
 			"schedule_json": schema.StringAttribute{
-				MarkdownDescription: "Schedule as a JSON object with `type` (`DAILY`, `WEEKLY`, `MONTHLY`, `CALENDAR` or `ANNUALLY`), the `months`, `days` and `hours` selectors (`type` `LIST` or `RANGE`, `values`, `interval`), `expiration` and `timeZoneId`. `hours` is required. Use `jsonencode()`. Fields the API adds do not cause a diff.",
+				MarkdownDescription: "Schedule as a JSON object with `type` (`DAILY`, `WEEKLY`, `MONTHLY`, `CALENDAR` or `ANNUALLY`), the `months`, `days` and `hours` selectors (each with `type` `LIST` or `RANGE`, `values` and an optional `interval`), `expiration` and `timeZoneId`. `hours` is required. Use `jsonencode()`. The value is compared on the configured fields only, so formatting, key order and fields IdentityNow adds do not produce a diff.",
 				Required:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},
 			"email_empty_results": schema.BoolAttribute{
-				MarkdownDescription: "Whether the report is emailed when it has no results. When not set, the value chosen by the API is kept.",
+				MarkdownDescription: "Whether the report is emailed when it has no results. When not set, the value chosen by IdentityNow is kept.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"creator_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the identity that created the schedule",
+				MarkdownDescription: "ID of the identity that created the schedule.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modifier_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the identity that last modified the schedule",
+				MarkdownDescription: "ID of the identity that last modified the schedule.",
 				Computed:            true,
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "Creation date",
+				MarkdownDescription: "Creation date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"recipient": schema.ListNestedBlock{
-				MarkdownDescription: "Identity that receives the violation report",
+				MarkdownDescription: "Identity that receives the violation report.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{MarkdownDescription: "Identity ID", Required: true},
+						"id": schema.StringAttribute{MarkdownDescription: "Identity ID.", Required: true},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Recipient type, `IDENTITY` (default)",
+							MarkdownDescription: "Recipient type, `IDENTITY` (default).",
 							Optional:            true,
 							Computed:            true,
 							Default:             stringdefault.StaticString("IDENTITY"),
 						},
-						"name": schema.StringAttribute{MarkdownDescription: "Identity display name. The API resolves it, so it can be left out.", Optional: true},
+						"name": schema.StringAttribute{MarkdownDescription: "Identity display name. When omitted, the name resolved by the API is not tracked.", Optional: true},
 					},
 				},
 			},

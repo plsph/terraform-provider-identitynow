@@ -19,26 +19,9 @@ Only the settings present in the configuration are managed. Settings that are no
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `time_zone` - (Optional) Time zone of the org, e.g. `Europe/Warsaw`. It determines when scheduled tasks run. Valid values are returned by the `identitynow_valid_time_zones` data source.
-* `lcs_change_honors_source_enable_feature` - (Optional) Whether the LCS_CHANGE_HONORS_SOURCE_ENABLE_FEATURE flag is enabled.
-* `iai_enable_certification_recommendations` - (Optional) Whether AI certification recommendations are enabled.
-* `arm_customer_id` - (Optional) Access Risk Management (ARM) customer ID.
-* `arm_sap_system_id_mappings` - (Optional) ARM mappings of IdentityNow source IDs to ARM system IDs, as returned by the API.
-* `arm_auth` - (Optional) ARM authentication string. The value is sensitive. When the API does not return the value, the known value is kept in state.
-* `arm_db` - (Optional) ARM database name.
-* `arm_sso_url` - (Optional) ARM SSO URL.
-* `sod_report_configs_json` - (Optional) Separation of duties report columns, objects with `columnName`, `required`, `included` and `order`. Required columns cannot be changed. A JSON array, e.g. built with `jsonencode`.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `org-config`.
-* `org_name` - Name of the org.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

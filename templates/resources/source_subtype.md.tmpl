@@ -15,20 +15,7 @@ Only `display_name` and `description` can be updated. Deleting a subtype also de
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `source_id` - (Required) ID of the source the subtype belongs to. Changing this forces a new subtype to be created.
-* `technical_name` - (Required) Technical name of the subtype. Changing this forces a new subtype to be created.
-* `display_name` - (Required) Display name of the subtype.
-* `description` - (Required) Description of the subtype.
-* `type` - (Optional) Type of the subtype, `MACHINE` or unset. When not set, the value returned by IdentityNow is kept. Changing this forces a new subtype to be created.
-
-## Attributes Reference
-
-* `id` - Subtype ID.
-* `system_managed` - Whether the subtype is managed by the system.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

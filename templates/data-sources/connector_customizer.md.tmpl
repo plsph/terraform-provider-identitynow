@@ -13,16 +13,6 @@ Use this data source to look up a connector customizer by ID or name. Lookups by
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Exactly one of `id` and `name` must be set.
 
-Exactly one of the following must be set:
-
-* `id` - (Optional) Connector customizer ID.
-* `name` - (Optional) Connector customizer name.
-
-## Attributes Reference
-
-* `image_version` - Current image version of the customizer.
-* `image_id` - Current image ID of the customizer.
-* `tenant_id` - Tenant ID of the customizer.
-* `created` - Creation date.
+{{ .SchemaMarkdown | trimspace }}

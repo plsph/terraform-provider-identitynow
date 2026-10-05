@@ -133,139 +133,146 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 		MarkdownDescription: "Access Profile resource",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Computed:            true,
+				MarkdownDescription: "Access profile ID.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				MarkdownDescription: "Access profile name.",
 			},
 			"description": schema.StringAttribute{
-				Required: true,
+				Required:            true,
+				MarkdownDescription: "Access profile description.",
 			},
 			"enabled": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Whether the access profile is enabled. An enabled access profile must include at least one entitlement. If not set, the value returned by the API is used.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"requestable": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "Whether the access profile is requestable by access request. Making an access profile non-requestable is only supported for tenants enabled with the new Request Center. If not set, the value returned by the API is used.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"segments": schema.SetAttribute{
-				MarkdownDescription: "Set of segment IDs assigned to the access profile",
+				MarkdownDescription: "Set of segment IDs assigned to the access profile. The order is not significant.",
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
+				MarkdownDescription: "Owner of the access profile.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
+						"id":   schema.StringAttribute{Required: true, MarkdownDescription: "Owner identity ID."},
+						"type": schema.StringAttribute{Required: true, MarkdownDescription: "Owner type, `IDENTITY`."},
+						"name": schema.StringAttribute{Required: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
 			"source": schema.ListNestedBlock{
+				MarkdownDescription: "Source associated with the access profile.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
+						"id":   schema.StringAttribute{Required: true, MarkdownDescription: "Source ID."},
+						"type": schema.StringAttribute{Required: true, MarkdownDescription: "Source type, `SOURCE`."},
+						"name": schema.StringAttribute{Required: true, MarkdownDescription: "Source name."},
 					},
 				},
 			},
 			"entitlements": schema.ListNestedBlock{
-				MarkdownDescription: "Entitlements assigned to this access profile",
+				MarkdownDescription: "Entitlements of the source assigned to the access profile. If `enabled` is false this can be empty, otherwise at least one entitlement is required.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Entitlement ID",
+							MarkdownDescription: "Entitlement ID.",
 						},
 						"name": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Entitlement name. Read keeps the configured casing when the API name differs only in case.",
+							MarkdownDescription: "Entitlement name. The configured casing is kept when the API name differs only in case.",
 						},
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
 							Default:             stringdefault.StaticString("ENTITLEMENT"),
-							MarkdownDescription: "Entitlement type",
+							MarkdownDescription: "Entitlement type. Defaults to `ENTITLEMENT`.",
 						},
 					},
 				},
 			},
 			"access_request_config": schema.ListNestedBlock{
-				MarkdownDescription: "Access request configuration",
+				MarkdownDescription: "Access request configuration.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"comments_required": schema.BoolAttribute{
 							Optional:            true,
 							Computed:            true,
 							Default:             booldefault.StaticBool(false),
-							MarkdownDescription: "If comment is required",
+							MarkdownDescription: "Whether the requester must provide comments justifying the request. Defaults to `false`.",
 						},
 						"denial_comments_required": schema.BoolAttribute{
 							Optional:            true,
 							Computed:            true,
 							Default:             booldefault.StaticBool(false),
-							MarkdownDescription: "If denial comment is required",
+							MarkdownDescription: "Whether an approver must provide comments when denying the request. Defaults to `false`.",
 						},
 						"reauthorization_required": schema.BoolAttribute{
 							Optional:            true,
 							Computed:            true,
 							Default:             booldefault.StaticBool(false),
-							MarkdownDescription: "Indicates whether reauthorization is required",
+							MarkdownDescription: "Whether reauthorization is required for the request. Defaults to `false`.",
 						},
 						"require_end_date": schema.BoolAttribute{
 							Optional:            true,
 							Computed:            true,
 							Default:             booldefault.StaticBool(false),
-							MarkdownDescription: "Indicates whether the requester must provide access end date",
+							MarkdownDescription: "Whether the requester must provide an access end date. Defaults to `false`.",
 						},
 						"form_definition_id": schema.StringAttribute{
 							Optional:            true,
-							MarkdownDescription: "ID of the form definition presented to the requester during the access request",
+							MarkdownDescription: "ID of the form definition presented to the requester during the access request. The v2026 API documents this field only for roles, so it relies on the tenant accepting it for access profiles.",
 						},
 					},
 					Blocks: map[string]schema.Block{
 						"approval_schemes": schema.ListNestedBlock{
-							MarkdownDescription: "Approval schemes",
+							MarkdownDescription: "Approval steps of the request, in order.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"approver_type": schema.StringAttribute{
 										Required:            true,
-										MarkdownDescription: "Type of approver",
+										MarkdownDescription: "Type of approver, e.g. `APP_OWNER`, `OWNER`, `SOURCE_OWNER`, `MANAGER` or `GOVERNANCE_GROUP`.",
 									},
 									"approver_id": schema.StringAttribute{
 										Optional:            true,
 										Computed:            true,
 										Default:             stringdefault.StaticString(""),
-										MarkdownDescription: "Id of approver",
+										MarkdownDescription: "ID of the approver, required when `approver_type` is `GOVERNANCE_GROUP`. Defaults to an empty string.",
 									},
 								},
 							},
 						},
 						"max_permitted_access_duration": schema.ListNestedBlock{
-							MarkdownDescription: "Max permitted access duration",
+							MarkdownDescription: "Maximum access duration the requester can request.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"value": schema.Int64Attribute{
 										Required:            true,
-										MarkdownDescription: "The numeric value representing the amount of time",
+										MarkdownDescription: "Amount of time.",
 									},
 									"time_unit": schema.StringAttribute{
 										Required:            true,
-										MarkdownDescription: "The unit of time",
+										MarkdownDescription: "Unit of time, e.g. `DAYS`, `WEEKS` or `MONTHS`.",
 									},
 								},
 							},
@@ -274,15 +281,23 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 				},
 			},
 			"revocation_request_config": schema.ListNestedBlock{
-				MarkdownDescription: "Revocation request configuration",
+				MarkdownDescription: "Revocation request configuration.",
 				NestedObject: schema.NestedBlockObject{
 					Blocks: map[string]schema.Block{
 						"approval_schemes": schema.ListNestedBlock{
-							MarkdownDescription: "Revocation approval schemes",
+							MarkdownDescription: "Approval steps of the revocation request, in order.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
-									"approver_type": schema.StringAttribute{Required: true},
-									"approver_id":   schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("")},
+									"approver_type": schema.StringAttribute{
+										Required:            true,
+										MarkdownDescription: "Type of approver, e.g. `APP_OWNER`, `OWNER`, `SOURCE_OWNER`, `MANAGER` or `GOVERNANCE_GROUP`.",
+									},
+									"approver_id": schema.StringAttribute{
+										Optional:            true,
+										Computed:            true,
+										Default:             stringdefault.StaticString(""),
+										MarkdownDescription: "ID of the approver, required when `approver_type` is `GOVERNANCE_GROUP`. Defaults to an empty string.",
+									},
 								},
 							},
 						},
@@ -290,23 +305,35 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 				},
 			},
 			"access_model_metadata": schema.ListNestedBlock{
-				MarkdownDescription: "Access model metadata for this access profile",
+				MarkdownDescription: "Access model metadata of the access profile. Only applied when the access profile is created.",
 				NestedObject: schema.NestedBlockObject{
 					Blocks: map[string]schema.Block{
 						"attributes": schema.ListNestedBlock{
-							MarkdownDescription: "Metadata attributes",
+							MarkdownDescription: "Metadata attributes.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
-									"key":         schema.StringAttribute{Required: true},
-									"name":        schema.StringAttribute{Required: true},
-									"multiselect": schema.BoolAttribute{Optional: true, Computed: true},
-									"status":      schema.StringAttribute{Optional: true, Computed: true},
-									"type":        schema.StringAttribute{Optional: true, Computed: true},
-									"description": schema.StringAttribute{Optional: true, Computed: true},
+									"key":         schema.StringAttribute{Required: true, MarkdownDescription: "Unique identifier of the metadata type, e.g. `iscPrivacy`."},
+									"name":        schema.StringAttribute{Required: true, MarkdownDescription: "Human readable name of the metadata attribute."},
+									"multiselect": schema.BoolAttribute{Optional: true, Computed: true, MarkdownDescription: "Whether multiple values can be selected. If not set, the value returned by the API is used."},
+									"status":      schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Status of the metadata attribute, e.g. `active`. If not set, the value returned by the API is used."},
+									"type":        schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Type of the metadata attribute, e.g. `governance` or `custom`. If not set, the value returned by the API is used."},
+									"description": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Description of the metadata attribute. If not set, the value returned by the API is used."},
 								},
 								Blocks: map[string]schema.Block{
-									"object_types": schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"value": schema.StringAttribute{Required: true}}}},
-									"values":       schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"value": schema.StringAttribute{Required: true}, "name": schema.StringAttribute{Optional: true, Computed: true}, "status": schema.StringAttribute{Optional: true, Computed: true}}}},
+									"object_types": schema.ListNestedBlock{
+										MarkdownDescription: "Object types the metadata attribute applies to.",
+										NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+											"value": schema.StringAttribute{Required: true, MarkdownDescription: "Object type, e.g. `entitlement`."},
+										}},
+									},
+									"values": schema.ListNestedBlock{
+										MarkdownDescription: "Values assigned to the metadata attribute.",
+										NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+											"value":  schema.StringAttribute{Required: true, MarkdownDescription: "The metadata value."},
+											"name":   schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Human readable name of the value."},
+											"status": schema.StringAttribute{Optional: true, Computed: true, MarkdownDescription: "Status of the value, e.g. `active`. If not set, the value returned by the API is used."},
+										}},
+									},
 								},
 							},
 						},
@@ -314,23 +341,31 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 				},
 			},
 			"provisioning_criteria": schema.ListNestedBlock{
-				MarkdownDescription: "Provisioning criteria to determine which account gets the access profile",
+				MarkdownDescription: "Criteria used to choose the account the access profile is provisioned to when an identity has several accounts on the source.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"operation": schema.StringAttribute{Required: true},
-						"attribute": schema.StringAttribute{Optional: true},
-						"value":     schema.StringAttribute{Optional: true},
+						"operation": schema.StringAttribute{Required: true, MarkdownDescription: "Operation, e.g. `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `HAS`, `AND` or `OR`."},
+						"attribute": schema.StringAttribute{Optional: true, MarkdownDescription: "Account attribute to compare, for comparison operations."},
+						"value":     schema.StringAttribute{Optional: true, MarkdownDescription: "Value to compare the attribute with, for comparison operations."},
 					},
 					Blocks: map[string]schema.Block{
 						"children": schema.ListNestedBlock{
+							MarkdownDescription: "Child criteria for `AND` and `OR` operations, with the same arguments. Supports up to 3 levels of nesting.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
-									"operation": schema.StringAttribute{Required: true},
-									"attribute": schema.StringAttribute{Optional: true},
-									"value":     schema.StringAttribute{Optional: true},
+									"operation": schema.StringAttribute{Required: true, MarkdownDescription: "Operation, e.g. `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `HAS`, `AND` or `OR`."},
+									"attribute": schema.StringAttribute{Optional: true, MarkdownDescription: "Account attribute to compare, for comparison operations."},
+									"value":     schema.StringAttribute{Optional: true, MarkdownDescription: "Value to compare the attribute with, for comparison operations."},
 								},
 								Blocks: map[string]schema.Block{
-									"children": schema.ListNestedBlock{NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{"operation": schema.StringAttribute{Required: true}, "attribute": schema.StringAttribute{Optional: true}, "value": schema.StringAttribute{Optional: true}}}},
+									"children": schema.ListNestedBlock{
+										MarkdownDescription: "Child criteria for `AND` and `OR` operations, the third and last level of nesting.",
+										NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
+											"operation": schema.StringAttribute{Required: true, MarkdownDescription: "Operation, e.g. `EQUALS`, `NOT_EQUALS`, `CONTAINS` or `HAS`."},
+											"attribute": schema.StringAttribute{Optional: true, MarkdownDescription: "Account attribute to compare."},
+											"value":     schema.StringAttribute{Optional: true, MarkdownDescription: "Value to compare the attribute with."},
+										}},
+									},
 								},
 							},
 						},
@@ -338,12 +373,12 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 				},
 			},
 			"additional_owners": schema.ListNestedBlock{
-				MarkdownDescription: "Additional owners for this access profile",
+				MarkdownDescription: "Additional identity or governance group owners of the access profile.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"type": schema.StringAttribute{Required: true},
-						"id":   schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Optional: true},
+						"type": schema.StringAttribute{Required: true, MarkdownDescription: "Owner type, `IDENTITY` or `GOVERNANCE_GROUP`."},
+						"id":   schema.StringAttribute{Required: true, MarkdownDescription: "ID of the identity or governance group."},
+						"name": schema.StringAttribute{Optional: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},

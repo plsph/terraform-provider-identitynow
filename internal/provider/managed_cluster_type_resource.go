@@ -105,7 +105,7 @@ func (r *ManagedClusterTypeResource) Schema(ctx context.Context, req resource.Sc
 				Required:            true,
 			},
 			"managed_process_ids": schema.ListAttribute{
-				MarkdownDescription: "IDs of the processes that run on clusters of this type.",
+				MarkdownDescription: "IDs of the processes that run on clusters of this type. Removing the attribute clears the list.",
 				ElementType:         types.StringType,
 				Optional:            true,
 			},

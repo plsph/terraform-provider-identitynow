@@ -127,68 +127,68 @@ func (r *DataSegmentResource) Schema(ctx context.Context, req resource.SchemaReq
 		MarkdownDescription: "Manages a data access segment, which limits the entitlements, identities and certifications its members can see. Uses an experimental API. Changes only take effect once the segment is published, see `publish`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Data segment ID",
+				MarkdownDescription: "Data segment ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Segment business name",
+				MarkdownDescription: "Segment business name.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Segment description",
+				MarkdownDescription: "Segment description.",
 				Optional:            true,
 			},
 			"membership": schema.StringAttribute{
-				MarkdownDescription: "How members are chosen: `ALL`, `FILTER` (identities matching `member_filter_json`) or `SELECTION` (the identities in `member_selection`). When not set, the value chosen by the API is kept.",
+				MarkdownDescription: "How members are chosen: `ALL`, `FILTER` (identities matching `member_filter_json`) or `SELECTION` (the identities in `member_selection`). When not set, the value chosen by IdentityNow is kept.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"member_filter_json": schema.StringAttribute{
-				MarkdownDescription: "Member filter for the `FILTER` membership as a JSON object with an `expression` (`operator` `AND` or `EQUALS`, `attribute`, `value` with `type` and `value`, and one level of `children`). Use `jsonencode()`. Fields the API adds do not cause a diff.",
+				MarkdownDescription: "Member filter for the `FILTER` membership as a JSON object with an `expression`: `operator` (`AND` or `EQUALS`), `attribute`, `value` (`type` and `value`) and one level of `children` expressions. Use `jsonencode()`.",
 				Optional:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},
 			"scopes_json": schema.StringAttribute{
-				MarkdownDescription: "Scopes of the segment as a JSON array. Each scope has a `scope` (`ENTITLEMENT`, `CERTIFICATION`, `IDENTITY` or `ENTITLEMENTREQUEST`), a `visibility` (`ALL`, `FILTER`, `SELECTION` or `UNSEGMENTED`) and a `scopeFilter` or `scopeSelection`. Use `jsonencode()`. Fields the API adds do not cause a diff.",
+				MarkdownDescription: "Scopes of the segment as a JSON array. Each scope has a `scope` (`ENTITLEMENT`, `CERTIFICATION`, `IDENTITY` or `ENTITLEMENTREQUEST`), a `visibility` (`ALL`, `FILTER`, `SELECTION` or `UNSEGMENTED`) and a `scopeFilter` expression or a `scopeSelection` list of typed references. Use `jsonencode()`.",
 				Optional:            true,
 				Validators:          []validator.String{jsonArrayStringValidator{}},
 			},
 			"enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether the segment is active, inactive segments have no effect. When not set, the value chosen by the API is kept.",
+				MarkdownDescription: "Whether the segment is active, inactive segments have no effect. When not set, the value chosen by IdentityNow is kept.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"publish": schema.BoolAttribute{
-				MarkdownDescription: "Whether the provider publishes the segment after every create and update, so the changes are applied. Defaults to `false`, which leaves the changes unpublished.",
+				MarkdownDescription: "Whether the provider publishes the segment after every create and update, so the changes are applied. Defaults to `false`, which leaves the changes unpublished. Only this segment is published (`publishAll=false`).",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
 			"published": schema.BoolAttribute{
-				MarkdownDescription: "Whether the segment as read from the API is published",
+				MarkdownDescription: "Whether the segment as read from the API is published. Changes made outside Terraform are not published automatically, even with `publish = true`, until the next change of the resource.",
 				Computed:            true,
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "Creation date",
+				MarkdownDescription: "Creation date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"member_selection": schema.ListNestedBlock{
-				MarkdownDescription: "Identity selected as member for the `SELECTION` membership",
+				MarkdownDescription: "Identity selected as member for the `SELECTION` membership.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{MarkdownDescription: "Identity ID", Required: true},
+						"id": schema.StringAttribute{MarkdownDescription: "Identity ID.", Required: true},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Object type, `IDENTITY` (default)",
+							MarkdownDescription: "Object type, `IDENTITY` (default).",
 							Optional:            true,
 							Computed:            true,
 							Default:             stringdefault.StaticString("IDENTITY"),
@@ -485,26 +485,26 @@ func (d *DataSegmentDataSource) Schema(ctx context.Context, req datasource.Schem
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up a data access segment by ID. Uses an experimental API.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":                 dsschema.StringAttribute{MarkdownDescription: "Data segment ID", Required: true},
-			"name":               dsschema.StringAttribute{MarkdownDescription: "Segment business name", Computed: true},
-			"description":        dsschema.StringAttribute{MarkdownDescription: "Segment description", Computed: true},
-			"membership":         dsschema.StringAttribute{MarkdownDescription: "How members are chosen: `ALL`, `FILTER` or `SELECTION`", Computed: true},
-			"member_filter_json": dsschema.StringAttribute{MarkdownDescription: "Member filter as a JSON object", Computed: true},
+			"id":                 dsschema.StringAttribute{MarkdownDescription: "Data segment ID.", Required: true},
+			"name":               dsschema.StringAttribute{MarkdownDescription: "Segment business name.", Computed: true},
+			"description":        dsschema.StringAttribute{MarkdownDescription: "Segment description.", Computed: true},
+			"membership":         dsschema.StringAttribute{MarkdownDescription: "How members are chosen, `ALL`, `FILTER` or `SELECTION`.", Computed: true},
+			"member_filter_json": dsschema.StringAttribute{MarkdownDescription: "Member filter as a JSON object.", Computed: true},
 			"member_selection": dsschema.ListNestedAttribute{
-				MarkdownDescription: "Identities selected as members",
+				MarkdownDescription: "Identities selected as members, with `id` and `type`.",
 				Computed:            true,
 				NestedObject: dsschema.NestedAttributeObject{
 					Attributes: map[string]dsschema.Attribute{
-						"id":   dsschema.StringAttribute{MarkdownDescription: "Identity ID", Computed: true},
-						"type": dsschema.StringAttribute{MarkdownDescription: "Object type", Computed: true},
+						"id":   dsschema.StringAttribute{MarkdownDescription: "Identity ID.", Computed: true},
+						"type": dsschema.StringAttribute{MarkdownDescription: "Object type.", Computed: true},
 					},
 				},
 			},
-			"scopes_json": dsschema.StringAttribute{MarkdownDescription: "Scopes of the segment as a JSON array", Computed: true},
-			"enabled":     dsschema.BoolAttribute{MarkdownDescription: "Whether the segment is active", Computed: true},
-			"published":   dsschema.BoolAttribute{MarkdownDescription: "Whether the segment is published", Computed: true},
-			"created":     dsschema.StringAttribute{MarkdownDescription: "Creation date", Computed: true},
-			"modified":    dsschema.StringAttribute{MarkdownDescription: "Last modification date", Computed: true},
+			"scopes_json": dsschema.StringAttribute{MarkdownDescription: "Scopes of the segment as a JSON array.", Computed: true},
+			"enabled":     dsschema.BoolAttribute{MarkdownDescription: "Whether the segment is active.", Computed: true},
+			"published":   dsschema.BoolAttribute{MarkdownDescription: "Whether the segment is published.", Computed: true},
+			"created":     dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
+			"modified":    dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 		},
 	}
 }

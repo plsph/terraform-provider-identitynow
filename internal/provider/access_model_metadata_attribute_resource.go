@@ -125,15 +125,15 @@ func (r *AccessModelMetadataAttributeResource) Schema(ctx context.Context, req r
 		MarkdownDescription: "Manages an access model metadata attribute. The API has no delete operation: destroying the resource only removes it from Terraform state. For the same reason `key`, `type`, `status` and `object_types` cannot be changed after creation: the plan fails instead of replacing the attribute.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Attribute ID, the same as `key`",
+				MarkdownDescription: "Attribute ID, the same as `key`.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"key":    immutableString("Unique technical name of the attribute. The API derives it from `name` when not set. It cannot be changed after creation."),
-			"type":   immutableString("Attribute type, `custom` or `governance`. The API sets a default when not set. It cannot be changed after creation."),
-			"status": immutableString("Attribute status, e.g. `active`. The API sets a default when not set. It cannot be changed after creation."),
+			"type":   immutableString("Type of the attribute, `custom` or `governance`. The API sets a default when not set. It cannot be changed after creation."),
+			"status": immutableString("Status of the attribute, e.g. `active`. The API sets a default when not set. It cannot be changed after creation."),
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Display name of the attribute",
+				MarkdownDescription: "Display name of the attribute.",
 				Required:            true,
 			},
 			"object_types": schema.ListAttribute{
@@ -144,7 +144,7 @@ func (r *AccessModelMetadataAttributeResource) Schema(ctx context.Context, req r
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Attribute description",
+				MarkdownDescription: "Description of the attribute.",
 				Optional:            true,
 			},
 			"multiselect": schema.BoolAttribute{
@@ -156,15 +156,15 @@ func (r *AccessModelMetadataAttributeResource) Schema(ctx context.Context, req r
 		},
 		Blocks: map[string]schema.Block{
 			"values": schema.ListNestedBlock{
-				MarkdownDescription: "Allowed values of the attribute. Updates replace the whole list of values.",
+				MarkdownDescription: "Allowed values of the attribute, one block per value. Updates replace the whole list of values.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"value": schema.StringAttribute{
-							MarkdownDescription: "Unique technical name of the value",
+							MarkdownDescription: "Unique technical name of the value.",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Display name of the value",
+							MarkdownDescription: "Display name of the value.",
 							Required:            true,
 						},
 						"status": schema.StringAttribute{
@@ -477,22 +477,22 @@ func (d *AccessModelMetadataAttributeDataSource) Schema(ctx context.Context, req
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up an access model metadata attribute by key.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":           dsschema.StringAttribute{MarkdownDescription: "Attribute ID, the same as `key`", Computed: true},
-			"key":          dsschema.StringAttribute{MarkdownDescription: "Technical name of the attribute", Required: true},
-			"name":         dsschema.StringAttribute{MarkdownDescription: "Display name of the attribute", Computed: true},
-			"type":         dsschema.StringAttribute{MarkdownDescription: "Attribute type", Computed: true},
-			"status":       dsschema.StringAttribute{MarkdownDescription: "Attribute status", Computed: true},
-			"object_types": dsschema.ListAttribute{MarkdownDescription: "Object types the attribute values can be applied to", Computed: true, ElementType: types.StringType},
-			"description":  dsschema.StringAttribute{MarkdownDescription: "Attribute description", Computed: true},
-			"multiselect":  dsschema.BoolAttribute{MarkdownDescription: "Whether an object can have multiple values of the attribute", Computed: true},
+			"id":           dsschema.StringAttribute{MarkdownDescription: "Attribute ID, the same as `key`.", Computed: true},
+			"key":          dsschema.StringAttribute{MarkdownDescription: "Technical name of the attribute.", Required: true},
+			"name":         dsschema.StringAttribute{MarkdownDescription: "Display name of the attribute.", Computed: true},
+			"type":         dsschema.StringAttribute{MarkdownDescription: "Type of the attribute.", Computed: true},
+			"status":       dsschema.StringAttribute{MarkdownDescription: "Status of the attribute.", Computed: true},
+			"object_types": dsschema.ListAttribute{MarkdownDescription: "Object types the attribute values can be applied to.", Computed: true, ElementType: types.StringType},
+			"description":  dsschema.StringAttribute{MarkdownDescription: "Description of the attribute.", Computed: true},
+			"multiselect":  dsschema.BoolAttribute{MarkdownDescription: "Whether an object can have multiple values of the attribute.", Computed: true},
 			"values": dsschema.ListNestedAttribute{
-				MarkdownDescription: "Allowed values of the attribute",
+				MarkdownDescription: "Allowed values of the attribute, each with `value`, `name` and `status`.",
 				Computed:            true,
 				NestedObject: dsschema.NestedAttributeObject{
 					Attributes: map[string]dsschema.Attribute{
-						"value":  dsschema.StringAttribute{MarkdownDescription: "Technical name of the value", Computed: true},
-						"name":   dsschema.StringAttribute{MarkdownDescription: "Display name of the value", Computed: true},
-						"status": dsschema.StringAttribute{MarkdownDescription: "Status of the value", Computed: true},
+						"value":  dsschema.StringAttribute{MarkdownDescription: "Technical name of the value.", Computed: true},
+						"name":   dsschema.StringAttribute{MarkdownDescription: "Display name of the value.", Computed: true},
+						"status": dsschema.StringAttribute{MarkdownDescription: "Status of the value.", Computed: true},
 					},
 				},
 			},

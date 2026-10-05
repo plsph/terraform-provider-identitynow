@@ -28,12 +28,12 @@ var mfaDuoConfigSpec = &tenantSettingsSpec{
 		{Name: "host", Path: []string{"host"}, Kind: tenantSettingsString,
 			Description: "Host name or IP address of the Duo API"},
 		{Name: "access_key", Path: []string{"accessKey"}, Kind: tenantSettingsString, Sensitive: true, WriteOnly: true,
-			Description: "Secret key for authenticating requests to Duo. It must be configured when the API does not return it, because the update replaces the whole configuration and would clear it"},
+			Description: "Secret key for authenticating requests to Duo"},
 		{Name: "identity_attribute", Path: []string{"identityAttribute"}, Kind: tenantSettingsString,
 			Description: "Identity attribute that maps identities to Duo users, e.g. `email`"},
 		{Name: "config_properties_json", Path: []string{"configProperties"}, Kind: tenantSettingsJSONObject, Sensitive: true, WriteOnly: true,
 			WriteOnlyKeys: []string{"skey"},
-			Description:   "Additional Duo properties, e.g. `skey` and `ikey`. The `skey` key must be configured when the API does not return it, because the update replaces the whole configuration and would clear it"},
+			Description:   "Additional Duo properties, e.g. `skey` and `ikey`"},
 	},
 }
 

@@ -13,12 +13,12 @@ import (
 // serviceDeskIntegrationRefDataSourceAttribute is a computed single-element reference list.
 func serviceDeskIntegrationRefDataSourceAttribute(description string) schema.ListNestedAttribute {
 	return schema.ListNestedAttribute{
-		MarkdownDescription: description,
+		MarkdownDescription: description + ", a list with at most one item with `id`, `type` and `name`.",
 		Computed:            true,
 		NestedObject: schema.NestedAttributeObject{
 			Attributes: map[string]schema.Attribute{
 				"id":   schema.StringAttribute{MarkdownDescription: "ID of the referenced object.", Computed: true},
-				"type": schema.StringAttribute{MarkdownDescription: "Type of the referenced object.", Computed: true},
+				"type": schema.StringAttribute{MarkdownDescription: "Reference type.", Computed: true},
 				"name": schema.StringAttribute{MarkdownDescription: "Name of the referenced object.", Computed: true},
 			},
 		},
@@ -63,13 +63,13 @@ func (d *ServiceDeskIntegrationDataSource) Schema(ctx context.Context, req datas
 			},
 			"provisioning_config_json": schema.StringAttribute{MarkdownDescription: "Provisioning configuration as a JSON object.", Computed: true},
 			"attributes_json": schema.StringAttribute{
-				MarkdownDescription: "Integration attributes as a JSON object, as returned by the API.",
+				MarkdownDescription: "Integration attributes as a JSON object, as returned by the API. The value is sensitive.",
 				Computed:            true,
 				Sensitive:           true,
 			},
-			"owner_ref":                serviceDeskIntegrationRefDataSourceAttribute("Identity that owns the integration."),
-			"cluster_ref":              serviceDeskIntegrationRefDataSourceAttribute("Virtual appliance cluster the integration uses."),
-			"before_provisioning_rule": serviceDeskIntegrationRefDataSourceAttribute("Before provisioning rule of the integration."),
+			"owner_ref":                serviceDeskIntegrationRefDataSourceAttribute("Identity that owns the integration"),
+			"cluster_ref":              serviceDeskIntegrationRefDataSourceAttribute("Virtual appliance cluster of the integration"),
+			"before_provisioning_rule": serviceDeskIntegrationRefDataSourceAttribute("Before provisioning rule"),
 			"created":                  schema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
 			"modified":                 schema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 		},
@@ -160,8 +160,8 @@ func (d *ServiceDeskIntegrationTypesDataSource) Schema(ctx context.Context, req 
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"name":        schema.StringAttribute{MarkdownDescription: "Display name of the type.", Computed: true},
-						"type":        schema.StringAttribute{MarkdownDescription: "Type value, used as `type` of `identitynow_service_desk_integration`.", Computed: true},
-						"script_name": schema.StringAttribute{MarkdownDescription: "Script name of the type's integration template.", Computed: true},
+						"type":        schema.StringAttribute{MarkdownDescription: "Type value, used as `type` of the integration.", Computed: true},
+						"script_name": schema.StringAttribute{MarkdownDescription: "Script name of the integration template of the type.", Computed: true},
 					},
 				},
 			},

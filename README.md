@@ -176,7 +176,9 @@ The documentation in `docs` is generated with [tfplugindocs](https://github.com/
 $ make generate
 ```
 
-This formats the examples, renders the templates into `docs` and validates the result. It requires `terraform` on the `PATH`; if it is not found, tfplugindocs downloads it. A documentation template for a new resource or data source goes into `templates/resources/<name>.md.tmpl` or `templates/data-sources/<name>.md.tmpl`. Reference its example with `{{ tffile .ExampleFile }}` and its import command with `{{ codefile "shell" .ImportFile }}`. Without a template, tfplugindocs generates the page from the schema descriptions.
+This formats the examples, renders the templates into `docs` and validates the result. It requires `terraform` on the `PATH`; if it is not found, tfplugindocs downloads it.
+
+The argument and attribute reference of every page is generated from the schema with `{{ .SchemaMarkdown | trimspace }}`, so document arguments and attributes in the `MarkdownDescription` of the schema: defaults, allowed values, constraints that validators enforce (e.g. "Exactly one block is required."), and behaviour. Notes that apply to the whole resource stay in the template, before the schema. A documentation template for a new resource or data source goes into `templates/resources/<name>.md.tmpl` or `templates/data-sources/<name>.md.tmpl`. Reference its example with `{{ tffile .ExampleFile }}` and its import command with `{{ codefile "shell" .ImportFile }}`. Without a template, tfplugindocs uses its default page layout.
 
 # Testing the Provider
 

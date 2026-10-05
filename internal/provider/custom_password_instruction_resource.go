@@ -158,20 +158,20 @@ func (r *CustomPasswordInstructionResource) Schema(ctx context.Context, req reso
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"page_id": schema.StringAttribute{
-				MarkdownDescription: "Page the instructions are shown on, e.g. `reset-password:enter-password`. Changing it forces new instructions.",
+				MarkdownDescription: "Page the instructions are shown on. One of `change-password:enter-password`, `change-password:finish`, `flow-selection:select`, `forget-username:user-email`, `mfa:enter-code`, `mfa:enter-kba`, `mfa:select`, `reset-password:enter-password`, `reset-password:enter-username`, `reset-password:finish`, `unlock-account:enter-username` or `unlock-account:finish`. Changing it forces new instructions to be created.",
 				Required:            true,
 				Validators:          []validator.String{customPasswordInstructionPageIDValidator{}},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"locale": schema.StringAttribute{
-				MarkdownDescription: "BCP 47 language tag of the instructions. Defaults to `default`. Changing it forces new instructions.",
+				MarkdownDescription: "BCP 47 language tag of the instructions. Defaults to `default`. Changing it forces new instructions to be created.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(customPasswordInstructionDefaultLocale),
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"page_content": schema.StringAttribute{
-				MarkdownDescription: "Instructions in basic HTML, at most 1000 characters. IdentityNow sanitizes the content; the configured content is kept in state, so changes made outside Terraform are not detected. Changing it forces new instructions.",
+				MarkdownDescription: "Instructions in basic HTML, at most 1000 characters. Links open in the current page unless they use `target=\"_blank\"`. Changing it forces new instructions to be created. IdentityNow sanitizes the content; the configured content is kept in state, so changes made outside Terraform are not detected.",
 				Required:            true,
 				Validators:          []validator.String{customPasswordInstructionLengthValidator{}},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},

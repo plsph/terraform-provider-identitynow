@@ -13,29 +13,7 @@ Manages a scheduled search, which runs a saved search on a schedule and emails t
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-The following arguments are supported:
-
-* `saved_search_id` - (Required) ID of the saved search that is run.
-* `schedule_json` - (Required) Schedule as a JSON object with `type` (`DAILY`, `WEEKLY`, `MONTHLY`, `CALENDAR` or `ANNUALLY`), the `months`, `days` and `hours` selectors (each with `type` `LIST` or `RANGE`, `values` and an optional `interval`), `expiration` and `timeZoneId`. `hours` is required. Use `jsonencode()`. The value is compared on the configured fields only, so formatting, key order and fields IdentityNow adds do not produce a diff.
-* `recipient` - (Required) Identity that receives the search results by email. At least one block is required. Contains:
-  * `id` - (Required) Identity ID.
-  * `type` - (Optional) Recipient type, `IDENTITY` (default).
-* `name` - (Optional) Scheduled search name.
-* `description` - (Optional) Scheduled search description.
-* `enabled` - (Optional) Whether the scheduled search is enabled. When not set, the value chosen by IdentityNow is kept.
-* `email_empty_results` - (Optional) Whether an email is sent when the search returns no results. When not set, the value chosen by IdentityNow is kept.
-* `display_query_details` - (Optional) Whether the email includes the query and a preview of the results, which can contain personal data. When not set, the value chosen by IdentityNow is kept.
-
-## Attributes Reference
-
-In addition to the arguments listed above, the following attributes are exported:
-
-* `id` - Scheduled search ID.
-* `owner` - Owner of the scheduled search, with `type` and `id`.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Update Behaviour
 

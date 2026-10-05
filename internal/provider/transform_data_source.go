@@ -40,15 +40,15 @@ func (d *TransformDataSource) Schema(ctx context.Context, req datasource.SchemaR
 				Computed:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Transform operation type",
+				MarkdownDescription: "Transform operation type.",
 				Computed:            true,
 			},
 			"attributes_json": schema.StringAttribute{
-				MarkdownDescription: "Transform attributes as a JSON object",
+				MarkdownDescription: "Transform attributes as a JSON object.",
 				Computed:            true,
 			},
 			"internal": schema.BoolAttribute{
-				MarkdownDescription: "Whether this is a SailPoint internal transform",
+				MarkdownDescription: "Whether this is a SailPoint internal transform.",
 				Computed:            true,
 			},
 		},

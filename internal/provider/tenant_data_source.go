@@ -134,7 +134,7 @@ func (d *TenantDataSource) Metadata(ctx context.Context, req datasource.Metadata
 
 func (d *TenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	str := func(description string) dsschema.StringAttribute {
-		return dsschema.StringAttribute{MarkdownDescription: description, Computed: true}
+		return dsschema.StringAttribute{MarkdownDescription: description + ".", Computed: true}
 	}
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Reads information about the current tenant and its products.",
@@ -146,7 +146,7 @@ func (d *TenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 			"region":      str("Deployment region of the tenant"),
 			"description": str("Tenant description"),
 			"products": dsschema.ListNestedAttribute{
-				MarkdownDescription: "Products of the tenant",
+				MarkdownDescription: "Products of the tenant.",
 				Computed:            true,
 				NestedObject: dsschema.NestedAttributeObject{
 					Attributes: map[string]dsschema.Attribute{
@@ -157,7 +157,7 @@ func (d *TenantDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 						"product_right":     str("Right needed for the product"),
 						"api_url":           str("API URL of the product"),
 						"licenses": dsschema.ListNestedAttribute{
-							MarkdownDescription: "Licenses of the product",
+							MarkdownDescription: "Licenses of the product.",
 							Computed:            true,
 							NestedObject: dsschema.NestedAttributeObject{
 								Attributes: map[string]dsschema.Attribute{

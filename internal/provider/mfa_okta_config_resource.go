@@ -27,7 +27,7 @@ var mfaOktaConfigSpec = &tenantSettingsSpec{
 		{Name: "host", Path: []string{"host"}, Kind: tenantSettingsString,
 			Description: "Host name of the Okta organization, e.g. `example.okta.com`"},
 		{Name: "access_key", Path: []string{"accessKey"}, Kind: tenantSettingsString, Sensitive: true, WriteOnly: true,
-			Description: "Okta API token. It must be configured when the API does not return it, because the update replaces the whole configuration and would clear it"},
+			Description: "Okta API token"},
 		{Name: "identity_attribute", Path: []string{"identityAttribute"}, Kind: tenantSettingsString,
 			Description: "Identity attribute that maps identities to Okta users, e.g. `email`"},
 	},

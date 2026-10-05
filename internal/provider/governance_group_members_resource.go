@@ -47,14 +47,14 @@ func (r *GovernanceGroupMembersResource) Schema(ctx context.Context, req resourc
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Governance Group Members ID (same as governance_group_id)",
+				MarkdownDescription: "Governance group members ID (same as `governance_group_id`).",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"governance_group_id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Governance Group ID",
+				MarkdownDescription: "ID of the governance group. Changing this forces a new resource to be created.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -62,21 +62,21 @@ func (r *GovernanceGroupMembersResource) Schema(ctx context.Context, req resourc
 		},
 		Blocks: map[string]schema.Block{
 			"members": schema.ListNestedBlock{
-				MarkdownDescription: "List of members",
+				MarkdownDescription: "Members of the governance group.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Member ID",
+							MarkdownDescription: "Identity ID of the member.",
 						},
 						"name": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Member name",
+							MarkdownDescription: "Name of the member.",
 						},
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Member type, defaults to IDENTITY",
+							MarkdownDescription: "Member type. Defaults to `IDENTITY`.",
 						},
 					},
 				},

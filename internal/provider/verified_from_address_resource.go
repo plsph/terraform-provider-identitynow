@@ -134,17 +134,17 @@ func (r *VerifiedFromAddressResource) Schema(ctx context.Context, req resource.S
 		MarkdownDescription: "Manages a sender (\"From:\") email address for notifications. Creating it starts the email verification.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Sender address ID",
+				MarkdownDescription: "Sender address ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"email": schema.StringAttribute{
-				MarkdownDescription: "Sender email address. Changing it forces a new address.",
+				MarkdownDescription: "Sender email address. The address cannot be changed, changing this forces a new address to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"is_verified_by_domain": schema.BoolAttribute{
-				MarkdownDescription: "Whether the address is verified by its domain",
+				MarkdownDescription: "Whether the address is verified by its domain.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
@@ -154,7 +154,7 @@ func (r *VerifiedFromAddressResource) Schema(ctx context.Context, req resource.S
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"region": schema.StringAttribute{
-				MarkdownDescription: "AWS SES region the address is associated with",
+				MarkdownDescription: "AWS SES region the address is associated with.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
@@ -284,13 +284,13 @@ func (d *VerifiedFromAddressDataSource) Schema(ctx context.Context, req datasour
 		MarkdownDescription: "Looks up a sender (\"From:\") email address and its verification status by email.",
 		Attributes: map[string]dsschema.Attribute{
 			"email": dsschema.StringAttribute{
-				MarkdownDescription: "Sender email address, compared case-insensitively",
+				MarkdownDescription: "Sender email address, compared case-insensitively.",
 				Required:            true,
 			},
-			"id":                    dsschema.StringAttribute{MarkdownDescription: "Sender address ID", Computed: true},
-			"is_verified_by_domain": dsschema.BoolAttribute{MarkdownDescription: "Whether the address is verified by its domain", Computed: true},
-			"verification_status":   dsschema.StringAttribute{MarkdownDescription: "Verification status: `PENDING`, `SUCCESS`, `FAILED` or `NA`", Computed: true},
-			"region":                dsschema.StringAttribute{MarkdownDescription: "AWS SES region the address is associated with", Computed: true},
+			"id":                    dsschema.StringAttribute{MarkdownDescription: "Sender address ID.", Computed: true},
+			"is_verified_by_domain": dsschema.BoolAttribute{MarkdownDescription: "Whether the address is verified by its domain.", Computed: true},
+			"verification_status":   dsschema.StringAttribute{MarkdownDescription: "Verification status: `PENDING`, `SUCCESS`, `FAILED` or `NA`.", Computed: true},
+			"region":                dsschema.StringAttribute{MarkdownDescription: "AWS SES region the address is associated with.", Computed: true},
 		},
 	}
 }

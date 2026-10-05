@@ -15,23 +15,11 @@ Manages the reassignment of one work type of an identity to another identity, e.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `identity_id` - (Required) ID of the identity whose work is reassigned. Changing this forces a new reassignment to be created.
-* `config_type` - (Required) Work type to reassign: `ACCESS_REQUESTS`, `CERTIFICATIONS`, `MANUAL_TASKS` or `GENERIC_APPROVALS`. Changing this forces a new reassignment to be created.
-* `reassigned_to_id` - (Required) ID of the identity that receives the work items.
-* `start_date` - (Optional) RFC 3339 date-time from which work items are reassigned. When not set, the API default is used and kept.
-* `end_date` - (Optional) RFC 3339 date-time at which the reassignment ends. When not set, the reassignment is permanent.
-
 Dates that denote the same instant in a different format, e.g. with milliseconds or another time zone offset, do not produce a diff.
 
 Changes of `reassigned_to_id`, `start_date` and `end_date` are applied with `PUT /reassignment-configurations/{identityId}` for the configured work type.
 
-## Attributes Reference
-
-* `id` - Resource ID in the form `<identity_id>/<config_type>`.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

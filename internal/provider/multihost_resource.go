@@ -126,18 +126,20 @@ func (r *MultihostResource) Metadata(ctx context.Context, req resource.MetadataR
 	resp.TypeName = req.ProviderTypeName + "_multihost"
 }
 
-func multihostRefBlock(description string, min int) schema.ListNestedBlock {
+// multihostRefBlock is a reference block with a required ID and a computed name. noun names the
+// referenced object in the nested descriptions, e.g. "Identity".
+func multihostRefBlock(description, noun string, min int) schema.ListNestedBlock {
 	return schema.ListNestedBlock{
 		MarkdownDescription: description,
 		Validators:          []validator.List{listSizeBetween(min, 1)},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"id": schema.StringAttribute{
-					MarkdownDescription: "ID of the referenced object.",
+					MarkdownDescription: noun + " ID.",
 					Required:            true,
 				},
 				"name": schema.StringAttribute{
-					MarkdownDescription: "Name of the referenced object, resolved by IdentityNow.",
+					MarkdownDescription: noun + " name, resolved by IdentityNow.",
 					Computed:            true,
 				},
 			},
@@ -163,12 +165,12 @@ func (r *MultihostResource) Schema(ctx context.Context, req resource.SchemaReque
 				Required:            true,
 			},
 			"connector": schema.StringAttribute{
-				MarkdownDescription: "Connector script name, e.g. `multihost-microsoft-sql-server`. Changing it forces a new Multi-Host Integration.",
+				MarkdownDescription: "Connector script name, e.g. `multihost-microsoft-sql-server`. Changing this forces a new Multi-Host Integration to be created, which also deletes its sources.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"connector_attributes_json": schema.StringAttribute{
-				MarkdownDescription: "Connector attributes of the Multi-Host Integration as a JSON object, e.g. `multiHostAttributes` with `authType`, `user` and `password`. Use `jsonencode()` for convenience. The value is sensitive, since it may contain credentials. Only the configured keys are managed and compared, also inside nested objects such as `multiHostAttributes`: attributes added by IdentityNow are ignored, and values the API does not return, or returns masked or encrypted, keep the configured value. Updates only send the changed values, so attributes of a nested object that are not configured are kept. Keys removed from the configuration are left unchanged in IdentityNow, since the API cannot remove attributes. Use `max_sources_per_agg_group` and `max_allowed_sources` instead of the `maxSourcesPerAggGroup` and `maxAllowedSources` keys.",
+				MarkdownDescription: "Connector attributes as a JSON object, e.g. `multiHostAttributes` with `authType`, `user` and `password`. Use `jsonencode()` for convenience. This value is sensitive, since it may contain credentials. Only the configured keys are managed and compared, also inside nested objects such as `multiHostAttributes`: attributes added by IdentityNow are ignored, and configured values that the API does not return, or returns masked or encrypted, keep the configured value. Updates only send the changed values, so attributes of a nested object that are not configured are kept. Keys removed from the configuration are left unchanged in IdentityNow, since the API cannot remove attributes. Use `max_sources_per_agg_group` and `max_allowed_sources` instead of the `maxSourcesPerAggGroup` and `maxAllowedSources` keys. After import the value is null until it is configured.",
 				Optional:            true,
 				Sensitive:           true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
@@ -203,9 +205,9 @@ func (r *MultihostResource) Schema(ctx context.Context, req resource.SchemaReque
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"owner":                multihostRefBlock("Identity that owns the Multi-Host Integration. Exactly one block is required.", 1),
-			"cluster":              multihostRefBlock("Virtual appliance cluster of the Multi-Host Integration. At most one block.", 0),
-			"management_workgroup": multihostRefBlock("Governance group that manages the Multi-Host Integration. At most one block.", 0),
+			"owner":                multihostRefBlock("Identity that owns the Multi-Host Integration. Exactly one block is required.", "Identity", 1),
+			"cluster":              multihostRefBlock("Virtual appliance cluster of the Multi-Host Integration. At most one block.", "Cluster", 0),
+			"management_workgroup": multihostRefBlock("Governance group that manages the Multi-Host Integration. At most one block.", "Governance group", 0),
 		},
 	}
 }
@@ -713,15 +715,15 @@ func (d *MultihostDataSource) Schema(ctx context.Context, req datasource.SchemaR
 			"name":                      dsschema.StringAttribute{MarkdownDescription: "Name of the Multi-Host Integration.", Computed: true},
 			"description":               dsschema.StringAttribute{MarkdownDescription: "Description of the Multi-Host Integration.", Computed: true},
 			"connector":                 dsschema.StringAttribute{MarkdownDescription: "Connector script name.", Computed: true},
-			"connector_attributes_json": dsschema.StringAttribute{MarkdownDescription: "All connector attributes as a JSON object. Sensitive, since it may contain credentials.", Computed: true, Sensitive: true},
+			"connector_attributes_json": dsschema.StringAttribute{MarkdownDescription: "All connector attributes as a JSON object. This value is sensitive, since it may contain credentials.", Computed: true, Sensitive: true},
 			"max_sources_per_agg_group": dsschema.Int64Attribute{MarkdownDescription: "Maximum number of sources per aggregation group.", Computed: true},
 			"max_allowed_sources":       dsschema.Int64Attribute{MarkdownDescription: "Maximum number of sources in the Multi-Host Integration.", Computed: true},
 			"type":                      dsschema.StringAttribute{MarkdownDescription: "Type of system managed.", Computed: true},
 			"created":                   dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
 			"modified":                  dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
-			"owner":                     ref("Owner identity, a list with one element."),
-			"cluster":                   ref("Virtual appliance cluster, a list with at most one element."),
-			"management_workgroup":      ref("Management governance group, a list with at most one element."),
+			"owner":                     ref("Owner identity, a list with one element with `id` and `name`."),
+			"cluster":                   ref("Virtual appliance cluster, a list with at most one element with `id` and `name`."),
+			"management_workgroup":      ref("Management governance group, a list with at most one element with `id` and `name`."),
 		},
 	}
 }

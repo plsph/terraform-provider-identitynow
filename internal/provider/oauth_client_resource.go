@@ -142,19 +142,19 @@ func (r *OauthClientResource) Schema(ctx context.Context, req resource.SchemaReq
 				Optional:            true,
 			},
 			"access_token_validity_seconds": schema.Int64Attribute{
-				MarkdownDescription: "Number of seconds an access token generated for this API client is valid for.",
+				MarkdownDescription: "Number of seconds an access token generated for this client is valid for.",
 				Required:            true,
 				Validators:          []validator.Int64{int64AtLeastValidator{min: 1}},
 			},
 			"refresh_token_validity_seconds": schema.Int64Attribute{
-				MarkdownDescription: "Number of seconds a refresh token generated for this API client is valid for. Defaults to the value chosen by IdentityNow.",
+				MarkdownDescription: "Number of seconds a refresh token is valid for. When not set, the value chosen by IdentityNow is used.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.Int64{int64AtLeastValidator{min: 1}},
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
 			"redirect_uris": schema.SetAttribute{
-				MarkdownDescription: "Approved redirect URIs for the `AUTHORIZATION_CODE` grant type.",
+				MarkdownDescription: "Approved redirect URIs, required for the `AUTHORIZATION_CODE` grant type.",
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
@@ -164,17 +164,17 @@ func (r *OauthClientResource) Schema(ctx context.Context, req resource.SchemaReq
 				ElementType:         types.StringType,
 			},
 			"access_type": schema.StringAttribute{
-				MarkdownDescription: "Access type of the API client, `ONLINE` or `OFFLINE`.",
+				MarkdownDescription: "Access type, `ONLINE` or `OFFLINE`.",
 				Required:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Client type, `CONFIDENTIAL` or `PUBLIC`. Cannot be updated, changing it forces a new client.",
+				MarkdownDescription: "Client type, `CONFIDENTIAL` or `PUBLIC`. Cannot be updated, changing it forces a new client to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()},
 			},
 			"internal": schema.BoolAttribute{
-				MarkdownDescription: "Whether the API client can be used for requests internal to IdentityNow. Cannot be updated, changing it forces a new client.",
+				MarkdownDescription: "Whether the API client can be used for requests internal to IdentityNow. Cannot be updated, changing it forces a new client to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()},
@@ -186,26 +186,26 @@ func (r *OauthClientResource) Schema(ctx context.Context, req resource.SchemaReq
 				Default:             booldefault.StaticBool(true),
 			},
 			"strong_auth_supported": schema.BoolAttribute{
-				MarkdownDescription: "Whether the API client supports strong authentication.",
+				MarkdownDescription: "Whether the API client supports strong authentication. When not set, the value chosen by IdentityNow is used.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"claims_supported": schema.BoolAttribute{
-				MarkdownDescription: "Whether the API client supports the serialization of SAML claims with the `AUTHORIZATION_CODE` flow.",
+				MarkdownDescription: "Whether the API client supports the serialization of SAML claims with the `AUTHORIZATION_CODE` flow. When not set, the value chosen by IdentityNow is used.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"scope": schema.SetAttribute{
-				MarkdownDescription: "Scopes of the API client. Defaults to `sp:scopes:all`, all rights of the owner. Cannot be updated, changing it forces a new client.",
+				MarkdownDescription: "Scopes of the API client. Defaults to `sp:scopes:all`, which grants all rights of the identity that creates the client. Cannot be updated, changing it forces a new client to be created.",
 				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
 				PlanModifiers:       []planmodifier.Set{setplanmodifier.UseStateForUnknown(), setplanmodifier.RequiresReplace()},
 			},
 			"secret": schema.StringAttribute{
-				MarkdownDescription: "Client secret. It is only returned when the client is created, so it is null for imported clients.",
+				MarkdownDescription: "Client secret. Only available for clients created by Terraform. It is only returned when the client is created, so it is null for imported clients.",
 				Computed:            true,
 				Sensitive:           true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -531,7 +531,7 @@ func (d *OauthClientDataSource) Schema(ctx context.Context, req datasource.Schem
 			"scope":                          computedSet("Scopes of the API client."),
 			"created":                        computedString("Creation date."),
 			"modified":                       computedString("Last modification date."),
-			"last_used":                      computedString("Date the client was last used to generate an access token, updated once a day."),
+			"last_used":                      computedString("Date the client was last used to generate an access token. It is updated once a day."),
 		},
 	}
 }

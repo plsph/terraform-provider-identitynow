@@ -191,52 +191,52 @@ func (r *TriggerSubscriptionResource) Schema(ctx context.Context, req resource.S
 		MarkdownDescription: "Manages a subscription to an event trigger. The subscription defines where and how trigger invocations are delivered.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Subscription ID",
+				MarkdownDescription: "Subscription ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Subscription name",
+				MarkdownDescription: "Subscription name.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Subscription description",
+				MarkdownDescription: "Subscription description.",
 				Optional:            true,
 			},
 			"trigger_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the trigger to subscribe to, e.g. `idn:identity-created`. Changing it forces a new subscription.",
+				MarkdownDescription: "ID of the trigger to subscribe to, e.g. `idn:identity-created`. The trigger of a subscription cannot be changed, changing this forces a new subscription to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"trigger_name": schema.StringAttribute{
-				MarkdownDescription: "Name of the trigger",
+				MarkdownDescription: "Name of the trigger.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Subscription type: `HTTP`, `EVENTBRIDGE`, `INLINE`, `SCRIPT` or `WORKFLOW`. `HTTP` requires `http_config`, `EVENTBRIDGE` requires `event_bridge_config`.",
+				MarkdownDescription: "Subscription type: `HTTP`, `EVENTBRIDGE`, `INLINE`, `SCRIPT` or `WORKFLOW`. `HTTP` requires an `http_config` block and `EVENTBRIDGE` requires an `event_bridge_config` block.",
 				Required:            true,
 				Validators:          []validator.String{triggerSubscriptionOneOfValidator{values: []string{"HTTP", "EVENTBRIDGE", "INLINE", "SCRIPT", "WORKFLOW"}}},
 			},
 			"response_deadline": schema.StringAttribute{
-				MarkdownDescription: "Deadline for completing a `REQUEST_RESPONSE` trigger invocation as an ISO-8601 duration, e.g. `PT1H`. Defaults to the API default (`PT1H`).",
+				MarkdownDescription: "Deadline for completing a `REQUEST_RESPONSE` trigger invocation as an ISO-8601 duration, e.g. `PT1H`. When not set, the API default (`PT1H`) is used.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"workflow_config_json": schema.StringAttribute{
-				MarkdownDescription: "Configuration of a `WORKFLOW` subscription as a JSON object. The v2026 API documents the field as patchable but does not describe its content, so it is passed through as is. Compared semantically.",
+				MarkdownDescription: "Configuration of a `WORKFLOW` subscription as a JSON object. The v2026 API lists the field as patchable but does not document its content, so the value is passed through as is. Compared semantically, so formatting and key order do not produce a diff.",
 				Optional:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},
 			"enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether the subscription receives real-time trigger invocations. Test invocations are always enabled. Defaults to `true`.",
+				MarkdownDescription: "Whether the subscription receives real-time trigger invocations. Test invocations are always delivered. Defaults to `true`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
 			},
 			"filter": schema.StringAttribute{
-				MarkdownDescription: "JSONPath filter; the trigger is only invoked when the expression evaluates to true.",
+				MarkdownDescription: "[JSONPath filter](https://developer.sailpoint.com/docs/extensibility/event-triggers/filtering-events); the trigger is only invoked when the expression evaluates to true.",
 				Optional:            true,
 			},
 		},
@@ -247,11 +247,11 @@ func (r *TriggerSubscriptionResource) Schema(ctx context.Context, req resource.S
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"url": schema.StringAttribute{
-							MarkdownDescription: "URL of the external integration",
+							MarkdownDescription: "URL of the external integration.",
 							Required:            true,
 						},
 						"http_dispatch_mode": schema.StringAttribute{
-							MarkdownDescription: "HTTP response mode: `SYNC`, `ASYNC` or `DYNAMIC`",
+							MarkdownDescription: "HTTP response mode: `SYNC`, `ASYNC` or `DYNAMIC`.",
 							Required:            true,
 							Validators:          []validator.String{triggerSubscriptionOneOfValidator{values: []string{"SYNC", "ASYNC", "DYNAMIC"}}},
 						},
@@ -263,7 +263,7 @@ func (r *TriggerSubscriptionResource) Schema(ctx context.Context, req resource.S
 							Validators:          []validator.String{triggerSubscriptionOneOfValidator{values: []string{"NO_AUTH", "BASIC_AUTH", "BEARER_TOKEN"}}},
 						},
 						"basic_auth_user_name": schema.StringAttribute{
-							MarkdownDescription: "User name for `BASIC_AUTH`",
+							MarkdownDescription: "User name for `BASIC_AUTH`.",
 							Optional:            true,
 						},
 						"basic_auth_password": schema.StringAttribute{
@@ -285,11 +285,11 @@ func (r *TriggerSubscriptionResource) Schema(ctx context.Context, req resource.S
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"aws_account": schema.StringAttribute{
-							MarkdownDescription: "12-digit AWS account number that has the EventBridge partner event source",
+							MarkdownDescription: "12-digit AWS account number that has the EventBridge partner event source.",
 							Required:            true,
 						},
 						"aws_region": schema.StringAttribute{
-							MarkdownDescription: "AWS region that has the EventBridge partner event source, e.g. `us-east-1`",
+							MarkdownDescription: "AWS region that has the EventBridge partner event source, e.g. `us-east-1`.",
 							Required:            true,
 						},
 					},

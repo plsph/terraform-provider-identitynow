@@ -141,12 +141,12 @@ func (r *CustomUserLevelResource) Schema(ctx context.Context, req resource.Schem
 				Required:            true,
 			},
 			"right_sets": schema.SetAttribute{
-				MarkdownDescription: "IDs of the right sets assigned to the user level, see `identitynow_authorization_right_sets`. When only a parent right set is listed, IdentityNow assigns all of its children; these are shown in `assigned_right_sets` and do not cause a diff.",
+				MarkdownDescription: "IDs of the right sets assigned to the user level, see [identitynow_authorization_right_sets](../data-sources/authorization_right_sets). When only a parent right set is listed, IdentityNow assigns all of its children as well. These children are listed in `assigned_right_sets` and do not produce a diff. A listed parent that IdentityNow only returns through its assigned children does not produce a diff either.",
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
 			"publish": schema.BoolAttribute{
-				MarkdownDescription: "Publish the user level after it is created or updated, making it active and assignable. A published user level cannot be unpublished, so setting it to `false` later has no effect. Defaults to `false`, which leaves a new user level in draft status.",
+				MarkdownDescription: "Publish the user level after it is created or updated, making it active and assignable. A published user level cannot be unpublished. Defaults to `false`, which leaves a new user level in `DRAFT` status. Setting it to `false` on a published user level has no effect.",
 				Optional:            true,
 			},
 			"assigned_right_sets": schema.SetAttribute{
@@ -179,12 +179,12 @@ func (r *CustomUserLevelResource) Schema(ctx context.Context, req resource.Schem
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Owner type, `IDENTITY` (the default).",
+							MarkdownDescription: "Owner type. Defaults to `IDENTITY`.",
 							Optional:            true,
 							Computed:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Owner display name, filled in by IdentityNow when not set. A configured name is kept as long as the owner ID does not change.",
+							MarkdownDescription: "Owner display name. When not set, the name returned by IdentityNow is used. A configured name (and type) is kept in state as long as the owner `id` does not change, so a name that differs from the display name returned by IdentityNow does not produce a diff.",
 							Optional:            true,
 							Computed:            true,
 						},

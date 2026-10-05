@@ -13,11 +13,4 @@ Use this data source to list the time zones that can be set as `time_zone` of th
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-This data source has no arguments.
-
-## Attributes Reference
-
-* `id` - Always `valid-time-zones`.
-* `time_zones` - List of valid time zone names, e.g. `Europe/Warsaw`.
+{{ .SchemaMarkdown | trimspace }}

@@ -15,28 +15,6 @@ Looking up by email address fails when several identities share the email addres
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Exactly one of `alias` and `email_address` must be set.
 
-The following arguments are supported:
-
-* `alias` - (Optional) The identity's alternate unique identifier, equivalent to its Account Name on the authoritative source account schema. Conflicts with `email_address`.
-
-* `email_address` - (Optional) The email address of the identity. Conflicts with `alias`.
-
-## Attributes Reference
-
-In addition to the Arguments listed above - the following Attributes are exported:
-
-* `id` - The identity ID.
-
-* `name` - The identity's name, equivalent to its Display Name attribute.
-
-* `description` - The identity description.
-
-* `enabled` - Whether the identity is enabled.
-
-* `is_manager` - Whether this identity is a manager of another identity.
-
-* `identity_status` - The identity's status in the system.
-
-* `attributes` - A list with one object containing identity attributes of the identity: `adp_id`, `email`, `firstname`, `lastname`, `phone`, `uid`, `user_type` and `workday_id`. Reference them with an index, e.g. `data.identitynow_identity.example.attributes[0].email`.
+{{ .SchemaMarkdown | trimspace }}

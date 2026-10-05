@@ -151,20 +151,20 @@ func (r *SearchAttributeConfigResource) Schema(ctx context.Context, req resource
 		MarkdownDescription: "Manages an extended account search attribute, which promotes source account attributes to a searchable account attribute. Uses an experimental API.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Configuration ID, the same as `name`",
+				MarkdownDescription: "Configuration ID, the same as `name`.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{searchAttributeConfigIDFromName{}},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Name of the search attribute. It must not be the same as an account or source attribute name.",
+				MarkdownDescription: "Name of the search attribute. Give it a unique name that is not used by an account or source attribute, or in the account schema of any current or future source.",
 				Required:            true,
 			},
 			"display_name": schema.StringAttribute{
-				MarkdownDescription: "Display name of the search attribute",
+				MarkdownDescription: "Display name of the search attribute.",
 				Required:            true,
 			},
 			"application_attributes": schema.MapAttribute{
-				MarkdownDescription: "Map of source ID to the name of the account attribute promoted to the search attribute",
+				MarkdownDescription: "Map of source ID to the name of the account attribute promoted to the search attribute.",
 				Required:            true,
 				ElementType:         types.StringType,
 			},
@@ -342,11 +342,11 @@ func (d *SearchAttributeConfigDataSource) Schema(ctx context.Context, req dataso
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up an extended account search attribute by name. Uses an experimental API.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":           dsschema.StringAttribute{MarkdownDescription: "Configuration ID, the same as `name`", Computed: true},
-			"name":         dsschema.StringAttribute{MarkdownDescription: "Name of the search attribute", Required: true},
-			"display_name": dsschema.StringAttribute{MarkdownDescription: "Display name of the search attribute", Computed: true},
+			"id":           dsschema.StringAttribute{MarkdownDescription: "Configuration ID, the same as `name`.", Computed: true},
+			"name":         dsschema.StringAttribute{MarkdownDescription: "Name of the search attribute.", Required: true},
+			"display_name": dsschema.StringAttribute{MarkdownDescription: "Display name of the search attribute.", Computed: true},
 			"application_attributes": dsschema.MapAttribute{
-				MarkdownDescription: "Map of source ID to the name of the promoted account attribute",
+				MarkdownDescription: "Map of source ID to the name of the promoted account attribute.",
 				Computed:            true,
 				ElementType:         types.StringType,
 			},

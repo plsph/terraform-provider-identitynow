@@ -40,78 +40,78 @@ func (d *WorkflowDataSource) Metadata(ctx context.Context, req datasource.Metada
 
 func (d *WorkflowDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Workflow data source",
+		MarkdownDescription: "Use this data source to access information about an existing Workflow. The lookup fails when several workflows share the name.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Workflow ID",
+				MarkdownDescription: "The ID of the workflow.",
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Workflow name",
+				MarkdownDescription: "The name of the workflow.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Workflow description",
+				MarkdownDescription: "Description of the workflow.",
 			},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Workflow owner",
+				MarkdownDescription: "List with the owner of the workflow.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Owner identity ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
 			"enabled": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether the workflow is enabled",
+				MarkdownDescription: "Whether the workflow is enabled.",
 			},
 			"trigger": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Workflow trigger",
+				MarkdownDescription: "List with the trigger configuration.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
 							Computed:            true,
-							MarkdownDescription: "Trigger type",
+							MarkdownDescription: "Trigger type (EVENT, SCHEDULED, or EXTERNAL).",
 						},
 						"display_name": schema.StringAttribute{
 							Computed:            true,
-							MarkdownDescription: "Trigger display name",
+							MarkdownDescription: "Trigger display name.",
 						},
 						"attributes_json": schema.StringAttribute{
 							Computed:            true,
-							MarkdownDescription: "Trigger attributes as JSON",
+							MarkdownDescription: "Trigger attributes as a JSON string.",
 						},
 					},
 				},
 			},
 			"definition": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Workflow definition",
+				MarkdownDescription: "List with the workflow definition.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"start": schema.StringAttribute{
 							Computed:            true,
-							MarkdownDescription: "The name of the starting step",
+							MarkdownDescription: "The name of the starting step.",
 						},
 						"steps_json": schema.StringAttribute{
 							Computed:            true,
-							MarkdownDescription: "Workflow steps as JSON",
+							MarkdownDescription: "Workflow steps as a JSON string.",
 						},
 					},
 				},
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The date and time the workflow was created",
+				MarkdownDescription: "The date and time the workflow was created.",
 			},
 			"modified": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The date and time the workflow was modified",
+				MarkdownDescription: "The date and time the workflow was modified.",
 			},
 		},
 	}

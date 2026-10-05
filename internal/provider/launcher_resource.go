@@ -156,7 +156,7 @@ func (r *LauncherResource) Schema(ctx context.Context, req resource.SchemaReques
 				Default:             booldefault.StaticBool(false),
 			},
 			"config_json": schema.StringAttribute{
-				MarkdownDescription: "Launcher configuration as a JSON object of at most 4 KB, e.g. `jsonencode({ workflowId = \"...\" })`. Compared semantically.",
+				MarkdownDescription: "Launcher configuration as a JSON object of at most 4 KB, e.g. `jsonencode({ workflowId = \"...\" })`. Use `jsonencode()` for convenience. The value is compared semantically.",
 				Required:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},

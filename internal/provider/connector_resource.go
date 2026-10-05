@@ -182,7 +182,7 @@ func (r *ConnectorResource) Schema(ctx context.Context, req resource.SchemaReque
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		}
 	}
-	metadata := computedString("UI metadata of the connector as a JSON object. Use `jsonencode()` for convenience. When not set, the value is not managed.")
+	metadata := computedString("UI metadata of the connector as a JSON object. Use `jsonencode()` for convenience. The value is compared semantically. When not set, the value is not managed.")
 	metadata.Validators = []validator.String{jsonObjectStringValidator{}}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages a custom connector. Uploading connector files and translations is not supported.",
@@ -198,29 +198,29 @@ func (r *ConnectorResource) Schema(ctx context.Context, req resource.SchemaReque
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Connector name, unique in the tenant. Changing it forces a new connector.",
+				MarkdownDescription: "Connector name, unique in the tenant. Changing this forces a new connector to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Connector type. Defaults to `custom <name>`. Changing it forces a new connector.",
+				MarkdownDescription: "Connector type. Defaults to `custom <name>`. Changing this forces a new connector to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()},
 			},
 			"class_name": schema.StringAttribute{
-				MarkdownDescription: "Connector class name, e.g. `sailpoint.connector.OpenConnectorAdapter` for connectors that implement the open connector standard. Changing it forces a new connector.",
+				MarkdownDescription: "Connector class name. Connectors that implement the open connector standard use `sailpoint.connector.OpenConnectorAdapter`. Changing this forces a new connector to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"direct_connect": schema.BoolAttribute{
-				MarkdownDescription: "Whether sources of the connector are direct connect sources. Defaults to `true`. Changing it forces a new connector.",
+				MarkdownDescription: "Whether sources of the connector are direct connect sources. Defaults to `true`. Changing this forces a new connector to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown(), boolplanmodifier.RequiresReplace()},
 			},
 			"status": schema.StringAttribute{
-				MarkdownDescription: "Connector status, `DEVELOPMENT`, `DEMO` or `RELEASED`. Changing it forces a new connector.",
+				MarkdownDescription: "Connector status, `DEVELOPMENT`, `DEMO` or `RELEASED`. Changing this forces a new connector to be created.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.String{connectorStatusValidator{}},

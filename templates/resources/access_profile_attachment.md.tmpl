@@ -17,19 +17,7 @@ An access profile attached to a source app can't be deleted, it must be detached
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-The following arguments are supported:
-
-* `source_app_id` - (Required) ID of the source app. Changing this forces a new resource to be created.
-
-* `access_profiles` - (Required) List of IDs of the access profiles attached to the source app.
-
-## Attributes Reference
-
-In addition to the Arguments listed above - the following Attributes are exported:
-
-* `id` - Access profile attachment ID (same as `source_app_id`).
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

@@ -13,20 +13,4 @@ Use this data source to look up a connector by script name. It works for built-i
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `script_name` - (Required) Script name of the connector.
-
-## Attributes Reference
-
-* `id` - Connector ID, the same as `script_name`.
-* `name` - Connector name.
-* `type` - Connector type.
-* `class_name` - Connector class name.
-* `direct_connect` - Whether sources of the connector are direct connect sources.
-* `status` - Connector status.
-* `connector_metadata_json` - UI metadata of the connector as a JSON object.
-* `application_xml` - Application XML of the connector.
-* `correlation_config_xml` - Correlation config XML of the connector.
-* `source_config_xml` - Source config XML of the connector.
-* `file_upload` - Whether sources of the connector are file upload sources.
+{{ .SchemaMarkdown | trimspace }}

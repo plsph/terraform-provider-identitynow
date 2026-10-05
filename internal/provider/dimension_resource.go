@@ -46,163 +46,163 @@ func (r *DimensionResource) Schema(ctx context.Context, req resource.SchemaReque
 		MarkdownDescription: "Dimension resource. A dimension is a sub-division of a role that allows fine-grained access grouping.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Dimension ID",
+				MarkdownDescription: "The ID of the dimension.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"role_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the role this dimension belongs to",
+				MarkdownDescription: "The ID of the role this dimension belongs to. Changing this forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Dimension name",
+				MarkdownDescription: "The name of the dimension. Can be updated in place.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Dimension description",
+				MarkdownDescription: "A description for the dimension. Removing it clears the description.",
 				Optional:            true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				MarkdownDescription: "Dimension owner",
+				MarkdownDescription: "Dimension owner. Removing it clears the owner.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Owner ID",
+							MarkdownDescription: "The owner's ID.",
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Owner type",
+							MarkdownDescription: "The owner type (e.g. `IDENTITY`).",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Owner name",
+							MarkdownDescription: "The owner name.",
 							Required:            true,
 						},
 					},
 				},
 			},
 			"access_profiles": schema.ListNestedBlock{
-				MarkdownDescription: "Access profiles assigned to this dimension",
+				MarkdownDescription: "Access profiles assigned to this dimension.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Access profile ID",
+							MarkdownDescription: "The access profile ID.",
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Access profile type",
+							MarkdownDescription: "The type (e.g. `ACCESS_PROFILE`).",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Access profile name",
+							MarkdownDescription: "The access profile name.",
 							Required:            true,
 						},
 					},
 				},
 			},
 			"entitlements": schema.ListNestedBlock{
-				MarkdownDescription: "Entitlements assigned to this dimension",
+				MarkdownDescription: "Entitlements assigned to this dimension.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Entitlement ID",
+							MarkdownDescription: "The entitlement ID.",
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Entitlement type",
+							MarkdownDescription: "The type (e.g. `ENTITLEMENT`).",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Entitlement name",
+							MarkdownDescription: "The entitlement name.",
 							Required:            true,
 						},
 					},
 				},
 			},
 			"membership": schema.ListNestedBlock{
-				MarkdownDescription: "Dimension membership definition. Defines how identities are assigned to this dimension.",
+				MarkdownDescription: "Dimension membership definition. Defines how identities are assigned to this dimension. Removing it clears the membership criteria.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Membership type (STANDARD or IDENTITY_LIST)",
+							MarkdownDescription: "The membership type (`STANDARD` or `IDENTITY_LIST`).",
 							Required:            true,
 						},
 					},
 					Blocks: map[string]schema.Block{
 						"criteria": schema.ListNestedBlock{
-							MarkdownDescription: "Membership criteria",
+							MarkdownDescription: "Membership criteria.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"operation": schema.StringAttribute{
-										MarkdownDescription: "Criteria operation (EQUALS, NOT_EQUALS, CONTAINS, AND, OR, etc.)",
+										MarkdownDescription: "The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).",
 										Required:            true,
 									},
 									"values": schema.ListAttribute{
-										MarkdownDescription: "List of values to match against",
+										MarkdownDescription: "A list of values to match against. Use this when the criteria should match any of multiple values.",
 										ElementType:         types.StringType,
 										Optional:            true,
 									},
 									"string_value": schema.StringAttribute{
-										MarkdownDescription: "Single value to match against",
+										MarkdownDescription: "A single value to match against.",
 										Optional:            true,
 									},
 								},
 								Blocks: map[string]schema.Block{
 									"key": schema.ListNestedBlock{
-										MarkdownDescription: "Criteria key identifying the identity attribute",
+										MarkdownDescription: "A `key` block identifying the identity attribute.",
 										NestedObject:        criteriaKeyBlockObject(),
 									},
 									"children": schema.ListNestedBlock{
-										MarkdownDescription: "Child criteria (level 2)",
+										MarkdownDescription: "One or more child `criteria` blocks (supports up to 3 levels of nesting).",
 										NestedObject: schema.NestedBlockObject{
 											Attributes: map[string]schema.Attribute{
 												"operation": schema.StringAttribute{
-													MarkdownDescription: "Criteria operation",
+													MarkdownDescription: "The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).",
 													Required:            true,
 												},
 												"values": schema.ListAttribute{
-													MarkdownDescription: "List of values to match against",
+													MarkdownDescription: "A list of values to match against. Use this when the criteria should match any of multiple values.",
 													ElementType:         types.StringType,
 													Optional:            true,
 												},
 												"string_value": schema.StringAttribute{
-													MarkdownDescription: "Single value to match against",
+													MarkdownDescription: "A single value to match against.",
 													Optional:            true,
 												},
 											},
 											Blocks: map[string]schema.Block{
 												"key": schema.ListNestedBlock{
-													MarkdownDescription: "Criteria key identifying the identity attribute",
+													MarkdownDescription: "A `key` block identifying the identity attribute.",
 													NestedObject:        criteriaKeyBlockObject(),
 												},
 												"children": schema.ListNestedBlock{
-													MarkdownDescription: "Child criteria (level 3)",
+													MarkdownDescription: "One or more child `criteria` blocks on the third and last nesting level, which cannot have children of their own.",
 													NestedObject: schema.NestedBlockObject{
 														Attributes: map[string]schema.Attribute{
 															"operation": schema.StringAttribute{
-																MarkdownDescription: "Criteria operation",
+																MarkdownDescription: "The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).",
 																Required:            true,
 															},
 															"values": schema.ListAttribute{
-																MarkdownDescription: "List of values to match against",
+																MarkdownDescription: "A list of values to match against. Use this when the criteria should match any of multiple values.",
 																ElementType:         types.StringType,
 																Optional:            true,
 															},
 															"string_value": schema.StringAttribute{
-																MarkdownDescription: "Single value to match against",
+																MarkdownDescription: "A single value to match against.",
 																Optional:            true,
 															},
 														},
 														Blocks: map[string]schema.Block{
 															"key": schema.ListNestedBlock{
-																MarkdownDescription: "Criteria key identifying the identity attribute",
+																MarkdownDescription: "A `key` block identifying the identity attribute.",
 																NestedObject:        criteriaKeyBlockObject(),
 															},
 														},

@@ -122,7 +122,7 @@ func (r *ConnectorCustomizerResource) Schema(ctx context.Context, req resource.S
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Connector customizer name. Changes are sent with an update request and verified by reading the customizer back; the apply fails when IdentityNow does not apply the new name, since the API documents the name as immutable.",
+				MarkdownDescription: "Connector customizer name. A rename is verified after the update, see above. Changes are sent with an update request and verified by reading the customizer back; the apply fails when IdentityNow does not apply the new name, since the API documents the name as immutable.",
 				Required:            true,
 			},
 			"image_version": schema.Int64Attribute{

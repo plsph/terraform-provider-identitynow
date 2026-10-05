@@ -13,13 +13,4 @@ Use this data source to look up a managed cluster type by ID.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `id` - (Required) Managed cluster type ID.
-
-## Attributes Reference
-
-* `type` - Name of the cluster type.
-* `pod` - Pod the cluster type applies to.
-* `org` - Org the cluster type applies to.
-* `managed_process_ids` - IDs of the processes that run on clusters of this type.
+{{ .SchemaMarkdown | trimspace }}

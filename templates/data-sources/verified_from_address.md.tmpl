@@ -13,13 +13,4 @@ Use this data source to look up a sender ("From:") email address and its verific
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `email` - (Required) Sender email address, compared case-insensitively.
-
-## Attributes Reference
-
-* `id` - Sender address ID.
-* `is_verified_by_domain` - Whether the address is verified by its domain.
-* `verification_status` - Verification status: `PENDING`, `SUCCESS`, `FAILED` or `NA`.
-* `region` - AWS SES region the address is associated with.
+{{ .SchemaMarkdown | trimspace }}

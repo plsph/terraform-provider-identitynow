@@ -15,16 +15,7 @@ Updates are sent as JSON Patch operations for the changed attributes only.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `type` - (Required) Name of the cluster type.
-* `pod` - (Required) Pod the cluster type applies to.
-* `org` - (Required) Org the cluster type applies to.
-* `managed_process_ids` - (Optional) IDs of the processes that run on clusters of this type. Removing the attribute clears the list.
-
-## Attributes Reference
-
-* `id` - Managed cluster type ID.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

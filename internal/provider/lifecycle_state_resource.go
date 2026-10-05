@@ -149,27 +149,27 @@ func (r *LifecycleStateResource) Schema(ctx context.Context, req resource.Schema
 		MarkdownDescription: "Manages a lifecycle state of an identity profile.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Lifecycle state ID",
+				MarkdownDescription: "Lifecycle state ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"identity_profile_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the identity profile the lifecycle state belongs to. Changing it forces a new lifecycle state.",
+				MarkdownDescription: "ID of the identity profile the lifecycle state belongs to. Changing this forces a new lifecycle state to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Lifecycle state name. The API does not allow renaming, changing it forces a new lifecycle state.",
+				MarkdownDescription: "Name of the lifecycle state. The API does not allow renaming, changing this forces a new lifecycle state to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"technical_name": schema.StringAttribute{
-				MarkdownDescription: "Technical name of the lifecycle state, used as the value of the `cloudLifecycleState` identity attribute. Changing it forces a new lifecycle state.",
+				MarkdownDescription: "Technical name of the lifecycle state, the value of the `cloudLifecycleState` identity attribute. Changing this forces a new lifecycle state to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Lifecycle state description",
+				MarkdownDescription: "Description of the lifecycle state.",
 				Optional:            true,
 			},
 			"enabled": schema.BoolAttribute{
@@ -179,7 +179,7 @@ func (r *LifecycleStateResource) Schema(ctx context.Context, req resource.Schema
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"identity_state": schema.StringAttribute{
-				MarkdownDescription: "Identity state associated with the lifecycle state: `ACTIVE`, `INACTIVE_SHORT_TERM` or `INACTIVE_LONG_TERM`. The API may assign one when not set. Changing it forces a new lifecycle state.",
+				MarkdownDescription: "Identity state associated with the lifecycle state: `ACTIVE`, `INACTIVE_SHORT_TERM` or `INACTIVE_LONG_TERM`. The API may assign one when not set. Changing this forces a new lifecycle state to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()},
@@ -191,61 +191,61 @@ func (r *LifecycleStateResource) Schema(ctx context.Context, req resource.Schema
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},
 			},
 			"account_actions_json": schema.StringAttribute{
-				MarkdownDescription: "Actions performed on the accounts of identities that enter the lifecycle state, as a JSON array of objects with `action` (`ENABLE`, `DISABLE` or `DELETE`), and `sourceIds`, `excludeSourceIds` or `allSources`.",
+				MarkdownDescription: "Actions performed on the accounts of identities that enter the lifecycle state, as a JSON array of objects with `action` (`ENABLE`, `DISABLE` or `DELETE`) and one of `sourceIds`, `excludeSourceIds` or `allSources`. The value is compared semantically.",
 				Optional:            true,
 				Validators:          []validator.String{jsonArrayStringValidator{}},
 			},
 			"access_profile_ids": schema.SetAttribute{
-				MarkdownDescription: "IDs of the access profiles granted to identities that enter the lifecycle state",
+				MarkdownDescription: "Set of IDs of the access profiles granted to identities that enter the lifecycle state.",
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
 			"remove_all_access_enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether all access is marked for removal when an identity enters the lifecycle state",
+				MarkdownDescription: "Whether all access is marked for removal when an identity enters the lifecycle state.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"identity_count": schema.Int64Attribute{
-				MarkdownDescription: "Number of identities in the lifecycle state",
+				MarkdownDescription: "Number of identities in the lifecycle state.",
 				Computed:            true,
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "Creation date",
+				MarkdownDescription: "Creation date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"email_notification_option": schema.ListNestedBlock{
-				MarkdownDescription: "Email notifications sent when an identity enters the lifecycle state. Without the block no notifications are sent.",
+				MarkdownDescription: "Email notifications sent when an identity enters the lifecycle state, at most one block. Without the block no notifications are sent.",
 				Validators:          []validator.List{listSizeBetween(0, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"notify_managers": schema.BoolAttribute{
-							MarkdownDescription: "Notify the manager of the identity",
+							MarkdownDescription: "Notify the manager of the identity. Defaults to `false`.",
 							Optional:            true,
 							Computed:            true,
 							Default:             booldefault.StaticBool(false),
 						},
 						"notify_all_admins": schema.BoolAttribute{
-							MarkdownDescription: "Notify all admins",
+							MarkdownDescription: "Notify all admins. Defaults to `false`.",
 							Optional:            true,
 							Computed:            true,
 							Default:             booldefault.StaticBool(false),
 						},
 						"notify_specific_users": schema.BoolAttribute{
-							MarkdownDescription: "Notify the users in `email_address_list`",
+							MarkdownDescription: "Notify the users in `email_address_list`. Defaults to `false`.",
 							Optional:            true,
 							Computed:            true,
 							Default:             booldefault.StaticBool(false),
 						},
 						"email_address_list": schema.ListAttribute{
-							MarkdownDescription: "Email addresses notified when `notify_specific_users` is true",
+							MarkdownDescription: "Email addresses notified when `notify_specific_users` is true.",
 							Optional:            true,
 							ElementType:         types.StringType,
 						},
@@ -582,32 +582,32 @@ func (d *LifecycleStateDataSource) Schema(ctx context.Context, req datasource.Sc
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up a lifecycle state of an identity profile by ID.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":                  dsschema.StringAttribute{MarkdownDescription: "Lifecycle state ID", Required: true},
-			"identity_profile_id": dsschema.StringAttribute{MarkdownDescription: "ID of the identity profile the lifecycle state belongs to", Required: true},
-			"name":                dsschema.StringAttribute{MarkdownDescription: "Lifecycle state name", Computed: true},
-			"technical_name":      dsschema.StringAttribute{MarkdownDescription: "Technical name of the lifecycle state", Computed: true},
-			"description":         dsschema.StringAttribute{MarkdownDescription: "Lifecycle state description", Computed: true},
-			"enabled":             dsschema.BoolAttribute{MarkdownDescription: "Whether the lifecycle state is enabled", Computed: true},
-			"identity_state":      dsschema.StringAttribute{MarkdownDescription: "Identity state associated with the lifecycle state", Computed: true},
-			"priority":            dsschema.Int64Attribute{MarkdownDescription: "Sort order of the lifecycle state", Computed: true},
+			"id":                  dsschema.StringAttribute{MarkdownDescription: "Lifecycle state ID.", Required: true},
+			"identity_profile_id": dsschema.StringAttribute{MarkdownDescription: "ID of the identity profile the lifecycle state belongs to.", Required: true},
+			"name":                dsschema.StringAttribute{MarkdownDescription: "Name of the lifecycle state.", Computed: true},
+			"technical_name":      dsschema.StringAttribute{MarkdownDescription: "Technical name of the lifecycle state.", Computed: true},
+			"description":         dsschema.StringAttribute{MarkdownDescription: "Description of the lifecycle state.", Computed: true},
+			"enabled":             dsschema.BoolAttribute{MarkdownDescription: "Whether the lifecycle state is enabled.", Computed: true},
+			"identity_state":      dsschema.StringAttribute{MarkdownDescription: "Identity state associated with the lifecycle state.", Computed: true},
+			"priority":            dsschema.Int64Attribute{MarkdownDescription: "Sort order of the lifecycle state.", Computed: true},
 			"email_notification_option": dsschema.ListNestedAttribute{
-				MarkdownDescription: "Email notifications sent when an identity enters the lifecycle state",
+				MarkdownDescription: "Email notifications, a list with one element with `notify_managers`, `notify_all_admins`, `notify_specific_users` and `email_address_list`.",
 				Computed:            true,
 				NestedObject: dsschema.NestedAttributeObject{
 					Attributes: map[string]dsschema.Attribute{
-						"notify_managers":       dsschema.BoolAttribute{MarkdownDescription: "Notify the manager of the identity", Computed: true},
-						"notify_all_admins":     dsschema.BoolAttribute{MarkdownDescription: "Notify all admins", Computed: true},
-						"notify_specific_users": dsschema.BoolAttribute{MarkdownDescription: "Notify the users in `email_address_list`", Computed: true},
-						"email_address_list":    dsschema.ListAttribute{MarkdownDescription: "Email addresses to notify", Computed: true, ElementType: types.StringType},
+						"notify_managers":       dsschema.BoolAttribute{MarkdownDescription: "Notify the manager of the identity.", Computed: true},
+						"notify_all_admins":     dsschema.BoolAttribute{MarkdownDescription: "Notify all admins.", Computed: true},
+						"notify_specific_users": dsschema.BoolAttribute{MarkdownDescription: "Notify the users in `email_address_list`.", Computed: true},
+						"email_address_list":    dsschema.ListAttribute{MarkdownDescription: "Email addresses to notify.", Computed: true, ElementType: types.StringType},
 					},
 				},
 			},
-			"account_actions_json":      dsschema.StringAttribute{MarkdownDescription: "Account actions as a JSON array", Computed: true},
-			"access_profile_ids":        dsschema.SetAttribute{MarkdownDescription: "IDs of the access profiles granted in the lifecycle state", Computed: true, ElementType: types.StringType},
-			"remove_all_access_enabled": dsschema.BoolAttribute{MarkdownDescription: "Whether all access is marked for removal", Computed: true},
-			"identity_count":            dsschema.Int64Attribute{MarkdownDescription: "Number of identities in the lifecycle state", Computed: true},
-			"created":                   dsschema.StringAttribute{MarkdownDescription: "Creation date", Computed: true},
-			"modified":                  dsschema.StringAttribute{MarkdownDescription: "Last modification date", Computed: true},
+			"account_actions_json":      dsschema.StringAttribute{MarkdownDescription: "Account actions as a JSON array.", Computed: true},
+			"access_profile_ids":        dsschema.SetAttribute{MarkdownDescription: "Set of IDs of the access profiles granted in the lifecycle state.", Computed: true, ElementType: types.StringType},
+			"remove_all_access_enabled": dsschema.BoolAttribute{MarkdownDescription: "Whether all access is marked for removal.", Computed: true},
+			"identity_count":            dsschema.Int64Attribute{MarkdownDescription: "Number of identities in the lifecycle state.", Computed: true},
+			"created":                   dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
+			"modified":                  dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 		},
 	}
 }

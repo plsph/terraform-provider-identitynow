@@ -13,16 +13,7 @@ Manages a tag. Tags are assigned to objects with [identitynow_tagged_object](tag
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Tag name. Tags cannot be renamed, changing this forces a new tag to be created.
-
-## Attributes Reference
-
-* `id` - Tag ID.
-* `created` - Creation date.
-* `modified` - Last modification date.
-* `tag_category_refs` - Objects the tag is assigned to. Each item contains `id`, `type` and `name`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

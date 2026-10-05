@@ -53,23 +53,23 @@ func (r *SourceAppResource) Schema(ctx context.Context, req resource.SchemaReque
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Source App ID",
+				MarkdownDescription: "Source app ID.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Source App name",
+				MarkdownDescription: "The source app name.",
 			},
 			"description": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Source App description",
+				MarkdownDescription: "The description of the source app.",
 			},
 			"enabled": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Whether the source app is enabled",
+				MarkdownDescription: "Whether the source app is enabled. If not set, the value returned by the API is used.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -77,7 +77,7 @@ func (r *SourceAppResource) Schema(ctx context.Context, req resource.SchemaReque
 			"match_all_accounts": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Whether to match all accounts",
+				MarkdownDescription: "Whether the source app matches all accounts of the source. If not set, the value returned by the API is used.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
@@ -85,22 +85,22 @@ func (r *SourceAppResource) Schema(ctx context.Context, req resource.SchemaReque
 		},
 		Blocks: map[string]schema.Block{
 			"source": schema.ListNestedBlock{
-				MarkdownDescription: "Account source for the source app",
+				MarkdownDescription: "Account source of the source app. At most one block is allowed. Can be changed in place.",
 				Validators:          []validator.List{listSizeBetween(0, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Source ID",
+							MarkdownDescription: "Source ID.",
 						},
 						"name": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Source name",
+							MarkdownDescription: "Source name.",
 						},
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Source type, defaults to SOURCE",
+							MarkdownDescription: "Source type. Defaults to `SOURCE`.",
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.UseStateForUnknown(),
 							},

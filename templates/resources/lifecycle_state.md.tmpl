@@ -13,30 +13,7 @@ Manages a lifecycle state of an identity profile. Lifecycle states control the a
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `identity_profile_id` - (Required) ID of the identity profile the lifecycle state belongs to. Changing this forces a new lifecycle state to be created.
-* `name` - (Required) Name of the lifecycle state. The API does not allow renaming, changing this forces a new lifecycle state to be created.
-* `technical_name` - (Required) Technical name of the lifecycle state, the value of the `cloudLifecycleState` identity attribute. Changing this forces a new lifecycle state to be created.
-* `description` - (Optional) Description of the lifecycle state.
-* `enabled` - (Optional) Whether the lifecycle state is enabled. The API defaults it to `false`.
-* `identity_state` - (Optional) Identity state associated with the lifecycle state: `ACTIVE`, `INACTIVE_SHORT_TERM` or `INACTIVE_LONG_TERM`. Changing this forces a new lifecycle state to be created.
-* `priority` - (Optional) Sort order of the lifecycle state, lower numbers first. The API assigns one when not set.
-* `account_actions_json` - (Optional) Actions performed on the accounts of identities that enter the lifecycle state, as a JSON array of objects with `action` (`ENABLE`, `DISABLE` or `DELETE`) and one of `sourceIds`, `excludeSourceIds` or `allSources`. The value is compared semantically.
-* `access_profile_ids` - (Optional) Set of IDs of the access profiles granted to identities that enter the lifecycle state.
-* `remove_all_access_enabled` - (Optional) Whether all access is marked for removal when an identity enters the lifecycle state.
-* `email_notification_option` - (Optional) Email notifications sent when an identity enters the lifecycle state, at most one block. Without the block no notifications are sent. It supports:
-    * `notify_managers` - (Optional) Notify the manager of the identity. Defaults to `false`.
-    * `notify_all_admins` - (Optional) Notify all admins. Defaults to `false`.
-    * `notify_specific_users` - (Optional) Notify the users in `email_address_list`. Defaults to `false`.
-    * `email_address_list` - (Optional) Email addresses notified when `notify_specific_users` is true.
-
-## Attributes Reference
-
-* `id` - Lifecycle state ID.
-* `identity_count` - Number of identities in the lifecycle state.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

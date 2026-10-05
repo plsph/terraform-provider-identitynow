@@ -119,12 +119,12 @@ func (d *AuthProfileDataSource) Schema(ctx context.Context, req datasource.Schem
 				Optional:            true,
 				Computed:            true,
 			},
-			"type":                schema.StringAttribute{MarkdownDescription: "Auth profile type: `BLOCK`, `MFA`, `NON_PTA` or `PTA`", Computed: true},
-			"off_network":         schema.BoolAttribute{MarkdownDescription: "Whether access from off network is blocked", Computed: true},
-			"untrusted_geography": schema.BoolAttribute{MarkdownDescription: "Whether access from untrusted geographies is blocked", Computed: true},
-			"application_id":      schema.StringAttribute{MarkdownDescription: "Application ID", Computed: true},
-			"application_name":    schema.StringAttribute{MarkdownDescription: "Application name", Computed: true},
-			"strong_auth_login":   schema.BoolAttribute{MarkdownDescription: "Whether strong authentication is enabled", Computed: true},
+			"type":                schema.StringAttribute{MarkdownDescription: "Type of the auth profile: `BLOCK`, `MFA`, `NON_PTA` or `PTA`.", Computed: true},
+			"off_network":         schema.BoolAttribute{MarkdownDescription: "Whether access from off network is blocked.", Computed: true},
+			"untrusted_geography": schema.BoolAttribute{MarkdownDescription: "Whether access from untrusted geographies is blocked.", Computed: true},
+			"application_id":      schema.StringAttribute{MarkdownDescription: "Application ID.", Computed: true},
+			"application_name":    schema.StringAttribute{MarkdownDescription: "Application name.", Computed: true},
+			"strong_auth_login":   schema.BoolAttribute{MarkdownDescription: "Whether strong authentication is enabled.", Computed: true},
 		},
 	}
 }

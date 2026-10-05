@@ -13,36 +13,4 @@ Use this data source to access information about an existing Workflow. The looku
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-The following arguments are supported:
-
-* `name` - (Required) The name of the workflow.
-
-## Attributes Reference
-
-In addition to the Arguments listed above - the following Attributes are exported:
-
-* `id` - The ID of the workflow.
-
-* `description` - Description of the workflow.
-
-* `enabled` - Whether the workflow is enabled.
-
-* `owner` - List with the owner of the workflow. Each element contains:
-  * `id` - Owner identity ID.
-  * `type` - Owner type.
-  * `name` - Owner name.
-
-* `trigger` - List with the trigger configuration. Each element contains:
-  * `type` - Trigger type (EVENT, SCHEDULED, or EXTERNAL).
-  * `display_name` - Trigger display name.
-  * `attributes_json` - Trigger attributes as a JSON string.
-
-* `definition` - List with the workflow definition. Each element contains:
-  * `start` - The name of the starting step.
-  * `steps_json` - Workflow steps as a JSON string.
-
-* `created` - The date and time the workflow was created.
-
-* `modified` - The date and time the workflow was modified.
+{{ .SchemaMarkdown | trimspace }}

@@ -850,38 +850,53 @@ func tenantSettingsConfigured(values map[string]attr.Value) map[string]bool {
 	return configured
 }
 
-func tenantSettingsFieldDescription(f *tenantSettingsField, resourceSchema bool) string {
-	description := f.Description
+func tenantSettingsFieldDescription(spec *tenantSettingsSpec, f *tenantSettingsField, resourceSchema bool) string {
+	writable := resourceSchema && !f.ReadOnly
+	// PUT APIs refuse to clear secrets that the API does not return (see tenantSettingsCheckWriteOnly).
+	put := spec.Mode != tenantSettingsPatch
+	description := f.Description + "."
 	switch f.Kind {
 	case tenantSettingsJSONObject:
-		description += " (JSON object"
-		if resourceSchema && !f.ReadOnly {
-			description += "; only the configured keys are managed, they are merged into the current object"
+		if writable {
+			description += " A JSON object, e.g. built with `jsonencode`. Only the configured keys are managed, they are merged into the current object."
+		} else {
+			description += " A JSON object."
 		}
-		description += ")"
 	case tenantSettingsJSONArray:
-		description += " (JSON array)"
+		if writable {
+			description += " A JSON array, e.g. built with `jsonencode`."
+		} else {
+			description += " A JSON array."
+		}
 	}
 	if f.Sensitive {
-		description += ". The value is sensitive"
+		description += " The value is sensitive."
 	}
-	if resourceSchema && f.WriteOnly {
-		description += ". When the API does not return the value, the known value is kept"
+	if writable && f.WriteOnly {
+		if put && f.Kind != tenantSettingsJSONObject {
+			description += " When the API does not return the value, the known value is kept in state, and it must be configured, because the update would clear it."
+		} else {
+			description += " When the API does not return the value, the known value is kept in state."
+		}
 	}
-	if resourceSchema && f.Trigger {
-		description += ". This is a one-shot request that the API resets after use: the state keeps the configured value, and the value is only sent on create and when it changes"
+	if writable && put {
+		for _, key := range f.WriteOnlyKeys {
+			description += " When the API does not return `" + key + "`, it must be configured here, because the update would clear it."
+		}
 	}
-	if resourceSchema && !f.ReadOnly {
-		description += ". When not configured, the current tenant value is kept and shown"
+	if writable && f.Trigger {
+		description += " One-shot request that the API resets after use: the state keeps the configured value, and the value is only sent on create and when the configured value changes."
 	}
-	description += "."
+	if writable {
+		description += " When not configured, the current tenant value is kept and shown."
+	}
 	return description
 }
 
 func tenantSettingsResourceSchema(spec *tenantSettingsSpec) schema.Schema {
 	attributes := map[string]schema.Attribute{
 		"id": schema.StringAttribute{
-			MarkdownDescription: "Always `" + spec.ID + "`",
+			MarkdownDescription: "Always `" + spec.ID + "`.",
 			Computed:            true,
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
@@ -890,7 +905,7 @@ func tenantSettingsResourceSchema(spec *tenantSettingsSpec) schema.Schema {
 		f := &spec.Fields[i]
 		optional := !f.ReadOnly
 		keep := !f.ReadOnly || f.Stable
-		description := tenantSettingsFieldDescription(f, true)
+		description := tenantSettingsFieldDescription(spec, f, true)
 		switch f.Kind {
 		case tenantSettingsBool:
 			a := schema.BoolAttribute{MarkdownDescription: description, Optional: optional, Computed: true, Sensitive: f.Sensitive}
@@ -944,11 +959,11 @@ func tenantSettingsResourceSchema(spec *tenantSettingsSpec) schema.Schema {
 
 func tenantSettingsDataSourceSchema(spec *tenantSettingsSpec, description string) dsschema.Schema {
 	attributes := map[string]dsschema.Attribute{
-		"id": dsschema.StringAttribute{MarkdownDescription: "Always `" + spec.ID + "`", Computed: true},
+		"id": dsschema.StringAttribute{MarkdownDescription: "Always `" + spec.ID + "`.", Computed: true},
 	}
 	for i := range spec.Fields {
 		f := &spec.Fields[i]
-		d := tenantSettingsFieldDescription(f, false)
+		d := tenantSettingsFieldDescription(spec, f, false)
 		switch f.Kind {
 		case tenantSettingsBool:
 			attributes[f.Name] = dsschema.BoolAttribute{MarkdownDescription: d, Computed: true, Sensitive: f.Sensitive}

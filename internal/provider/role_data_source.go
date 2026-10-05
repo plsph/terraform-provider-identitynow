@@ -40,45 +40,45 @@ func (d *RoleDataSource) Schema(ctx context.Context, req datasource.SchemaReques
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Role ID",
+				MarkdownDescription: "The ID of the role.",
 			},
 			"name": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Role name",
+				MarkdownDescription: "The name of the role.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Role description",
+				MarkdownDescription: "The description of the role.",
 			},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Role owner",
+				MarkdownDescription: "List with the owner of the role.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Owner ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
 			"access_profiles": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access profiles",
+				MarkdownDescription: "The access profiles assigned to this role.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Access profile ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Access profile type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Access profile name."},
 					},
 				},
 			},
 			"requestable": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether requestable",
+				MarkdownDescription: "Whether the role is requestable.",
 			},
 			"enabled": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether enabled",
+				MarkdownDescription: "Whether the role is enabled.",
 			},
 		},
 	}

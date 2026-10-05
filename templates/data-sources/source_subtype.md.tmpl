@@ -13,19 +13,6 @@ Use this data source to look up a machine account subtype by ID, or by source ID
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Set either `id`, or both `source_id` and `technical_name`.
 
-Set either `id`, or both `source_id` and `technical_name`:
-
-* `id` - (Optional) Subtype ID.
-* `source_id` - (Optional) ID of the source.
-* `technical_name` - (Optional) Technical name of the subtype.
-
-## Attributes Reference
-
-* `display_name` - Display name of the subtype.
-* `description` - Description of the subtype.
-* `type` - Type of the subtype, `MACHINE` or null.
-* `system_managed` - Whether the subtype is managed by the system.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}

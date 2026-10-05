@@ -19,22 +19,9 @@ Only the settings present in the configuration are managed. Settings that are no
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `approvals_must_be_external` - (Optional) Whether approvals must be processed by an external system. This blocks Request Center access requests for users who are not org admins.
-* `reauthorization_enabled` - (Optional) Whether reauthorization is enforced for appropriately configured access items.
-* `gov_group_visibility_enabled` - (Optional) Whether requesters and requested-for users can see the names of governance group members when a request awaits the group's approval.
-* `request_on_behalf_of_anyone_by_anyone` - (Optional) Whether anyone can request access for anyone.
-* `request_on_behalf_of_employee_by_manager` - (Optional) Whether managers can request access for their direct reports.
-* `entitlement_request_config_json` - (Optional) Default entitlement request configuration with `accessRequestConfig` and `revocationRequestConfig` objects (`approvalSchemes`, `requestCommentRequired`, `denialCommentRequired`, `reauthorizationRequired`, `requireEndDate`, `maxPermittedAccessDuration`). A JSON object, e.g. built with `jsonencode`.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `access-request-config`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

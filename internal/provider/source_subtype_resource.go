@@ -131,12 +131,12 @@ func (r *SourceSubtypeResource) Schema(ctx context.Context, req resource.SchemaR
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"source_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the source the subtype belongs to. Changing it forces a new subtype.",
+				MarkdownDescription: "ID of the source the subtype belongs to. Changing this forces a new subtype to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"technical_name": schema.StringAttribute{
-				MarkdownDescription: "Technical name of the subtype. Changing it forces a new subtype.",
+				MarkdownDescription: "Technical name of the subtype. Changing this forces a new subtype to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -149,7 +149,7 @@ func (r *SourceSubtypeResource) Schema(ctx context.Context, req resource.SchemaR
 				Required:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Type of the subtype, `MACHINE` or unset. Changing it forces a new subtype.",
+				MarkdownDescription: "Type of the subtype, `MACHINE` or unset. When not set, the value returned by IdentityNow is kept. Changing this forces a new subtype to be created.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()},
@@ -338,7 +338,7 @@ func (d *SourceSubtypeDataSource) Schema(ctx context.Context, req datasource.Sch
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up a machine account subtype by ID, or by source ID and technical name. Uses an experimental API.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":             dsschema.StringAttribute{MarkdownDescription: "Subtype ID. Set either `id`, or `source_id` and `technical_name`.", Optional: true, Computed: true},
+			"id":             dsschema.StringAttribute{MarkdownDescription: "Subtype ID. Set either `id`, or both `source_id` and `technical_name`.", Optional: true, Computed: true},
 			"source_id":      dsschema.StringAttribute{MarkdownDescription: "ID of the source. Required together with `technical_name` when `id` is not set.", Optional: true, Computed: true},
 			"technical_name": dsschema.StringAttribute{MarkdownDescription: "Technical name of the subtype. Required together with `source_id` when `id` is not set.", Optional: true, Computed: true},
 			"display_name":   dsschema.StringAttribute{MarkdownDescription: "Display name of the subtype.", Computed: true},

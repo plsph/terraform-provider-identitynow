@@ -46,23 +46,23 @@ func (r *TaggedObjectResource) Schema(ctx context.Context, req resource.SchemaRe
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Tagged Object ID (composed as object_type/object_id1,object_id2,...)",
+				MarkdownDescription: "Tagged object ID (composed as `object_type/object_id1,object_id2,...`).",
 			},
 			"object_type": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Type of the SailPoint object to tag (e.g. ACCESS_PROFILE, ROLE, SOURCE, IDENTITY, GOVERNANCE_GROUP, ENTITLEMENT, APPLICATION)",
+				MarkdownDescription: "Type of the SailPoint objects to tag. Supported values include: `ACCESS_PROFILE`, `ROLE`, `SOURCE`, `IDENTITY`, `GOVERNANCE_GROUP`, `ENTITLEMENT`, `APPLICATION`. Changing this forces a new resource to be created.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"object_ids": schema.SetAttribute{
 				Required:            true,
-				MarkdownDescription: "Set of IDs of the SailPoint objects to tag",
+				MarkdownDescription: "Set of IDs of the SailPoint objects to tag. All objects receive the same tags.",
 				ElementType:         types.StringType,
 			},
 			"tags": schema.SetAttribute{
 				Optional:            true,
-				MarkdownDescription: "Set of tags to apply to the objects (case-insensitive, stored as uppercase). The resource manages the full tag set of each object: tags set outside Terraform are replaced, and destroy removes all tags from the objects.",
+				MarkdownDescription: "Set of tags of the objects. Tags are case-insensitive and stored in uppercase. If not set, the tags of the objects are cleared. The resource manages the full tag set of each object: tags set outside Terraform are replaced, and destroy removes all tags from the objects.",
 				CustomType: CaseInsensitiveStringSetType{
 					SetType: basetypes.SetType{ElemType: CaseInsensitiveStringType{}},
 				},

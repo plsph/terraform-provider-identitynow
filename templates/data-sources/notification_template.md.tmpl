@@ -13,26 +13,6 @@ Use this data source to look up a custom notification template by ID, or by key,
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Set either `id`, or all of `key`, `medium` and `locale`.
 
-Set either `id`, or all of `key`, `medium` and `locale`:
-
-* `id` - (Optional) Template ID.
-* `key` - (Optional) Template key.
-* `medium` - (Optional) Message medium: `EMAIL`, `SLACK` or `TEAMS`.
-* `locale` - (Optional) Locale as a BCP 47 language tag, e.g. `en`.
-
-## Attributes Reference
-
-* `name` - Template name.
-* `subject` - Subject line.
-* `body` - Message body.
-* `header` - Deprecated header.
-* `footer` - Deprecated footer.
-* `from` - "From:" address.
-* `reply_to` - "Reply To" address.
-* `description` - Template description.
-* `slack_template_json` - Slack template as a JSON object, without empty values.
-* `teams_template_json` - Microsoft Teams template as a JSON object, without empty values.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}

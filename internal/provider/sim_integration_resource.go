@@ -146,7 +146,7 @@ func (r *SimIntegrationResource) Schema(ctx context.Context, req resource.Schema
 				Optional:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Integration type, e.g. `ServiceNow Service Desk`. When not set, the value returned by the API is used.",
+				MarkdownDescription: "Integration type, e.g. `ServiceNow Service Desk`. When not set, the value returned by the API is stored.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -161,17 +161,17 @@ func (r *SimIntegrationResource) Schema(ctx context.Context, req resource.Schema
 				Optional:            true,
 			},
 			"status_map_json": schema.StringAttribute{
-				MarkdownDescription: "Mapping between ticket statuses and provisioning results as a JSON object, e.g. `{\"closed_complete\" = \"Committed\"}`. When not set, the value returned by the API is ignored. Keys added by the API do not cause a diff.",
+				MarkdownDescription: "Mapping between ticket statuses and provisioning results as a JSON object, e.g. `closed_complete` to `Committed`. Compared semantically; keys the API adds do not cause a diff. When not set, the value returned by the API is ignored.",
 				Optional:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},
 			"request_json": schema.StringAttribute{
-				MarkdownDescription: "Request data that customizes the description and body of the created tickets, as a JSON object. When not set, the value returned by the API is ignored. Keys added by the API do not cause a diff.",
+				MarkdownDescription: "Request data that customizes the description and body of the created tickets, as a JSON object. Compared semantically; keys the API adds do not cause a diff. When not set, the value returned by the API is ignored.",
 				Optional:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 			},
 			"attributes_json": schema.StringAttribute{
-				MarkdownDescription: "Integration attributes as a JSON object, including the credentials used to connect to the service desk. The value is sensitive. Keys that the API does not return, such as passwords, and keys added by the API do not cause a diff. When not set, the value returned by the API is ignored.",
+				MarkdownDescription: "Integration attributes as a JSON object, including the credentials used to connect to the service desk. The value is sensitive and is not shown in plans. Keys missing from the API response, such as passwords, and keys the API adds do not cause a diff, while changed values of the other keys are detected as drift. When not set, the value returned by the API is ignored.",
 				Optional:            true,
 				Sensitive:           true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
@@ -187,7 +187,7 @@ func (r *SimIntegrationResource) Schema(ctx context.Context, req resource.Schema
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"before_provisioning_rule": serviceDeskIntegrationRefBlock("Before provisioning rule of the integration.", "RULE"),
+			"before_provisioning_rule": serviceDeskIntegrationRefBlock("Before provisioning rule of the integration.", "Rule", "RULE"),
 		},
 	}
 }
@@ -391,11 +391,11 @@ func (d *SimIntegrationDataSource) Schema(ctx context.Context, req datasource.Sc
 			"status_map_json": dsschema.StringAttribute{MarkdownDescription: "Status mapping as a JSON object.", Computed: true},
 			"request_json":    dsschema.StringAttribute{MarkdownDescription: "Ticket request data as a JSON object.", Computed: true},
 			"attributes_json": dsschema.StringAttribute{
-				MarkdownDescription: "Integration attributes as a JSON object, as returned by the API.",
+				MarkdownDescription: "Integration attributes as a JSON object, as returned by the API. The value is sensitive.",
 				Computed:            true,
 				Sensitive:           true,
 			},
-			"before_provisioning_rule": serviceDeskIntegrationRefDataSourceAttribute("Before provisioning rule of the integration."),
+			"before_provisioning_rule": serviceDeskIntegrationRefDataSourceAttribute("Before provisioning rule"),
 			"created":                  dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
 			"modified":                 dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 		},

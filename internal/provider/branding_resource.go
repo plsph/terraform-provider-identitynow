@@ -155,12 +155,12 @@ func (r *BrandingResource) Schema(ctx context.Context, req resource.SchemaReques
 		MarkdownDescription: "Manages a branding item (product name, colors, email sender and login message). The logo is not managed: upload it in the IdentityNow UI. Updates do not send a logo; if IdentityNow treats a missing logo as a removal, an update clears the uploaded logo.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Branding item name.",
+				MarkdownDescription: "Name of the branding item.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Name of the branding item. Changing it forces a new branding item.",
+				MarkdownDescription: "Name of the branding item. Changing it forces a new branding item to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -174,7 +174,7 @@ func (r *BrandingResource) Schema(ctx context.Context, req resource.SchemaReques
 			"email_from_address":          optional("Sender address of emails."),
 			"login_informational_message": optional("Informational message shown on the login page."),
 			"standard_logo_url": schema.StringAttribute{
-				MarkdownDescription: "URL of the standard logo. The logo is not managed by this resource.",
+				MarkdownDescription: "URL of the standard logo. The logo is not managed by this resource, see the note above.",
 				Computed:            true,
 			},
 		},
@@ -370,7 +370,7 @@ func (d *BrandingDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 				MarkdownDescription: "Name of the branding item, e.g. `default`.",
 				Required:            true,
 			},
-			"id":                          computed("Branding item name."),
+			"id":                          computed("Name of the branding item."),
 			"product_name":                computed("Product name."),
 			"action_button_color":         computed("Hex color of action buttons."),
 			"active_link_color":           computed("Hex color of links."),

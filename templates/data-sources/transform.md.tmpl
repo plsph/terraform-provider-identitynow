@@ -13,15 +13,6 @@ Use this data source to look up a transform by ID or name.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Exactly one of `id` and `name` must be set.
 
-Exactly one of the following must be set:
-
-* `id` - (Optional) Transform ID.
-* `name` - (Optional) Transform name.
-
-## Attributes Reference
-
-* `type` - Transform operation type.
-* `attributes_json` - Transform attributes as a JSON object.
-* `internal` - Whether this is a SailPoint internal transform.
+{{ .SchemaMarkdown | trimspace }}

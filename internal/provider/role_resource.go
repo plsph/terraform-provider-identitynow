@@ -145,22 +145,22 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		MarkdownDescription: "Role resource",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Role ID",
+				MarkdownDescription: "The ID of the role.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Role name",
+				MarkdownDescription: "The name of the role. Can be updated in place.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Role description",
+				MarkdownDescription: "A description of the role. Removing it clears the description.",
 				Optional:            true,
 			},
 			"requestable": schema.BoolAttribute{
-				MarkdownDescription: "Whether this role is requestable",
+				MarkdownDescription: "Whether this role is requestable via access requests. If not set, the value returned by the API is used.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Bool{
@@ -168,7 +168,7 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				},
 			},
 			"dimensional": schema.BoolAttribute{
-				MarkdownDescription: "Whether this role is dimensional",
+				MarkdownDescription: "Whether this role is dimensional. If not set, the value returned by the API is used.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Bool{
@@ -176,7 +176,7 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				},
 			},
 			"enabled": schema.BoolAttribute{
-				MarkdownDescription: "Whether this role is enabled",
+				MarkdownDescription: "Whether this role is enabled. If not set, the value returned by the API is used.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Bool{
@@ -186,125 +186,126 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				MarkdownDescription: "Role owner. Exactly one owner is required.",
+				MarkdownDescription: "Role owner. Exactly one block is required.",
 				Validators:          []validator.List{listSizeBetween(1, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Owner ID",
+							MarkdownDescription: "The owner's ID.",
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Owner type",
+							MarkdownDescription: "The owner type (e.g. `IDENTITY`).",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Owner name",
+							MarkdownDescription: "The owner name.",
 							Required:            true,
 						},
 					},
 				},
 			},
 			"access_profiles": schema.ListNestedBlock{
-				MarkdownDescription: "Access profiles assigned to this role",
+				MarkdownDescription: "Access profiles assigned to this role.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Access profile ID",
+							MarkdownDescription: "The access profile ID.",
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Access profile type",
+							MarkdownDescription: "The type (e.g. `ACCESS_PROFILE`).",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Access profile name",
+							MarkdownDescription: "The access profile name.",
 							Required:            true,
 						},
 					},
 				},
 			},
 			"entitlements": schema.ListNestedBlock{
-				MarkdownDescription: "Entitlements assigned to this role",
+				MarkdownDescription: "Entitlements assigned to this role.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "Entitlement ID",
+							MarkdownDescription: "The entitlement ID.",
 							Required:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Entitlement type",
+							MarkdownDescription: "The type (e.g. `ENTITLEMENT`).",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Entitlement name",
+							MarkdownDescription: "The entitlement name.",
 							Required:            true,
 						},
 					},
 				},
 			},
 			"access_model_metadata": schema.ListNestedBlock{
-				MarkdownDescription: "Access model metadata for this role",
+				MarkdownDescription: "Defines access model metadata for this role.",
 				NestedObject: schema.NestedBlockObject{
 					Blocks: map[string]schema.Block{
 						"attributes": schema.ListNestedBlock{
-							MarkdownDescription: "Metadata attributes",
+							MarkdownDescription: "Metadata attributes. Each `attributes` block corresponds to an `AccessModelMetadataAttribute` in the IdentityNow API.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"key": schema.StringAttribute{
-										MarkdownDescription: "Unique identifier for the metadata type (e.g. iscPrivacy)",
+										MarkdownDescription: "The unique identifier for the metadata type (e.g. `iscPrivacy`).",
 										Required:            true,
 									},
 									"name": schema.StringAttribute{
-										MarkdownDescription: "Human readable name of the metadata attribute",
+										MarkdownDescription: "The human readable name of the metadata attribute.",
 										Required:            true,
 									},
 									"multiselect": schema.BoolAttribute{
-										MarkdownDescription: "Whether multiple values can be selected for the metadata attribute",
+										MarkdownDescription: "Whether multiple values can be selected for the metadata attribute. If not set, the value returned by the API is used.",
 										Optional:            true,
 										Computed:            true,
 									},
 									"status": schema.StringAttribute{
-										MarkdownDescription: "Status of the metadata attribute (e.g. active)",
+										MarkdownDescription: "The status of the metadata attribute (e.g. `active`). If not set, the value returned by the API is used.",
 										Optional:            true,
 										Computed:            true,
 									},
 									"type": schema.StringAttribute{
-										MarkdownDescription: "Type of the metadata attribute (e.g. custom)",
+										MarkdownDescription: "The type of the metadata attribute (e.g. `custom`). If not set, the value returned by the API is used.",
 										Optional:            true,
 										Computed:            true,
 									},
 									"description": schema.StringAttribute{
-										MarkdownDescription: "Description of the metadata attribute",
+										MarkdownDescription: "The description of the metadata attribute. If not set, the value returned by the API is used.",
 										Optional:            true,
 										Computed:            true,
 									},
 								},
 								Blocks: map[string]schema.Block{
 									"object_types": schema.ListNestedBlock{
-										MarkdownDescription: "Object types associated with the metadata attribute",
+										MarkdownDescription: "One or more `object_types` blocks, each with a required `value` naming an object type the metadata attribute applies to (e.g. `role`).",
 										NestedObject: schema.NestedBlockObject{
 											Attributes: map[string]schema.Attribute{
 												"value": schema.StringAttribute{
-													Required: true,
+													MarkdownDescription: "An object type the metadata attribute applies to (e.g. `role`).",
+													Required:            true,
 												},
 											},
 										},
 									},
 									"values": schema.ListNestedBlock{
-										MarkdownDescription: "Values assigned to this metadata attribute",
+										MarkdownDescription: "Values assigned to this metadata attribute.",
 										NestedObject: schema.NestedBlockObject{
 											Attributes: map[string]schema.Attribute{
 												"value": schema.StringAttribute{
-													MarkdownDescription: "The metadata value",
+													MarkdownDescription: "The metadata value.",
 													Required:            true,
 												},
 												"name": schema.StringAttribute{
-													MarkdownDescription: "Human readable name of the value",
+													MarkdownDescription: "The human readable name of the value.",
 													Required:            true,
 												},
 												"status": schema.StringAttribute{
-													MarkdownDescription: "Status of the value (e.g. active)",
+													MarkdownDescription: "The status of the value (e.g. `active`). If not set, the value returned by the API is used.",
 													Optional:            true,
 													Computed:            true,
 												},
@@ -318,59 +319,59 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				},
 			},
 			"access_request_config": schema.ListNestedBlock{
-				MarkdownDescription: "Access request configuration for this role",
+				MarkdownDescription: "Configures the approval process for access requests.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"comments_required": schema.BoolAttribute{
-							MarkdownDescription: "Whether comments are required when requesting access",
+							MarkdownDescription: "Whether comments are required when requesting access. If not set, the value returned by the API is used.",
 							Optional:            true,
 							Computed:            true,
 						},
 						"denial_comments_required": schema.BoolAttribute{
-							MarkdownDescription: "Whether comments are required when denying access",
+							MarkdownDescription: "Whether comments are required when denying access. If not set, the value returned by the API is used.",
 							Optional:            true,
 							Computed:            true,
 						},
 						"form_definition_id": schema.StringAttribute{
-							MarkdownDescription: "ID of the form definition presented to the requester during the access request",
+							MarkdownDescription: "ID of the form definition presented to the requester during the access request.",
 							Optional:            true,
 						},
 					},
 					Blocks: map[string]schema.Block{
 						"approval_schemes": schema.ListNestedBlock{
-							MarkdownDescription: "Approval schemes for this role",
+							MarkdownDescription: "Approval schemes for this role.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"approver_type": schema.StringAttribute{
-										MarkdownDescription: "Type of approver (e.g. APP_OWNER, MANAGER, GOVERNANCE_GROUP)",
+										MarkdownDescription: "The type of approver (e.g. `APP_OWNER`, `MANAGER`, `GOVERNANCE_GROUP`).",
 										Required:            true,
 									},
 									"approver_id": schema.StringAttribute{
-										MarkdownDescription: "ID of the approver (required for GOVERNANCE_GROUP type)",
+										MarkdownDescription: "The ID of the approver (required when `approver_type` is `GOVERNANCE_GROUP`).",
 										Optional:            true,
 									},
 								},
 							},
 						},
 						"dimension_schema": schema.ListNestedBlock{
-							MarkdownDescription: "Dimension schema for dimensional roles",
+							MarkdownDescription: "A `dimension_schema` block for dimension-specific approval configuration.",
 							NestedObject: schema.NestedBlockObject{
 								Blocks: map[string]schema.Block{
 									"dimension_attributes": schema.ListNestedBlock{
-										MarkdownDescription: "Dimension attributes that define this dimension",
+										MarkdownDescription: "Dimension attributes that define this dimension.",
 										NestedObject: schema.NestedBlockObject{
 											Attributes: map[string]schema.Attribute{
 												"name": schema.StringAttribute{
-													MarkdownDescription: "The attribute name",
+													MarkdownDescription: "The attribute name.",
 													Required:            true,
 												},
 												"display_name": schema.StringAttribute{
-													MarkdownDescription: "The display name of the attribute",
+													MarkdownDescription: "The display name of the attribute. If not set, the value returned by the API is used.",
 													Optional:            true,
 													Computed:            true,
 												},
 												"derived": schema.BoolAttribute{
-													MarkdownDescription: "Whether the attribute is derived",
+													MarkdownDescription: "Whether the attribute is derived. If not set, the value returned by the API is used.",
 													Optional:            true,
 													Computed:            true,
 												},
@@ -384,82 +385,82 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				},
 			},
 			"membership": schema.ListNestedBlock{
-				MarkdownDescription: "Role membership definition. Defines how identities are assigned to this role.",
+				MarkdownDescription: "Role membership definition. Defines how identities are assigned to this role. Removing it clears the membership criteria.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
-							MarkdownDescription: "Membership type (STANDARD or IDENTITY_LIST)",
+							MarkdownDescription: "The membership type (`STANDARD` or `IDENTITY_LIST`).",
 							Required:            true,
 						},
 					},
 					Blocks: map[string]schema.Block{
 						"criteria": schema.ListNestedBlock{
-							MarkdownDescription: "Membership criteria",
+							MarkdownDescription: "Membership criteria.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"operation": schema.StringAttribute{
-										MarkdownDescription: "Criteria operation (EQUALS, NOT_EQUALS, CONTAINS, AND, OR, etc.)",
+										MarkdownDescription: "The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).",
 										Required:            true,
 									},
 									"values": schema.ListAttribute{
-										MarkdownDescription: "List of values to match against",
+										MarkdownDescription: "A list of values to match against. Use this when the criteria should match any of multiple values.",
 										ElementType:         types.StringType,
 										Optional:            true,
 									},
 									"string_value": schema.StringAttribute{
-										MarkdownDescription: "Single value to match against",
+										MarkdownDescription: "A single value to match against.",
 										Optional:            true,
 									},
 								},
 								Blocks: map[string]schema.Block{
 									"key": schema.ListNestedBlock{
-										MarkdownDescription: "Criteria key identifying the identity attribute",
+										MarkdownDescription: "A `key` block identifying the identity attribute.",
 										NestedObject:        criteriaKeyBlockObject(),
 									},
 									"children": schema.ListNestedBlock{
-										MarkdownDescription: "Child criteria (level 2)",
+										MarkdownDescription: "One or more child `criteria` blocks (supports up to 3 levels of nesting).",
 										NestedObject: schema.NestedBlockObject{
 											Attributes: map[string]schema.Attribute{
 												"operation": schema.StringAttribute{
-													MarkdownDescription: "Criteria operation",
+													MarkdownDescription: "The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).",
 													Required:            true,
 												},
 												"values": schema.ListAttribute{
-													MarkdownDescription: "List of values to match against",
+													MarkdownDescription: "A list of values to match against. Use this when the criteria should match any of multiple values.",
 													ElementType:         types.StringType,
 													Optional:            true,
 												},
 												"string_value": schema.StringAttribute{
-													MarkdownDescription: "Single value to match against",
+													MarkdownDescription: "A single value to match against.",
 													Optional:            true,
 												},
 											},
 											Blocks: map[string]schema.Block{
 												"key": schema.ListNestedBlock{
-													MarkdownDescription: "Criteria key identifying the identity attribute",
+													MarkdownDescription: "A `key` block identifying the identity attribute.",
 													NestedObject:        criteriaKeyBlockObject(),
 												},
 												"children": schema.ListNestedBlock{
-													MarkdownDescription: "Child criteria (level 3)",
+													MarkdownDescription: "One or more child `criteria` blocks on the third and last nesting level, which cannot have children of their own.",
 													NestedObject: schema.NestedBlockObject{
 														Attributes: map[string]schema.Attribute{
 															"operation": schema.StringAttribute{
-																MarkdownDescription: "Criteria operation",
+																MarkdownDescription: "The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).",
 																Required:            true,
 															},
 															"values": schema.ListAttribute{
-																MarkdownDescription: "List of values to match against",
+																MarkdownDescription: "A list of values to match against. Use this when the criteria should match any of multiple values.",
 																ElementType:         types.StringType,
 																Optional:            true,
 															},
 															"string_value": schema.StringAttribute{
-																MarkdownDescription: "Single value to match against",
+																MarkdownDescription: "A single value to match against.",
 																Optional:            true,
 															},
 														},
 														Blocks: map[string]schema.Block{
 															"key": schema.ListNestedBlock{
-																MarkdownDescription: "Criteria key identifying the identity attribute",
+																MarkdownDescription: "A `key` block identifying the identity attribute.",
 																NestedObject:        criteriaKeyBlockObject(),
 															},
 														},
@@ -913,15 +914,15 @@ func criteriaKeyBlockObject() schema.NestedBlockObject {
 	return schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Key type (IDENTITY or ACCOUNT)",
+				MarkdownDescription: "The key type (`IDENTITY` or `ACCOUNT`).",
 				Required:            true,
 			},
 			"property": schema.StringAttribute{
-				MarkdownDescription: "Identity or account attribute name (e.g. attribute.department)",
+				MarkdownDescription: "The identity or account attribute name (e.g. `attribute.department`).",
 				Required:            true,
 			},
 			"source_id": schema.StringAttribute{
-				MarkdownDescription: "Source ID (required when type is ACCOUNT)",
+				MarkdownDescription: "The source ID (required when `type` is `ACCOUNT`).",
 				Optional:            true,
 			},
 		},

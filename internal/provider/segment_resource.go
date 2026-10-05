@@ -76,7 +76,8 @@ func (r *SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest
 		MarkdownDescription: "Manages a SailPoint identity segment.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				Computed:            true,
+				MarkdownDescription: "The segment ID.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -87,13 +88,13 @@ func (r *SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest
 			},
 			"description": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "An optional description for the segment.",
+				MarkdownDescription: "The segment description.",
 			},
 			"active": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "Whether the segment is active. Inactive segments have no effect.",
+				MarkdownDescription: "Whether the segment is active. Inactive segments have no effect. Defaults to `false`.",
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
@@ -109,7 +110,7 @@ func (r *SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest
 			"visibility_criteria_json": schema.StringAttribute{
 				Optional:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
-				MarkdownDescription: "Visibility criteria as a JSON object. Conflicts with visibility_criteria.",
+				MarkdownDescription: "Visibility criteria as a JSON object following the SailPoint Visibility Criteria schema. Must be a JSON object. Conflicts with `visibility_criteria`. The value is compared semantically, so differences in whitespace, key order or unset fields don't produce a diff, and it is refreshed from the API, so changes made outside Terraform are detected.",
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -118,9 +119,9 @@ func (r *SegmentResource) Schema(ctx context.Context, req resource.SchemaRequest
 				MarkdownDescription: "The segment owner.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
+						"id":   schema.StringAttribute{Required: true, MarkdownDescription: "Owner identity ID."},
+						"type": schema.StringAttribute{Required: true, MarkdownDescription: "Owner type, `IDENTITY`."},
+						"name": schema.StringAttribute{Required: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
@@ -149,41 +150,44 @@ func visibilityCriteriaBlock(depth int, computed bool) schema.Block {
 	object := schema.NestedBlockObject{Blocks: map[string]schema.Block{
 		"expression": visibilityExpressionBlock(depth, computed),
 	}}
+	description := "Visibility criteria following the SailPoint Visibility Criteria schema. Conflicts with `visibility_criteria_json`."
 	if computed {
-		return schema.ListNestedBlock{NestedObject: object}
+		return schema.ListNestedBlock{MarkdownDescription: description, NestedObject: object}
 	}
-	return schema.ListNestedBlock{NestedObject: object}
+	return schema.ListNestedBlock{MarkdownDescription: description, NestedObject: object}
 }
 
 func visibilityExpressionBlock(depth int, computed bool) schema.Block {
-	attribute := func() schema.StringAttribute {
+	attribute := func(description string) schema.StringAttribute {
 		if computed {
-			return schema.StringAttribute{Computed: true}
+			return schema.StringAttribute{Computed: true, MarkdownDescription: description}
 		}
-		return schema.StringAttribute{Optional: true}
+		return schema.StringAttribute{Optional: true, MarkdownDescription: description}
 	}
 	object := schema.NestedBlockObject{
 		Attributes: map[string]schema.Attribute{
-			"operator":  attribute(),
-			"attribute": attribute(),
+			"operator":  attribute("Operator, e.g. `EQUALS`, `AND` or `OR`."),
+			"attribute": attribute("Identity attribute to compare, for comparison operators."),
 		},
 		Blocks: map[string]schema.Block{
 			"value": schema.ListNestedBlock{
+				MarkdownDescription: "Value to compare with.",
 				NestedObject: schema.NestedBlockObject{Attributes: map[string]schema.Attribute{
-					"type":  attribute(),
-					"value": attribute(),
+					"type":  attribute("Value type, e.g. `STRING`."),
+					"value": attribute("The value."),
 				}},
 			},
 		},
 	}
 	if depth > 1 {
 		object.Blocks["children"] = schema.ListNestedBlock{
+			MarkdownDescription: "Child criteria for `AND` and `OR` operators. Each `children` block contains an `expression` block with the same arguments. Supports up to 3 levels of nesting.",
 			NestedObject: schema.NestedBlockObject{Blocks: map[string]schema.Block{
 				"expression": visibilityExpressionBlock(depth-1, computed),
 			}},
 		}
 	}
-	return schema.ListNestedBlock{NestedObject: object}
+	return schema.ListNestedBlock{MarkdownDescription: "Expression block.", NestedObject: object}
 }
 
 func (r *SegmentResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

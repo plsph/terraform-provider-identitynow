@@ -15,16 +15,7 @@ There is one configuration per tenant. Creating the resource replaces the curren
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `attribute` - (Optional) Identity attribute that is publicly visible. Up to 5 blocks can be configured. Without blocks no attributes are public. Contains:
-  * `key` - (Required) Identity attribute key.
-  * `name` - (Required) Identity attribute display name.
-
-## Attributes Reference
-
-* `id` - Always `public-identities-config`.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

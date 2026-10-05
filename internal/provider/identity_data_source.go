@@ -54,49 +54,49 @@ func (d *IdentityDataSource) Schema(ctx context.Context, req datasource.SchemaRe
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Identity ID",
+				MarkdownDescription: "The identity ID.",
 			},
 			"alias": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Identity alias",
+				MarkdownDescription: "The identity's alternate unique identifier, equivalent to its Account Name on the authoritative source account schema. Conflicts with `email_address`. Exactly one of `alias` and `email_address` must be set.",
 			},
 			"name": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Identity name",
+				MarkdownDescription: "The identity's name, equivalent to its Display Name attribute.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Identity description",
+				MarkdownDescription: "The identity description.",
 			},
 			"email_address": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "Identity email address",
+				MarkdownDescription: "The email address of the identity. Conflicts with `alias`. Exactly one of `alias` and `email_address` must be set.",
 			},
 			"enabled": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether enabled",
+				MarkdownDescription: "Whether the identity is enabled.",
 			},
 			"is_manager": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether the identity is a manager",
+				MarkdownDescription: "Whether this identity is a manager of another identity.",
 			},
 			"identity_status": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Identity status",
+				MarkdownDescription: "The identity's status in the system.",
 			},
 			"attributes": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Identity attributes",
+				MarkdownDescription: "A list with one object containing identity attributes of the identity: `adp_id`, `email`, `firstname`, `lastname`, `phone`, `uid`, `user_type` and `workday_id`. Reference them with an index, e.g. `data.identitynow_identity.example.attributes[0].email`.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"adp_id":     schema.StringAttribute{Computed: true},
-						"lastname":   schema.StringAttribute{Computed: true},
-						"firstname":  schema.StringAttribute{Computed: true},
-						"phone":      schema.StringAttribute{Computed: true},
-						"user_type":  schema.StringAttribute{Computed: true},
-						"uid":        schema.StringAttribute{Computed: true},
-						"email":      schema.StringAttribute{Computed: true},
-						"workday_id": schema.StringAttribute{Computed: true},
+						"adp_id":     schema.StringAttribute{Computed: true, MarkdownDescription: "ADP ID of the identity."},
+						"lastname":   schema.StringAttribute{Computed: true, MarkdownDescription: "Last name of the identity."},
+						"firstname":  schema.StringAttribute{Computed: true, MarkdownDescription: "First name of the identity."},
+						"phone":      schema.StringAttribute{Computed: true, MarkdownDescription: "Phone number of the identity."},
+						"user_type":  schema.StringAttribute{Computed: true, MarkdownDescription: "User type of the identity."},
+						"uid":        schema.StringAttribute{Computed: true, MarkdownDescription: "UID of the identity."},
+						"email":      schema.StringAttribute{Computed: true, MarkdownDescription: "Email address of the identity."},
+						"workday_id": schema.StringAttribute{Computed: true, MarkdownDescription: "Workday ID of the identity."},
 					},
 				},
 			},

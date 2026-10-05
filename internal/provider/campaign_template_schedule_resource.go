@@ -100,16 +100,16 @@ func campaignTemplateScheduleSelectorBlock(description string, min int) schema.L
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"type": schema.StringAttribute{
-					MarkdownDescription: "Selector type: `LIST` (distinct values) or `RANGE` (two values, the inclusive start and end of the range)",
+					MarkdownDescription: "`LIST` (distinct values) or `RANGE` (two values, the inclusive start and end of the range).",
 					Required:            true,
 				},
 				"values": schema.ListAttribute{
-					MarkdownDescription: "Selected values, as strings",
+					MarkdownDescription: "Selected values, as strings.",
 					Required:            true,
 					ElementType:         types.StringType,
 				},
 				"interval": schema.Int64Attribute{
-					MarkdownDescription: "Interval between the selected values, e.g. `3` with hour value `8` runs every three hours from 8 AM",
+					MarkdownDescription: "Interval between the selected values, for example `3` with hour `8` runs every three hours from 8 AM.",
 					Optional:            true,
 				},
 			},
@@ -122,12 +122,12 @@ func (r *CampaignTemplateScheduleResource) Schema(ctx context.Context, req resou
 		MarkdownDescription: "Manages the schedule that generates campaigns from a certification campaign template. A template has at most one schedule.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Campaign template ID, the schedule has no ID of its own",
+				MarkdownDescription: "Campaign template ID, the schedule has no ID of its own.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"campaign_template_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the scheduled campaign template. Changing it forces a new schedule.",
+				MarkdownDescription: "ID of the scheduled campaign template. Changing this forces a new schedule to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
@@ -136,11 +136,11 @@ func (r *CampaignTemplateScheduleResource) Schema(ctx context.Context, req resou
 				Required:            true,
 			},
 			"expiration": schema.StringAttribute{
-				MarkdownDescription: "Date and time (ISO-8601) after which the schedule no longer runs",
+				MarkdownDescription: "Date and time (ISO-8601) after which the schedule no longer runs.",
 				Optional:            true,
 			},
 			"time_zone_id": schema.StringAttribute{
-				MarkdownDescription: "Time zone the schedule runs in, e.g. `America/New_York`. When not set, the value chosen by the API is kept.",
+				MarkdownDescription: "Time zone the schedule runs in, such as `America/New_York`. When not set, the value chosen by IdentityNow is kept.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

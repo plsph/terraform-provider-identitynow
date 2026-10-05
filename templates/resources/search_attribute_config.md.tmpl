@@ -17,17 +17,9 @@ The API creates the configuration asynchronously. After the create request, the 
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Name of the search attribute. Give it a unique name that is not used by an account or source attribute, or in the account schema of any current or future source.
-* `display_name` - (Required) Display name of the search attribute.
-* `application_attributes` - (Required) Map of source ID to the name of the account attribute promoted to the search attribute.
-
 All arguments can be updated in place. Renaming changes the `id`.
 
-## Attributes Reference
-
-* `id` - Configuration ID, the same as `name`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

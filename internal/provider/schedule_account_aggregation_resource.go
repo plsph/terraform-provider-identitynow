@@ -41,21 +41,21 @@ func (r *ScheduleAccountAggregationResource) Schema(ctx context.Context, req res
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Schedule ID (same as source_id)",
+				MarkdownDescription: "Schedule ID (same as `source_id`).",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"source_id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Source ID",
+				MarkdownDescription: "ID of the source as used by the legacy `cc/api/source` aggregation schedule endpoints. This is the numeric legacy source ID (usually available as the source's `cloudExternalId` connector attribute), not the source `id` used by the v2026 API. Changing this forces a new resource to be created.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"cron_expressions": schema.ListAttribute{
 				Required:            true,
-				MarkdownDescription: "Account aggregation scheduling in cron expression format. Exactly one expression is supported.",
+				MarkdownDescription: "List with exactly one cron expression defining the aggregation schedule, e.g. `0 0 * * * ?` for every hour.",
 				ElementType:         types.StringType,
 				Validators:          []validator.List{listSizeBetween(1, 1)},
 			},

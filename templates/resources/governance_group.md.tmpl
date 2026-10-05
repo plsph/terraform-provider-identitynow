@@ -13,26 +13,9 @@ Manages an IdentityNow Governance Group. Use `identitynow_governance_group_membe
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+See the [SailPoint API documentation](https://developer.sailpoint.com/docs/api/v2024/create-workgroup) for details.
 
-The following arguments are supported:
-
-As described in (https://developer.sailpoint.com/docs/api/v2024/create-workgroup)
-
-* `name` - (Required) Governance group name.
-
-* `description` - (Required) Governance group description.
-
-* `owner` - (Required) Governance group owner. Exactly one block is required. Contains:
-  * `id` - (Required) Owner identity ID.
-  * `name` - (Required) Owner name.
-  * `type` - (Optional) Owner type. Defaults to `IDENTITY`.
-
-## Attributes Reference
-
-In addition to the Arguments listed above - the following Attributes are exported:
-
-* `id` - Governance group ID.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

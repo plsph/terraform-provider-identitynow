@@ -42,108 +42,110 @@ func (d *AccessProfileDataSource) Metadata(ctx context.Context, req datasource.M
 }
 
 func (d *AccessProfileDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	refAttributes := func(idDesc, typeDesc, nameDesc string) map[string]schema.Attribute {
+		return map[string]schema.Attribute{
+			"id":   schema.StringAttribute{Computed: true, MarkdownDescription: idDesc},
+			"type": schema.StringAttribute{Computed: true, MarkdownDescription: typeDesc},
+			"name": schema.StringAttribute{Computed: true, MarkdownDescription: nameDesc},
+		}
+	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Access Profile data source - looks up an access profile by name",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access Profile ID",
+				MarkdownDescription: "Access profile ID.",
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Access Profile name",
+				MarkdownDescription: "Name of the access profile.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access Profile description",
+				MarkdownDescription: "Access profile description.",
 			},
 			"enabled": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether enabled",
+				MarkdownDescription: "Whether the access profile is enabled.",
 			},
 			"requestable": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether requestable",
+				MarkdownDescription: "Whether the access profile is requestable by access request.",
 			},
 			"source": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access Profile source",
+				MarkdownDescription: "List with the source associated with the access profile.",
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
-					},
+					Attributes: refAttributes("Source ID.", "Source type, `SOURCE`.", "Source name."),
 				},
 			},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access Profile owner",
+				MarkdownDescription: "List with the owner of the access profile.",
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
-					},
+					Attributes: refAttributes("Owner identity ID.", "Owner type, `IDENTITY`.", "Owner name."),
 				},
 			},
 			"access_request_config": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access request configuration",
+				MarkdownDescription: "List with the access request configuration.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"comments_required":        schema.BoolAttribute{Computed: true},
-						"denial_comments_required": schema.BoolAttribute{Computed: true},
-						"reauthorization_required": schema.BoolAttribute{Computed: true},
-						"require_end_date":         schema.BoolAttribute{Computed: true},
-						"form_definition_id":       schema.StringAttribute{Computed: true},
+						"comments_required":        schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether the requester must provide comments justifying the request."},
+						"denial_comments_required": schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether an approver must provide comments when denying the request."},
+						"reauthorization_required": schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether reauthorization is required."},
+						"require_end_date":         schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether the requester must provide an access end date."},
+						"form_definition_id":       schema.StringAttribute{Computed: true, MarkdownDescription: "ID of the form definition presented to the requester during the access request."},
 					},
 				},
 			},
 			"revocation_request_config": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Revocation request configuration",
+				MarkdownDescription: "List with the revocation request configuration.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"approval_schemes": schema.ListAttribute{Computed: true, ElementType: types.StringType, MarkdownDescription: "Approver types of the revocation approval schemes"},
+						"approval_schemes": schema.ListAttribute{Computed: true, ElementType: types.StringType, MarkdownDescription: "List of the approver types of the revocation approval steps, e.g. `[\"MANAGER\"]`."},
 					},
 				},
 			},
 			"segments": schema.ListAttribute{
 				Computed:            true,
-				MarkdownDescription: "Segment IDs assigned to this access profile",
+				MarkdownDescription: "List of segment IDs assigned to the access profile.",
 				ElementType:         types.StringType,
 			},
 			"access_model_metadata": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Access model metadata for this access profile",
+				MarkdownDescription: "Access model metadata of the access profile.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"attributes": schema.ListNestedAttribute{
-							Computed: true,
+							Computed:            true,
+							MarkdownDescription: "Metadata attributes.",
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
-									"key":         schema.StringAttribute{Computed: true},
-									"name":        schema.StringAttribute{Computed: true},
-									"multiselect": schema.BoolAttribute{Computed: true},
-									"status":      schema.StringAttribute{Computed: true},
-									"type":        schema.StringAttribute{Computed: true},
-									"description": schema.StringAttribute{Computed: true},
+									"key":         schema.StringAttribute{Computed: true, MarkdownDescription: "Unique identifier of the metadata type, e.g. `iscPrivacy`."},
+									"name":        schema.StringAttribute{Computed: true, MarkdownDescription: "Human readable name of the metadata attribute."},
+									"multiselect": schema.BoolAttribute{Computed: true, MarkdownDescription: "Whether multiple values can be selected."},
+									"status":      schema.StringAttribute{Computed: true, MarkdownDescription: "Status of the metadata attribute, e.g. `active`."},
+									"type":        schema.StringAttribute{Computed: true, MarkdownDescription: "Type of the metadata attribute, e.g. `governance` or `custom`."},
+									"description": schema.StringAttribute{Computed: true, MarkdownDescription: "Description of the metadata attribute."},
 									"object_types": schema.ListNestedAttribute{
-										Computed: true,
+										Computed:            true,
+										MarkdownDescription: "Object types the metadata attribute applies to.",
 										NestedObject: schema.NestedAttributeObject{
 											Attributes: map[string]schema.Attribute{
-												"value": schema.StringAttribute{Computed: true},
+												"value": schema.StringAttribute{Computed: true, MarkdownDescription: "Object type, e.g. `entitlement`."},
 											},
 										},
 									},
 									"values": schema.ListNestedAttribute{
-										Computed: true,
+										Computed:            true,
+										MarkdownDescription: "Values assigned to the metadata attribute.",
 										NestedObject: schema.NestedAttributeObject{
 											Attributes: map[string]schema.Attribute{
-												"value":  schema.StringAttribute{Computed: true},
-												"name":   schema.StringAttribute{Computed: true},
-												"status": schema.StringAttribute{Computed: true},
+												"value":  schema.StringAttribute{Computed: true, MarkdownDescription: "The metadata value."},
+												"name":   schema.StringAttribute{Computed: true, MarkdownDescription: "Human readable name of the value."},
+												"status": schema.StringAttribute{Computed: true, MarkdownDescription: "Status of the value, e.g. `active`."},
 											},
 										},
 									},
@@ -155,26 +157,28 @@ func (d *AccessProfileDataSource) Schema(ctx context.Context, req datasource.Sch
 			},
 			"provisioning_criteria": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Provisioning criteria for this access profile",
+				MarkdownDescription: "Criteria used to choose the account to provision.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"operation": schema.StringAttribute{Computed: true},
-						"attribute": schema.StringAttribute{Computed: true},
-						"value":     schema.StringAttribute{Computed: true},
+						"operation": schema.StringAttribute{Computed: true, MarkdownDescription: "Operation, e.g. `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `HAS`, `AND` or `OR`."},
+						"attribute": schema.StringAttribute{Computed: true, MarkdownDescription: "Account attribute to compare, for comparison operations."},
+						"value":     schema.StringAttribute{Computed: true, MarkdownDescription: "Value to compare the attribute with, for comparison operations."},
 						"children": schema.ListNestedAttribute{
-							Computed: true,
+							Computed:            true,
+							MarkdownDescription: "Child criteria for `AND` and `OR` operations, with the same attributes (up to 3 levels).",
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
-									"operation": schema.StringAttribute{Computed: true},
-									"attribute": schema.StringAttribute{Computed: true},
-									"value":     schema.StringAttribute{Computed: true},
+									"operation": schema.StringAttribute{Computed: true, MarkdownDescription: "Operation, e.g. `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `HAS`, `AND` or `OR`."},
+									"attribute": schema.StringAttribute{Computed: true, MarkdownDescription: "Account attribute to compare, for comparison operations."},
+									"value":     schema.StringAttribute{Computed: true, MarkdownDescription: "Value to compare the attribute with, for comparison operations."},
 									"children": schema.ListNestedAttribute{
-										Computed: true,
+										Computed:            true,
+										MarkdownDescription: "Child criteria for `AND` and `OR` operations, the third and last level of nesting.",
 										NestedObject: schema.NestedAttributeObject{
 											Attributes: map[string]schema.Attribute{
-												"operation": schema.StringAttribute{Computed: true},
-												"attribute": schema.StringAttribute{Computed: true},
-												"value":     schema.StringAttribute{Computed: true},
+												"operation": schema.StringAttribute{Computed: true, MarkdownDescription: "Operation, e.g. `EQUALS`, `NOT_EQUALS`, `CONTAINS` or `HAS`."},
+												"attribute": schema.StringAttribute{Computed: true, MarkdownDescription: "Account attribute to compare."},
+												"value":     schema.StringAttribute{Computed: true, MarkdownDescription: "Value to compare the attribute with."},
 											},
 										},
 									},
@@ -186,13 +190,9 @@ func (d *AccessProfileDataSource) Schema(ctx context.Context, req datasource.Sch
 			},
 			"additional_owners": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Additional owners for this access profile",
+				MarkdownDescription: "Additional identity or governance group owners.",
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"type": schema.StringAttribute{Computed: true},
-						"id":   schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
-					},
+					Attributes: refAttributes("ID of the identity or governance group.", "Owner type, `IDENTITY` or `GOVERNANCE_GROUP`.", "Owner name."),
 				},
 			},
 		},

@@ -15,18 +15,6 @@ Use this data source to look up an authentication profile by ID or name.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
+Exactly one of `id` and `name` must be set.
 
-Exactly one of the following must be set:
-
-* `id` - (Optional) Auth profile ID.
-* `name` - (Optional) Auth profile name.
-
-## Attributes Reference
-
-* `type` - Type of the auth profile: `BLOCK`, `MFA`, `NON_PTA` or `PTA`.
-* `off_network` - Whether access from off network is blocked.
-* `untrusted_geography` - Whether access from untrusted geographies is blocked.
-* `application_id` - Application ID.
-* `application_name` - Application name.
-* `strong_auth_login` - Whether strong authentication is enabled.
+{{ .SchemaMarkdown | trimspace }}

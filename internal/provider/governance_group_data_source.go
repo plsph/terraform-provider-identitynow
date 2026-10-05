@@ -37,24 +37,24 @@ func (d *GovernanceGroupDataSource) Schema(ctx context.Context, req datasource.S
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Governance Group ID",
+				MarkdownDescription: "ID of the governance group.",
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Governance Group name",
+				MarkdownDescription: "Governance group name.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Governance Group description",
+				MarkdownDescription: "Governance group description.",
 			},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Governance Group owner",
+				MarkdownDescription: "List with the governance group owner. Each element contains `id`, `type` and `name`.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Owner ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner type."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},

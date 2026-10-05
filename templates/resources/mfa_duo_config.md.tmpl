@@ -21,22 +21,9 @@ Because the update sends the whole configuration, a secret that the API does not
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `enabled` - (Optional) Whether the MFA method is enabled.
-* `host` - (Optional) Host name or IP address of the Duo API.
-* `access_key` - (Optional) Secret key for authenticating requests to Duo. The value is sensitive. When the API does not return the value, the known value is kept in state, and it must be configured, because the update would clear it.
-* `identity_attribute` - (Optional) Identity attribute that maps identities to Duo users, e.g. `email`.
-* `config_properties_json` - (Optional) Additional Duo properties, e.g. `skey` and `ikey`. A JSON object, e.g. built with `jsonencode`. The value is sensitive. When the API does not return the value, the known value is kept in state. When the API does not return `skey`, it must be configured here, because the update would clear it.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `mfa-duo-config`.
-* `mfa_method` - MFA method name (`duo-web`).
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

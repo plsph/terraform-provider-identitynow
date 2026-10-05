@@ -13,19 +13,4 @@ Use this data source to look up a data access segment by ID. It uses an experime
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `id` - (Required) Data segment ID.
-
-## Attributes Reference
-
-* `name` - Segment business name.
-* `description` - Segment description.
-* `membership` - How members are chosen, `ALL`, `FILTER` or `SELECTION`.
-* `member_filter_json` - Member filter as a JSON object.
-* `member_selection` - Identities selected as members, with `id` and `type`.
-* `scopes_json` - Scopes of the segment as a JSON array.
-* `enabled` - Whether the segment is active.
-* `published` - Whether the segment is published.
-* `created` - Creation date.
-* `modified` - Last modification date.
+{{ .SchemaMarkdown | trimspace }}

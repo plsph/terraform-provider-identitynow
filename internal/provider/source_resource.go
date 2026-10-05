@@ -60,31 +60,37 @@ func (r *SourceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		MarkdownDescription: "Source resource",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed: true,
+				MarkdownDescription: "Source ID.",
+				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: "Source name. Can be updated in place.",
+				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: "Source description.",
+				Required:            true,
 			},
 			"connector": schema.StringAttribute{
-				Required: true,
+				MarkdownDescription: "Connector script name, e.g. `active-directory`, `azure-active-directory` or `aws`. Changing this forces a new resource to be created.",
+				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"delete_threshold": schema.Int64Attribute{
-				Required: true,
+				MarkdownDescription: "Maximum percentage of accounts that can be deleted during an aggregation.",
+				Required:            true,
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"authoritative": schema.BoolAttribute{
-				Required: true,
+				MarkdownDescription: "Whether the source is authoritative, i.e. a source of identities. Changing this forces a new resource to be created.",
+				Required:            true,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
 				},
@@ -92,22 +98,24 @@ func (r *SourceResource) Schema(ctx context.Context, req resource.SchemaRequest,
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				Validators: []validator.List{listSizeBetween(1, 1)},
+				MarkdownDescription: "Owner of the source. Exactly one block is required.",
+				Validators:          []validator.List{listSizeBetween(1, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
+						"id":   schema.StringAttribute{Required: true, MarkdownDescription: "Owner identity ID."},
+						"type": schema.StringAttribute{Required: true, MarkdownDescription: "Owner type, `IDENTITY`."},
+						"name": schema.StringAttribute{Required: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
 			"cluster": schema.ListNestedBlock{
-				Validators: []validator.List{listSizeBetween(0, 1)},
+				MarkdownDescription: "Virtual appliance cluster used by the source. At most one block is allowed.",
+				Validators:          []validator.List{listSizeBetween(0, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Required: true},
-						"type": schema.StringAttribute{Required: true},
-						"name": schema.StringAttribute{Required: true},
+						"id":   schema.StringAttribute{Required: true, MarkdownDescription: "Cluster ID."},
+						"type": schema.StringAttribute{Required: true, MarkdownDescription: "Cluster type, `CLUSTER`."},
+						"name": schema.StringAttribute{Required: true, MarkdownDescription: "Cluster name."},
 					},
 				},
 			},

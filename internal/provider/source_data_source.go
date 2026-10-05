@@ -41,47 +41,47 @@ func (d *SourceDataSource) Schema(ctx context.Context, req datasource.SchemaRequ
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Source ID",
+				MarkdownDescription: "Source ID.",
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Source name",
+				MarkdownDescription: "Name of the source.",
 			},
 			"description": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Source description",
+				MarkdownDescription: "Source description.",
 			},
 			"connector": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Source connector type",
+				MarkdownDescription: "Connector script name, e.g. `active-directory`.",
 			},
 			"delete_threshold": schema.Int64Attribute{
 				Computed:            true,
-				MarkdownDescription: "Delete threshold",
+				MarkdownDescription: "Maximum percentage of accounts that can be deleted during an aggregation.",
 			},
 			"authoritative": schema.BoolAttribute{
 				Computed:            true,
-				MarkdownDescription: "Whether the source is authoritative",
+				MarkdownDescription: "Whether the source is authoritative.",
 			},
 			"owner": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Source owner",
+				MarkdownDescription: "List with the owner of the source.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Owner identity ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner type, `IDENTITY`."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Owner name."},
 					},
 				},
 			},
 			"cluster": schema.ListNestedAttribute{
 				Computed:            true,
-				MarkdownDescription: "Source cluster",
+				MarkdownDescription: "List with the virtual appliance cluster of the source, empty when the source has no cluster.",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"id":   schema.StringAttribute{Computed: true},
-						"type": schema.StringAttribute{Computed: true},
-						"name": schema.StringAttribute{Computed: true},
+						"id":   schema.StringAttribute{Computed: true, MarkdownDescription: "Cluster ID."},
+						"type": schema.StringAttribute{Computed: true, MarkdownDescription: "Cluster type, `CLUSTER`."},
+						"name": schema.StringAttribute{Computed: true, MarkdownDescription: "Cluster name."},
 					},
 				},
 			},

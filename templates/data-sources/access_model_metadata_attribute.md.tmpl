@@ -13,17 +13,4 @@ Use this data source to look up an access model metadata attribute and its value
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `key` - (Required) Technical name of the attribute.
-
-## Attributes Reference
-
-* `id` - Attribute ID, the same as `key`.
-* `name` - Display name of the attribute.
-* `type` - Type of the attribute.
-* `status` - Status of the attribute.
-* `object_types` - Object types the attribute values can be applied to.
-* `description` - Description of the attribute.
-* `multiselect` - Whether an object can have multiple values of the attribute.
-* `values` - Allowed values of the attribute, each with `value`, `name` and `status`.
+{{ .SchemaMarkdown | trimspace }}

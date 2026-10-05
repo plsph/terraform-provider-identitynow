@@ -19,19 +19,9 @@ The lists are compared as sets on refresh, so a different order returned by the 
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `range` - (Optional) IP addresses or subnets (CIDR), e.g. `10.0.0.0/8`.
-* `geolocation` - (Optional) Two-letter uppercase country codes, e.g. `PL`.
-* `whitelisted` - (Optional) Whether the IP ranges and countries are allowed (`true`) or blocked (`false`).
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `network-config`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

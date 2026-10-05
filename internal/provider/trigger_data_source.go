@@ -97,24 +97,24 @@ func (d *TriggerDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Trigger name. Exactly one of `id` or `name` must be set.",
+				MarkdownDescription: "Trigger name. All triggers are listed and matched by exact name. Exactly one of `id` or `name` must be set.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Trigger type: `REQUEST_RESPONSE` or `FIRE_AND_FORGET`",
+				MarkdownDescription: "Trigger type: `REQUEST_RESPONSE` or `FIRE_AND_FORGET`.",
 				Computed:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Trigger description",
+				MarkdownDescription: "Trigger description.",
 				Computed:            true,
 			},
 			"input_schema": schema.StringAttribute{
-				MarkdownDescription: "JSON schema of the payload sent by the trigger to subscribers",
+				MarkdownDescription: "JSON schema of the payload sent by the trigger to subscribers.",
 				Computed:            true,
 			},
 			"example_input_json": schema.StringAttribute{
-				MarkdownDescription: "Example payload sent by the trigger, as a JSON document",
+				MarkdownDescription: "Example payload sent by the trigger, as a JSON document.",
 				Computed:            true,
 			},
 		},

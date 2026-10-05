@@ -87,27 +87,27 @@ func (r *PublicIdentitiesConfigResource) Schema(ctx context.Context, req resourc
 			"There is one configuration per tenant, destroying the resource only removes it from Terraform state.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Always `" + publicIdentitiesConfigID + "`",
+				MarkdownDescription: "Always `" + publicIdentitiesConfigID + "`.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"attribute": schema.ListNestedBlock{
-				MarkdownDescription: "Identity attribute that is publicly visible. Up to 5 attributes can be configured.",
+				MarkdownDescription: "Identity attribute that is publicly visible. Up to 5 blocks can be configured. Without blocks no attributes are public.",
 				Validators:          []validator.List{listSizeBetween(0, 5)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"key": schema.StringAttribute{
-							MarkdownDescription: "Identity attribute key",
+							MarkdownDescription: "Identity attribute key.",
 							Required:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "Identity attribute display name",
+							MarkdownDescription: "Identity attribute display name.",
 							Required:            true,
 						},
 					},

@@ -192,11 +192,11 @@ func (r *DasApplicationResource) Schema(ctx context.Context, req resource.Schema
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Display name of the application. Names should be unique: the API does not return the ID of a new application, so it is looked up by name after creation.",
+				MarkdownDescription: "Display name of the application. Use a unique name, see above: the API does not return the ID of a new application, so it is looked up by name after creation.",
 				Required:            true,
 			},
 			"application_type": schema.Int64Attribute{
-				MarkdownDescription: "Numeric application type, one of `1`, `8`, `9`, `11`, `15`, `20`, `21`, `24`, `25`, `27`, `28`, `29`, `33`, `35` or `37` (e.g. Active Directory or AWS S3). Changing it forces a new application. The API does not return it, so after an import the configured value is taken over without a replacement.",
+				MarkdownDescription: "Numeric application type, one of `1`, `8`, `9`, `11`, `15`, `20`, `21`, `24`, `25`, `27`, `28`, `29`, `33`, `35` or `37` (e.g. Active Directory or AWS S3). Changing it forces a new application to be created. The API does not return it, so after an import the configured value is taken over without a replacement.",
 				Required:            true,
 				PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplaceIf(
 					dasApplicationTypeRequiresReplace,
@@ -221,13 +221,13 @@ func (r *DasApplicationResource) Schema(ctx context.Context, req resource.Schema
 				Optional:            true,
 			},
 			"application_crawler_settings_json": dasApplicationSettingsAttribute(
-				"Resource crawler settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `calculateResourceSize`, `excludedPathsByRegex` and `includeResources`."),
+				"Resource crawler settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `calculateResourceSize`, `crawlSnapshotsFolder`, `excludedPathsByRegex`, `crawlTopLevelShares`, `excludedResources` and `includeResources`."),
 			"permission_collector_settings_json": dasApplicationSettingsAttribute(
-				"Permission collector settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `analyzeUniquePermissions` and `calculateEffectivePermissions`."),
+				"Permission collector settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `analyzeUniquePermissions`, `calculateEffectivePermissions`, `calculateRiskiestPermissions` and `effectivePermissionsSource`."),
 			"data_classification_settings_json": dasApplicationSettingsAttribute(
 				"Data classification settings as a JSON object, with the keys `isEnabled` and `clusterId`."),
 			"activity_configuration_settings_json": dasApplicationSettingsAttribute(
-				"Activity monitoring settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `retentionTimePeriod`, `retentionTimeType` and `excludeUsers`."),
+				"Activity monitoring settings as a JSON object, with keys such as `isEnabled`, `clusterId`, `retentionTimePeriod`, `retentionTimeType`, `excludeUsers`, `excludeFolders`, `excludeFileExtensions` and `excludeActions`."),
 			"execute_now": schema.BoolAttribute{
 				MarkdownDescription: "Whether the application setup is executed immediately when the application is created or updated. Defaults to `false`.",
 				Optional:            true,
@@ -520,7 +520,7 @@ func (d *DasApplicationDataSource) Schema(ctx context.Context, req datasource.Sc
 	resp.Schema = dsschema.Schema{
 		MarkdownDescription: "Looks up a Data Access Security application by ID.",
 		Attributes: map[string]dsschema.Attribute{
-			"id":          dsschema.StringAttribute{MarkdownDescription: "Application ID.", Required: true},
+			"id":          dsschema.StringAttribute{MarkdownDescription: "Numeric application ID.", Required: true},
 			"name":        dsschema.StringAttribute{MarkdownDescription: "Display name of the application.", Computed: true},
 			"description": dsschema.StringAttribute{MarkdownDescription: "Description of the application.", Computed: true},
 			"type":        dsschema.StringAttribute{MarkdownDescription: "Name of the application type.", Computed: true},

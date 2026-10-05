@@ -139,7 +139,7 @@ func (r *ManagedClientResource) Schema(ctx context.Context, req resource.SchemaR
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"cluster_id": schema.StringAttribute{
-			MarkdownDescription: "ID of the managed cluster the client belongs to. Changing it forces a new client.",
+			MarkdownDescription: "ID of the managed cluster the client belongs to. Changing this forces a new client to be created.",
 			Required:            true,
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 		},
@@ -154,7 +154,7 @@ func (r *ManagedClientResource) Schema(ctx context.Context, req resource.SchemaR
 			Optional:            true,
 		},
 		"type": schema.StringAttribute{
-			MarkdownDescription: "Client type, `VA` or `CCG`. When not set, the API default is used. Changing it forces a new client.",
+			MarkdownDescription: "Client type, `VA` or `CCG`. When not set, the API default is stored. Changing this forces a new client to be created.",
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown(), stringplanmodifier.RequiresReplace()},
@@ -165,7 +165,7 @@ func (r *ManagedClientResource) Schema(ctx context.Context, req resource.SchemaR
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 		},
 		"secret": schema.StringAttribute{
-			MarkdownDescription: "API key of the client. The value is sensitive; it is taken from the create response and kept in state.",
+			MarkdownDescription: "API key of the client. The value is sensitive. It is taken from the create response and kept in state, since the API does not return it again.",
 			Computed:            true,
 			Sensitive:           true,
 			PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

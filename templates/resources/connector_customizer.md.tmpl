@@ -13,17 +13,7 @@ Manages a connector customizer. The name is the only writable field; changes are
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Connector customizer name. A rename is verified after the update, see above.
-
-## Attributes Reference
-
-* `id` - Connector customizer ID.
-* `image_version` - Current image version of the customizer. Null until a version is created.
-* `image_id` - Current image ID of the customizer. Null until a version is created.
-* `tenant_id` - Tenant ID of the customizer.
-* `created` - Creation date.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

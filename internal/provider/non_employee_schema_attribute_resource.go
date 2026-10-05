@@ -117,22 +117,22 @@ func (r *NonEmployeeSchemaAttributeResource) Schema(ctx context.Context, req res
 		MarkdownDescription: "Manages a custom schema attribute of a non-employee source. A source has 8 mandatory attributes and up to 10 custom attributes.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Schema attribute ID",
+				MarkdownDescription: "Schema attribute ID.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"non_employee_source_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the non-employee source (`identitynow_non_employee_source.id`). Changing it forces a new attribute.",
+				MarkdownDescription: "ID of the non-employee source (`identitynow_non_employee_source.id`). Changing this forces a new attribute to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"technical_name": schema.StringAttribute{
-				MarkdownDescription: "Technical name of the attribute, unique per source. It cannot be changed, changing it forces a new attribute.",
+				MarkdownDescription: "Technical name of the attribute, unique per source. It cannot be changed, changing this forces a new attribute to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Attribute type. Only `TEXT` is supported for custom attributes, which is the default. Changing it forces a new attribute.",
+				MarkdownDescription: "Attribute type. Only `TEXT` is supported for custom attributes, which is the default. Changing this forces a new attribute to be created.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("TEXT"),
@@ -140,15 +140,15 @@ func (r *NonEmployeeSchemaAttributeResource) Schema(ctx context.Context, req res
 				Validators:          []validator.String{triggerSubscriptionOneOfValidator{values: []string{"TEXT", "DATE", "IDENTITY"}}},
 			},
 			"label": schema.StringAttribute{
-				MarkdownDescription: "Label displayed in the UI",
+				MarkdownDescription: "Label displayed in the UI.",
 				Required:            true,
 			},
 			"help_text": schema.StringAttribute{
-				MarkdownDescription: "Help text displayed in the UI",
+				MarkdownDescription: "Help text displayed in the UI.",
 				Optional:            true,
 			},
 			"placeholder": schema.StringAttribute{
-				MarkdownDescription: "Hint text shown in the empty input field",
+				MarkdownDescription: "Hint text shown in the empty input field.",
 				Optional:            true,
 			},
 			"required": schema.BoolAttribute{
@@ -158,17 +158,17 @@ func (r *NonEmployeeSchemaAttributeResource) Schema(ctx context.Context, req res
 				Default:             booldefault.StaticBool(false),
 			},
 			"system": schema.BoolAttribute{
-				MarkdownDescription: "Whether this is a mandatory system attribute",
+				MarkdownDescription: "Whether this is a mandatory system attribute.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"created": schema.StringAttribute{
-				MarkdownDescription: "Creation date",
+				MarkdownDescription: "Creation date.",
 				Computed:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"modified": schema.StringAttribute{
-				MarkdownDescription: "Last modification date",
+				MarkdownDescription: "Last modification date.",
 				Computed:            true,
 			},
 		},
@@ -341,7 +341,7 @@ func (d *NonEmployeeSchemaAttributeDataSource) Schema(ctx context.Context, req d
 		MarkdownDescription: "Looks up a schema attribute of a non-employee source by ID or technical name. Mandatory system attributes can be looked up too.",
 		Attributes: map[string]dsschema.Attribute{
 			"non_employee_source_id": dsschema.StringAttribute{
-				MarkdownDescription: "ID of the non-employee source",
+				MarkdownDescription: "ID of the non-employee source.",
 				Required:            true,
 			},
 			"id": dsschema.StringAttribute{
@@ -354,14 +354,14 @@ func (d *NonEmployeeSchemaAttributeDataSource) Schema(ctx context.Context, req d
 				Optional:            true,
 				Computed:            true,
 			},
-			"type":        dsschema.StringAttribute{MarkdownDescription: "Attribute type: `TEXT`, `DATE` or `IDENTITY`", Computed: true},
-			"label":       dsschema.StringAttribute{MarkdownDescription: "Label displayed in the UI", Computed: true},
-			"help_text":   dsschema.StringAttribute{MarkdownDescription: "Help text displayed in the UI", Computed: true},
-			"placeholder": dsschema.StringAttribute{MarkdownDescription: "Hint text shown in the empty input field", Computed: true},
-			"required":    dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is required for all non-employees", Computed: true},
-			"system":      dsschema.BoolAttribute{MarkdownDescription: "Whether this is a mandatory system attribute", Computed: true},
-			"created":     dsschema.StringAttribute{MarkdownDescription: "Creation date", Computed: true},
-			"modified":    dsschema.StringAttribute{MarkdownDescription: "Last modification date", Computed: true},
+			"type":        dsschema.StringAttribute{MarkdownDescription: "Attribute type: `TEXT`, `DATE` or `IDENTITY`.", Computed: true},
+			"label":       dsschema.StringAttribute{MarkdownDescription: "Label displayed in the UI.", Computed: true},
+			"help_text":   dsschema.StringAttribute{MarkdownDescription: "Help text displayed in the UI.", Computed: true},
+			"placeholder": dsschema.StringAttribute{MarkdownDescription: "Hint text shown in the empty input field.", Computed: true},
+			"required":    dsschema.BoolAttribute{MarkdownDescription: "Whether the attribute is required for all non-employees.", Computed: true},
+			"system":      dsschema.BoolAttribute{MarkdownDescription: "Whether this is a mandatory system attribute.", Computed: true},
+			"created":     dsschema.StringAttribute{MarkdownDescription: "Creation date.", Computed: true},
+			"modified":    dsschema.StringAttribute{MarkdownDescription: "Last modification date.", Computed: true},
 		},
 	}
 }

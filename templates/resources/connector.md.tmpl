@@ -17,25 +17,9 @@ Only the connector metadata and the application, correlation config and source c
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Connector name, unique in the tenant. Changing this forces a new connector to be created.
-* `class_name` - (Required) Connector class name. Connectors that implement the open connector standard use `sailpoint.connector.OpenConnectorAdapter`. Changing this forces a new connector to be created.
-* `type` - (Optional) Connector type. Defaults to `custom <name>`. Changing this forces a new connector to be created.
-* `direct_connect` - (Optional) Whether sources of the connector are direct connect sources. Defaults to `true`. Changing this forces a new connector to be created.
-* `status` - (Optional) Connector status, `DEVELOPMENT`, `DEMO` or `RELEASED`. Changing this forces a new connector to be created.
-* `connector_metadata_json` - (Optional) UI metadata of the connector as a JSON object. Use `jsonencode()` for convenience. The value is compared semantically. When not set, the value is not managed.
-* `application_xml` - (Optional) Application XML of the connector. When not set, the value is not managed.
-* `correlation_config_xml` - (Optional) Correlation config XML of the connector. When not set, the value is not managed.
-* `source_config_xml` - (Optional) Source config XML of the connector. When not set, the value is not managed.
-
 Differences only in line endings or trailing whitespace of the XML values are ignored.
 
-## Attributes Reference
-
-* `id` - Connector ID, the same as `script_name`.
-* `script_name` - Unique script name of the connector.
-* `file_upload` - Whether sources of the connector are file upload sources.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

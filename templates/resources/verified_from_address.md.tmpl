@@ -13,16 +13,7 @@ Manages a sender ("From:") email address for notifications. Creating the resourc
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `email` - (Required) Sender email address. The address cannot be changed, changing this forces a new address to be created.
-
-## Attributes Reference
-
-* `id` - Sender address ID.
-* `is_verified_by_domain` - Whether the address is verified by its domain.
-* `verification_status` - Verification status: `PENDING`, `SUCCESS`, `FAILED` or `NA`.
-* `region` - AWS SES region the address is associated with.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

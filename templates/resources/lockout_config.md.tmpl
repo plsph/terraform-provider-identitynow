@@ -17,19 +17,9 @@ Only the settings present in the configuration are managed. Settings that are no
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `maximum_attempts` - (Optional) Maximum number of failed authentication attempts before the user is locked out.
-* `lockout_duration` - (Optional) Time in minutes a user is locked out.
-* `lockout_window` - (Optional) Rolling window in minutes in which failed attempts count towards the maximum.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `lockout-config`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

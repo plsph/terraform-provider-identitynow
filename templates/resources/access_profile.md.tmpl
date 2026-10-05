@@ -19,86 +19,9 @@ All arguments can be updated in place, including `name`, the `source` together w
 
 {{ tffile "examples/resources/identitynow_access_profile/access_profile_with_access_model_metadata.tf" }}
 
-## Arguments Reference
+See the [SailPoint API documentation](https://developer.sailpoint.com/docs/api/v3/create-access-profile) for details.
 
-The following arguments are supported:
-
-As per developer guide: (https://developer.sailpoint.com/docs/api/v3/create-access-profile)
-
-* `name` - (Required) Access profile name.
-
-* `description` - (Required) Access profile description.
-
-* `requestable` - (Optional) Whether the access profile is requestable by access request. Making an access profile non-requestable is only supported for tenants enabled with the new Request Center. If not set, the value returned by the API is used.
-
-* `enabled` - (Optional) Whether the access profile is enabled. An enabled access profile must include at least one entitlement. If not set, the value returned by the API is used.
-
-* `segments` - (Optional) Set of segment IDs assigned to the access profile. The order is not significant.
-
-* `owner` - (Optional) Owner of the access profile. Contains:
-  * `id` - (Required) Owner identity ID.
-  * `name` - (Required) Owner name.
-  * `type` - (Required) Owner type, `IDENTITY`.
-
-* `source` - (Optional) Source associated with the access profile. Contains:
-  * `id` - (Required) Source ID.
-  * `name` - (Required) Source name.
-  * `type` - (Required) Source type, `SOURCE`.
-
-* `entitlements` - (Optional) Entitlements of the source assigned to the access profile. Can be repeated. If `enabled` is false this can be empty, otherwise at least one entitlement is required. Contains:
-  * `id` - (Required) Entitlement ID.
-  * `name` - (Required) Entitlement name. The configured casing is kept when the API name differs only in case.
-  * `type` - (Optional) Entitlement type. Defaults to `ENTITLEMENT`.
-
-* `access_request_config` - (Optional) Access request configuration. Contains:
-  * `comments_required` - (Optional) Whether the requester must provide comments justifying the request. Defaults to `false`.
-  * `denial_comments_required` - (Optional) Whether an approver must provide comments when denying the request. Defaults to `false`.
-  * `reauthorization_required` - (Optional) Whether reauthorization is required for the request. Defaults to `false`.
-  * `require_end_date` - (Optional) Whether the requester must provide an access end date. Defaults to `false`.
-  * `form_definition_id` - (Optional) ID of the form definition presented to the requester during the access request. The v2026 API documents this field only for roles, so it relies on the tenant accepting it for access profiles.
-  * `approval_schemes` - (Optional) Approval steps of the request, in order. Can be repeated. Contains:
-    * `approver_type` - (Required) Type of approver, e.g. `APP_OWNER`, `OWNER`, `SOURCE_OWNER`, `MANAGER` or `GOVERNANCE_GROUP`.
-    * `approver_id` - (Optional) ID of the approver, required when `approver_type` is `GOVERNANCE_GROUP`. Defaults to an empty string.
-  * `max_permitted_access_duration` - (Optional) Maximum access duration the requester can request. Contains:
-    * `value` - (Required) Amount of time.
-    * `time_unit` - (Required) Unit of time, e.g. `DAYS`, `WEEKS` or `MONTHS`.
-
-* `revocation_request_config` - (Optional) Revocation request configuration. Contains:
-  * `approval_schemes` - (Optional) Approval steps of the revocation request, in order. Can be repeated. Contains:
-    * `approver_type` - (Required) Type of approver, e.g. `APP_OWNER`, `OWNER`, `SOURCE_OWNER`, `MANAGER` or `GOVERNANCE_GROUP`.
-    * `approver_id` - (Optional) ID of the approver, required when `approver_type` is `GOVERNANCE_GROUP`.
-
-* `additional_owners` - (Optional) Additional identity or governance group owners of the access profile. Can be repeated. Contains:
-  * `id` - (Required) ID of the identity or governance group.
-  * `type` - (Required) Owner type, `IDENTITY` or `GOVERNANCE_GROUP`.
-  * `name` - (Optional) Owner name.
-
-* `provisioning_criteria` - (Optional) Criteria used to choose the account the access profile is provisioned to when an identity has several accounts on the source. Contains:
-  * `operation` - (Required) Operation, e.g. `EQUALS`, `NOT_EQUALS`, `CONTAINS`, `HAS`, `AND` or `OR`.
-  * `attribute` - (Optional) Account attribute to compare, for comparison operations.
-  * `value` - (Optional) Value to compare the attribute with, for comparison operations.
-  * `children` - (Optional) Child criteria for `AND` and `OR` operations, with the same arguments. Supports up to 3 levels of nesting.
-
-* `access_model_metadata` - (Optional) Access model metadata of the access profile. Only applied when the access profile is created. Contains:
-  * `attributes` - (Optional) Metadata attributes. Can be repeated. Contains:
-    * `key` - (Required) Unique identifier of the metadata type, e.g. `iscPrivacy`.
-    * `name` - (Required) Human readable name of the metadata attribute.
-    * `multiselect` - (Optional) Whether multiple values can be selected. If not set, the value returned by the API is used.
-    * `status` - (Optional) Status of the metadata attribute, e.g. `active`. If not set, the value returned by the API is used.
-    * `type` - (Optional) Type of the metadata attribute, e.g. `governance` or `custom`. If not set, the value returned by the API is used.
-    * `description` - (Optional) Description of the metadata attribute. If not set, the value returned by the API is used.
-    * `object_types` - (Optional) Object types the metadata attribute applies to. Can be repeated. Contains:
-      * `value` - (Required) Object type, e.g. `entitlement`.
-    * `values` - (Optional) Values assigned to the metadata attribute. Can be repeated. Contains:
-      * `value` - (Required) The metadata value.
-      * `name` - (Optional) Human readable name of the value.
-      * `status` - (Optional) Status of the value, e.g. `active`. If not set, the value returned by the API is used.
-
-## Attributes Reference
-
-In addition to the Arguments listed above - the following Attributes are exported:
-
-* `id` - Access profile ID.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

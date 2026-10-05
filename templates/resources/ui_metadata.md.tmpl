@@ -17,19 +17,9 @@ Only the settings present in the configuration are managed. Settings that are no
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
 All arguments are optional; settings that are not configured keep their current value.
 
-* `iframe_white_list` - (Optional) Space-separated domains that may embed the non-authenticated parts of IdentityNow (e.g. password reset) in an iframe.
-* `username_label` - (Optional) Label of the username field on the login page.
-* `username_empty_text` - (Optional) Placeholder text of the username field on the login page.
-
-## Attributes Reference
-
-In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
-
-* `id` - Always `ui-metadata`.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

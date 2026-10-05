@@ -49,38 +49,38 @@ func (r *GovernanceGroupResource) Schema(ctx context.Context, req resource.Schem
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Governance Group ID",
+				MarkdownDescription: "Governance group ID.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Governance Group name",
+				MarkdownDescription: "Governance group name.",
 			},
 			"description": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Governance Group description",
+				MarkdownDescription: "Governance group description.",
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"owner": schema.ListNestedBlock{
-				MarkdownDescription: "Governance Group owner. Exactly one owner is required.",
+				MarkdownDescription: "Governance group owner. Exactly one block is required.",
 				Validators:          []validator.List{listSizeBetween(1, 1)},
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Owner ID",
+							MarkdownDescription: "Owner identity ID.",
 						},
 						"name": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Owner name",
+							MarkdownDescription: "Owner name.",
 						},
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Owner type, defaults to IDENTITY",
+							MarkdownDescription: "Owner type. Defaults to `IDENTITY`.",
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.UseStateForUnknown(),
 							},

@@ -138,7 +138,7 @@ func (r *DasTaskScheduleResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 			},
 			"start_time": schema.Int64Attribute{
-				MarkdownDescription: "Start time of the schedule, in seconds since the epoch. When not set, the value returned by the API is used and kept: the API always has a start time, so removing the argument keeps the current start time.",
+				MarkdownDescription: "Start time of the schedule, in seconds since the epoch. When not set, the value returned by the API is stored and kept: the API always has a start time, so removing the argument keeps the current start time.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.Int64{int64planmodifier.UseStateForUnknown()},

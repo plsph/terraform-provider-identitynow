@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -125,26 +126,27 @@ func (r *ServiceDeskIntegrationResource) Metadata(ctx context.Context, req resou
 }
 
 // serviceDeskIntegrationRefBlock is a single optional reference block with an ID, a type that
-// defaults to defaultType and a name resolved by the API.
-func serviceDeskIntegrationRefBlock(description, defaultType string) schema.ListNestedBlock {
+// defaults to defaultType and a name resolved by the API. noun names the referenced object in
+// the nested descriptions, e.g. "Identity".
+func serviceDeskIntegrationRefBlock(description, noun, defaultType string) schema.ListNestedBlock {
 	return schema.ListNestedBlock{
-		MarkdownDescription: description,
+		MarkdownDescription: description + " At most one block.",
 		Validators:          []validator.List{listSizeBetween(0, 1)},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"id": schema.StringAttribute{
-					MarkdownDescription: "ID of the referenced object.",
+					MarkdownDescription: noun + " ID.",
 					Required:            true,
 				},
 				"type": schema.StringAttribute{
-					MarkdownDescription: fmt.Sprintf("Type of the referenced object. Defaults to `%s`.", defaultType),
+					MarkdownDescription: fmt.Sprintf("Reference type. Defaults to `%s`.", defaultType),
 					Optional:            true,
 					Computed:            true,
 					PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				},
 				// No UseStateForUnknown: the name of a changed reference must be resolved again.
 				"name": schema.StringAttribute{
-					MarkdownDescription: "Name of the referenced object. Resolved by the API when not set.",
+					MarkdownDescription: fmt.Sprintf("%s name. Resolved by the API when not set. A configured `type` and `name` are kept in state as long as the %s `id` does not change, so a name that differs from the display name returned by the API does not cause a diff.", noun, strings.ToLower(noun)),
 					Optional:            true,
 					Computed:            true,
 				},
@@ -163,33 +165,33 @@ func (r *ServiceDeskIntegrationResource) Schema(ctx context.Context, req resourc
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "Unique name of the service desk integration.",
+				MarkdownDescription: "Unique name of the integration.",
 				Required:            true,
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "Description of the service desk integration.",
+				MarkdownDescription: "Description of the integration.",
 				Required:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Service desk integration type, e.g. `ServiceNowSDIM`. See the `identitynow_service_desk_integration_types` data source for the supported types.",
+				MarkdownDescription: "Service desk integration type, e.g. `ServiceNowSDIM`. The [identitynow_service_desk_integration_types](../data-sources/service_desk_integration_types) data source lists the supported types.",
 				Required:            true,
 			},
 			"managed_sources": schema.ListAttribute{
-				MarkdownDescription: "IDs of the sources managed by the integration. Deprecated by the API in favor of `managedResourceRefs` in `provisioning_config_json`; when not set, the value returned by the API is used.",
+				MarkdownDescription: "IDs of the sources managed by the integration. The API deprecates this field in favor of `managedResourceRefs` in `provisioning_config_json`. When not set, the value returned by the API is stored.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers:       []planmodifier.List{listplanmodifier.UseStateForUnknown()},
 			},
 			"provisioning_config_json": schema.StringAttribute{
-				MarkdownDescription: "Provisioning configuration as a JSON object, with keys such as `managedResourceRefs`, `planInitializerScript`, `noProvisioningRequests` and `provisioningRequestExpiration`. When not set, the value returned by the API is used and kept, so removing the argument does not clear the configuration; set it to `{}` to clear it. Keys added by the API, such as the read-only `universalManager` (never sent to the API), do not cause a diff.",
+				MarkdownDescription: "Provisioning configuration as a JSON object, with keys such as `managedResourceRefs`, `planInitializerScript`, `noProvisioningRequests` and `provisioningRequestExpiration`. When not set, the value returned by the API is stored and sent back on updates, so removing the argument does not clear the configuration; set it to `\"{}\"` to clear it. Keys added by the API, such as the read-only `universalManager`, do not cause a diff; `universalManager` is never sent to the API.",
 				Optional:            true,
 				Computed:            true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"attributes_json": schema.StringAttribute{
-				MarkdownDescription: "Integration attributes as a JSON object, e.g. the service desk URL and credentials. The value is sensitive. Keys that the API does not return, such as passwords, and keys added by the API do not cause a diff.",
+				MarkdownDescription: "Integration attributes as a JSON object, e.g. the service desk URL and credentials. Use `jsonencode()` for convenience. The value is sensitive and is not shown in plans. The API does not return secrets such as passwords: keys missing from the API response, and keys the API adds, do not cause a diff, while changed values of the other keys are detected as drift.",
 				Required:            true,
 				Sensitive:           true,
 				Validators:          []validator.String{jsonObjectStringValidator{}},
@@ -205,9 +207,9 @@ func (r *ServiceDeskIntegrationResource) Schema(ctx context.Context, req resourc
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"owner_ref":                serviceDeskIntegrationRefBlock("Identity that owns the integration.", "IDENTITY"),
-			"cluster_ref":              serviceDeskIntegrationRefBlock("Virtual appliance cluster the integration uses.", "CLUSTER"),
-			"before_provisioning_rule": serviceDeskIntegrationRefBlock("Before provisioning rule of the integration.", "RULE"),
+			"owner_ref":                serviceDeskIntegrationRefBlock("Identity that owns the integration.", "Identity", "IDENTITY"),
+			"cluster_ref":              serviceDeskIntegrationRefBlock("Virtual appliance cluster the integration uses.", "Cluster", "CLUSTER"),
+			"before_provisioning_rule": serviceDeskIntegrationRefBlock("Before provisioning rule of the integration.", "Rule", "RULE"),
 		},
 	}
 }

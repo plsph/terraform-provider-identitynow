@@ -15,12 +15,4 @@ Use this data source to look up an extended account search attribute by name.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Name of the search attribute.
-
-## Attributes Reference
-
-* `id` - Configuration ID, the same as `name`.
-* `display_name` - Display name of the search attribute.
-* `application_attributes` - Map of source ID to the name of the promoted account attribute.
+{{ .SchemaMarkdown | trimspace }}

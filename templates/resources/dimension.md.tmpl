@@ -21,72 +21,7 @@ All arguments except `role_id` can be updated in place. Removing `description`, 
 
 {{ tffile "examples/resources/identitynow_dimension/dimension_with_multi_value_criteria.tf" }}
 
-## Arguments Reference
-
-The following arguments are supported:
-
-* `role_id` - (Required) The ID of the role this dimension belongs to. Changing this forces a new resource to be created.
-* `name` - (Required) The name of the dimension. Can be updated in place.
-* `description` - (Optional) A description for the dimension. Removing it clears the description.
-* `owner` - (Optional) An `owner` block as defined below. Removing it clears the owner.
-* `access_profiles` - (Optional) One or more `access_profiles` blocks as defined below.
-* `entitlements` - (Optional) One or more `entitlements` blocks as defined below.
-* `membership` - (Optional) A `membership` block as defined below. Removing it clears the membership criteria.
-
----
-
-An `owner` block supports:
-
-* `id` - (Required) The owner's ID.
-* `type` - (Required) The owner type (e.g. `IDENTITY`).
-* `name` - (Required) The owner name.
-
----
-
-An `access_profiles` block supports:
-
-* `id` - (Required) The access profile ID.
-* `type` - (Required) The type (e.g. `ACCESS_PROFILE`).
-* `name` - (Required) The access profile name.
-
----
-
-An `entitlements` block supports:
-
-* `id` - (Required) The entitlement ID.
-* `type` - (Required) The type (e.g. `ENTITLEMENT`).
-* `name` - (Required) The entitlement name.
-
----
-
-A `membership` block supports:
-
-* `type` - (Required) The membership type (`STANDARD` or `IDENTITY_LIST`).
-* `criteria` - (Optional) A `criteria` block as defined below.
-
----
-
-A `criteria` block supports:
-
-* `operation` - (Required) The criteria operation (`EQUALS`, `NOT_EQUALS`, `CONTAINS`, `AND`, `OR`, etc.).
-* `string_value` - (Optional) A single value to match against.
-* `values` - (Optional) A list of values to match against. Use this when the criteria should match any of multiple values.
-* `key` - (Optional) A `key` block identifying the identity attribute.
-* `children` - (Optional) One or more child `criteria` blocks (supports up to 3 levels of nesting).
-
----
-
-A `key` block supports:
-
-* `type` - (Required) The key type (`IDENTITY` or `ACCOUNT`).
-* `property` - (Required) The identity or account attribute name (e.g. `attribute.department`).
-* `source_id` - (Optional) The source ID (required when `type` is `ACCOUNT`).
-
-## Attributes Reference
-
-In addition to the Arguments listed above - the following Attributes are exported:
-
-* `id` - The ID of the Dimension.
+{{ .SchemaMarkdown | trimspace }}
 
 ## Import
 

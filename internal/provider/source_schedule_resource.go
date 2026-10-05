@@ -114,12 +114,12 @@ func (r *SourceScheduleResource) Schema(ctx context.Context, req resource.Schema
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"source_id": schema.StringAttribute{
-				MarkdownDescription: "ID of the source. Changing it forces a new schedule.",
+				MarkdownDescription: "ID of the source. Changing this forces a new schedule to be created.",
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "Schedule type, `ACCOUNT_AGGREGATION` or `GROUP_AGGREGATION`. The type cannot be changed, changing it forces a new schedule.",
+				MarkdownDescription: "Schedule type, `ACCOUNT_AGGREGATION` or `GROUP_AGGREGATION`. The type cannot be changed, changing this forces a new schedule to be created.",
 				Required:            true,
 				Validators:          []validator.String{sourceScheduleTypeValidator{}},
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},

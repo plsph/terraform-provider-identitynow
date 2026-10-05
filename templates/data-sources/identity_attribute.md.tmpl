@@ -13,17 +13,4 @@ Use this data source to look up an identity attribute by its technical name.
 
 {{ tffile .ExampleFile }}
 
-## Arguments Reference
-
-* `name` - (Required) Technical name of the identity attribute.
-
-## Attributes Reference
-
-* `id` - Identity attribute ID, the same as `name`.
-* `display_name` - Business-friendly name of the identity attribute.
-* `type` - Type of the identity attribute.
-* `standard` - Whether the attribute is a standard attribute.
-* `multi` - Whether the attribute is multi-valued.
-* `searchable` - Whether the attribute is searchable.
-* `system` - Whether the attribute is a system attribute.
-* `sources_json` - Sources of the attribute value as a JSON array.
+{{ .SchemaMarkdown | trimspace }}

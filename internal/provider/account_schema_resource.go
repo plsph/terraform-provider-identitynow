@@ -69,7 +69,7 @@ func (r *AccountSchemaResource) Schema(ctx context.Context, req resource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Account Schema ID",
+				MarkdownDescription: "Schema ID (same as `schema_id`).",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -77,21 +77,21 @@ func (r *AccountSchemaResource) Schema(ctx context.Context, req resource.SchemaR
 			"name": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Account Schema name. Cannot be changed after the schema is created.",
+				MarkdownDescription: "Name of the schema, e.g. `account`. The name can't be changed after the schema is created. If not set, the existing name is used.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"source_id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Source ID",
+				MarkdownDescription: "ID of the source the schema belongs to. Changing this forces a new resource to be created.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"schema_id": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "Schema ID",
+				MarkdownDescription: "ID of the existing schema. Changing this forces a new resource to be created.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -99,7 +99,7 @@ func (r *AccountSchemaResource) Schema(ctx context.Context, req resource.SchemaR
 			"display_attribute": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Display attribute",
+				MarkdownDescription: "Name of the attribute used to display the account. If not set, the existing value is kept.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -107,7 +107,7 @@ func (r *AccountSchemaResource) Schema(ctx context.Context, req resource.SchemaR
 			"identity_attribute": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Identity attribute",
+				MarkdownDescription: "Name of the attribute that uniquely identifies an account on the source. If not set, the existing value is kept.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -115,7 +115,7 @@ func (r *AccountSchemaResource) Schema(ctx context.Context, req resource.SchemaR
 			"native_object_type": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Native object type",
+				MarkdownDescription: "Name of the object type on the source system, e.g. `User`. If not set, the existing value is kept.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -123,7 +123,7 @@ func (r *AccountSchemaResource) Schema(ctx context.Context, req resource.SchemaR
 			"hierarchy_attribute": schema.StringAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Hierarchy attribute",
+				MarkdownDescription: "Name of the attribute used to build group hierarchies. If not set, the existing value is kept.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -131,18 +131,18 @@ func (r *AccountSchemaResource) Schema(ctx context.Context, req resource.SchemaR
 			"include_permissions": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "Include permissions",
+				MarkdownDescription: "Whether permissions are included in the schema. If not set, the existing value is kept.",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"modified": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Last modified timestamp",
+				MarkdownDescription: "The date and time the schema was last modified.",
 			},
 			"created": schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "Creation timestamp",
+				MarkdownDescription: "The date and time the schema was created.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -150,55 +150,55 @@ func (r *AccountSchemaResource) Schema(ctx context.Context, req resource.SchemaR
 		},
 		Blocks: map[string]schema.Block{
 			"attributes": schema.ListNestedBlock{
-				MarkdownDescription: "Schema attributes. When at least one attribute is configured the list is authoritative: attributes that are not configured are removed from the schema. Without attribute blocks the existing attributes are left unchanged.",
+				MarkdownDescription: "Attributes of the schema. When at least one block is configured the list is authoritative: attributes that are not configured are removed from the schema. Without `attributes` blocks the existing attributes are left unchanged.",
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"name": schema.StringAttribute{
 							Required:            true,
-							MarkdownDescription: "Attribute name",
+							MarkdownDescription: "Attribute name.",
 						},
 						"type": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Attribute type",
+							MarkdownDescription: "Attribute type, e.g. `STRING`, `LONG`, `INT`, `BOOLEAN` or `DATE`. If not set, the existing value is kept.",
 						},
 						"description": schema.StringAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Attribute description",
+							MarkdownDescription: "Attribute description. If not set, the existing value is kept.",
 						},
 						"is_group": schema.BoolAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Whether this is a group attribute",
+							MarkdownDescription: "Whether the attribute refers to a group. If not set, the existing value is kept.",
 						},
 						"is_multi_valued": schema.BoolAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Whether this attribute is multi-valued",
+							MarkdownDescription: "Whether the attribute is multi-valued. If not set, the existing value is kept.",
 						},
 						"is_entitlement": schema.BoolAttribute{
 							Optional:            true,
 							Computed:            true,
-							MarkdownDescription: "Whether this is an entitlement attribute",
+							MarkdownDescription: "Whether the attribute is an entitlement. If not set, the existing value is kept.",
 						},
 					},
 					Blocks: map[string]schema.Block{
 						"schema": schema.ListNestedBlock{
-							MarkdownDescription: "Schema reference",
+							MarkdownDescription: "Reference to the schema of the objects the attribute refers to, e.g. the `group` schema for a group membership attribute.",
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
 										Required:            true,
-										MarkdownDescription: "Schema ID",
+										MarkdownDescription: "Schema ID.",
 									},
 									"name": schema.StringAttribute{
 										Required:            true,
-										MarkdownDescription: "Schema name",
+										MarkdownDescription: "Schema name.",
 									},
 									"type": schema.StringAttribute{
 										Required:            true,
-										MarkdownDescription: "Schema type",
+										MarkdownDescription: "Reference type, `CONNECTOR_SCHEMA`.",
 									},
 								},
 							},
