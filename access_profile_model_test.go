@@ -94,7 +94,7 @@ func TestAccessProfileAccessRequestConfigFormDefinitionRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	data := AccessProfileResourceModel{
 		AccessRequestConfig: types.ListNull(types.ObjectType{}),
-		Segments:            types.ListNull(types.StringType),
+		Segments:            types.SetNull(types.StringType),
 	}
 	var diags diag.Diagnostics
 	r := &AccessProfileResource{}
@@ -141,7 +141,7 @@ func TestAccessProfilePatchesOnlyChangedFields(t *testing.T) {
 		Entitlements:            types.ListNull(types.ObjectType{}),
 		AccessRequestConfig:     types.ListNull(types.ObjectType{}),
 		RevocationRequestConfig: types.ListNull(types.ObjectType{}),
-		Segments:                types.ListNull(types.StringType),
+		Segments:                types.SetNull(types.StringType),
 		AccessModelMetadata:     types.ListNull(types.ObjectType{}),
 		ProvisioningCriteria:    types.ListNull(types.ObjectType{}),
 		AdditionalOwners:        types.ListNull(types.ObjectType{}),
@@ -171,7 +171,7 @@ func TestAccessProfileUnknownBoolsAreNotSent(t *testing.T) {
 		Entitlements:            types.ListNull(types.ObjectType{}),
 		AccessRequestConfig:     types.ListNull(types.ObjectType{}),
 		RevocationRequestConfig: types.ListNull(types.ObjectType{}),
-		Segments:                types.ListNull(types.StringType),
+		Segments:                types.SetNull(types.StringType),
 		AccessModelMetadata:     types.ListNull(types.ObjectType{}),
 		ProvisioningCriteria:    types.ListNull(types.ObjectType{}),
 		AdditionalOwners:        types.ListNull(types.ObjectType{}),
@@ -223,7 +223,7 @@ func TestAccessProfileProvisioningCriteriaRoundTrip(t *testing.T) {
 }
 
 func TestAccessProfileStateKeepsUnsetSegmentsNull(t *testing.T) {
-	data := AccessProfileResourceModel{Segments: types.ListNull(types.StringType)}
+	data := AccessProfileResourceModel{Segments: types.SetNull(types.StringType)}
 	var diags diag.Diagnostics
 	(&AccessProfileResource{}).setStateFromAPI(context.Background(), &data, &AccessProfile{Name: "Example"}, &diags)
 	if diags.HasError() {
@@ -231,6 +231,29 @@ func TestAccessProfileStateKeepsUnsetSegmentsNull(t *testing.T) {
 	}
 	if !data.Segments.IsNull() {
 		t.Fatalf("expected segments to stay null, got %s", data.Segments)
+	}
+}
+
+// Regression test: the API returns segments in a different order than configured, which must not
+// show up as a diff in the plan.
+func TestAccessProfileSegmentsIgnoreOrder(t *testing.T) {
+	ctx := context.Background()
+	prior, _ := types.SetValueFrom(ctx, types.StringType, []string{"seg-a", "seg-b", "seg-c"})
+	data := AccessProfileResourceModel{Segments: prior}
+	var diags diag.Diagnostics
+	(&AccessProfileResource{}).setStateFromAPI(ctx, &data, &AccessProfile{Name: "Example", Segments: []string{"seg-c", "seg-a", "seg-b"}}, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if !data.Segments.Equal(prior) {
+		t.Fatalf("expected segments in another order to equal the prior value, got %s", data.Segments)
+	}
+	state := AccessProfileResourceModel{Segments: data.Segments}
+	plan := AccessProfileResourceModel{Segments: prior}
+	for _, p := range accessProfilePatches(plan, state, &AccessProfile{}) {
+		if p.Path == "/segments" {
+			t.Fatalf("expected no segments patch when only the order differs")
+		}
 	}
 }
 
@@ -251,7 +274,7 @@ func TestAccessProfilePatchesClearAdditionalOwners(t *testing.T) {
 		Entitlements:            types.ListNull(types.ObjectType{}),
 		AccessRequestConfig:     types.ListNull(types.ObjectType{}),
 		RevocationRequestConfig: types.ListNull(types.ObjectType{}),
-		Segments:                types.ListNull(types.StringType),
+		Segments:                types.SetNull(types.StringType),
 		AccessModelMetadata:     types.ListNull(types.ObjectType{}),
 		ProvisioningCriteria:    types.ListNull(types.ObjectType{}),
 		AdditionalOwners:        types.ListValueMust(ownerType, []attr.Value{owner}),

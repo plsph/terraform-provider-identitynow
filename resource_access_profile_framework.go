@@ -40,7 +40,7 @@ type AccessProfileResourceModel struct {
 	Entitlements            types.List   `tfsdk:"entitlements"`
 	AccessRequestConfig     types.List   `tfsdk:"access_request_config"`
 	RevocationRequestConfig types.List   `tfsdk:"revocation_request_config"`
-	Segments                types.List   `tfsdk:"segments"`
+	Segments                types.Set    `tfsdk:"segments"`
 	AccessModelMetadata     types.List   `tfsdk:"access_model_metadata"`
 	ProvisioningCriteria    types.List   `tfsdk:"provisioning_criteria"`
 	AdditionalOwners        types.List   `tfsdk:"additional_owners"`
@@ -158,8 +158,8 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"segments": schema.ListAttribute{
-				MarkdownDescription: "List of segment IDs assigned to the access profile",
+			"segments": schema.SetAttribute{
+				MarkdownDescription: "Set of segment IDs assigned to the access profile",
 				Optional:            true,
 				ElementType:         types.StringType,
 			},
@@ -995,14 +995,14 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 	}
 
 	if len(ap.Segments) > 0 {
-		segmentList, d := types.ListValueFrom(ctx, types.StringType, ap.Segments)
+		segmentSet, d := types.SetValueFrom(ctx, types.StringType, ap.Segments)
 		diags.Append(d...)
-		data.Segments = segmentList
+		data.Segments = segmentSet
 	} else if data.Segments.IsNull() || data.Segments.IsUnknown() {
 		// segments is optional, keep it null when it is not configured
-		data.Segments = types.ListNull(types.StringType)
+		data.Segments = types.SetNull(types.StringType)
 	} else {
-		data.Segments, _ = types.ListValue(types.StringType, []attr.Value{})
+		data.Segments, _ = types.SetValue(types.StringType, []attr.Value{})
 	}
 
 	revocationObjType := types.ObjectType{AttrTypes: map[string]attr.Type{

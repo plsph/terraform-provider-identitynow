@@ -156,7 +156,7 @@ As per developer guide: (https://developer.sailpoint.com/docs/api/v3/create-acce
 
 * `enabled` - (Optional) Whether the access profile is enabled. An enabled access profile must include at least one entitlement. If not set, the value returned by the API is used.
 
-* `segments` - (Optional) List of segment IDs assigned to the access profile.
+* `segments` - (Optional) Set of segment IDs assigned to the access profile. The order is not significant.
 
 * `owner` - (Optional) Owner of the access profile. Contains:
   * `id` - (Required) Owner identity ID.

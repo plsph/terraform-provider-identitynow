@@ -26,6 +26,7 @@ BREAKING CHANGES AND BEHAVIOUR CHANGES:
 * resource/identitynow_tagged_object: `tags` is no longer computed, removing it clears the tags
 * resource/identitynow_access_profile: changing `access_model_metadata` of an existing access profile shows a warning, the access profile API only accepts metadata on creation
 * data-source/identitynow_identity, data-source/identitynow_workflow, data-source/identitynow_segment: fail when several objects match instead of picking the first one
+* resource/identitynow_access_profile: `segments` is a set, so the order returned by the API no longer shows a diff in the plan; existing state is read without migration, but references by index (`segments[0]`) must be replaced, for example with `tolist(...)`
 
 BUG FIXES:
 * provider: fix divide-by-zero crash and hanging requests when pool size or rate limit environment variables are set
