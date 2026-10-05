@@ -229,6 +229,33 @@ func TestRoleAccessRequestConfigReconcileOmitsDefaults(t *testing.T) {
 	}
 }
 
+func TestRoleAccessRequestConfigFormDefinitionRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	var diags diag.Diagnostics
+	prior := types.ListNull(roleAccessRequestConfigObjectType())
+	state := roleAccessRequestConfigReconcile(ctx, prior, &RoleAccessRequestConfig{FormDefinitionId: "form-1"}, &diags)
+	if state.IsNull() || len(state.Elements()) != 1 {
+		t.Fatalf("expected config with only a form definition to be kept, got %s", state)
+	}
+	got := roleAccessRequestConfigModelToAPI(ctx, state, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if got.FormDefinitionId != "form-1" {
+		t.Fatalf("expected form definition form-1, got %q", got.FormDefinitionId)
+	}
+
+	state = roleAccessRequestConfigAPIToState(ctx, &RoleAccessRequestConfig{CommentsRequired: boolPtr(true)}, &diags)
+	var models []RoleAccessRequestConfigModel
+	diags.Append(state.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if !models[0].FormDefinitionID.IsNull() {
+		t.Fatalf("expected unset form definition to be null, got %s", models[0].FormDefinitionID)
+	}
+}
+
 func TestEqualIgnoringUnknown(t *testing.T) {
 	ctx := context.Background()
 	var diags diag.Diagnostics

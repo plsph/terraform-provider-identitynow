@@ -55,12 +55,13 @@ type EntitlementRefModel struct {
 }
 
 type AccessRequestConfigModel struct {
-	CommentsRequired           types.Bool `tfsdk:"comments_required"`
-	DenialCommentsRequired     types.Bool `tfsdk:"denial_comments_required"`
-	ReauthorizationRequired    types.Bool `tfsdk:"reauthorization_required"`
-	RequireEndDate             types.Bool `tfsdk:"require_end_date"`
-	ApprovalSchemes            types.List `tfsdk:"approval_schemes"`
-	MaxPermittedAccessDuration types.List `tfsdk:"max_permitted_access_duration"`
+	CommentsRequired           types.Bool   `tfsdk:"comments_required"`
+	DenialCommentsRequired     types.Bool   `tfsdk:"denial_comments_required"`
+	ReauthorizationRequired    types.Bool   `tfsdk:"reauthorization_required"`
+	RequireEndDate             types.Bool   `tfsdk:"require_end_date"`
+	FormDefinitionID           types.String `tfsdk:"form_definition_id"`
+	ApprovalSchemes            types.List   `tfsdk:"approval_schemes"`
+	MaxPermittedAccessDuration types.List   `tfsdk:"max_permitted_access_duration"`
 }
 
 type ApprovalSchemeModel struct {
@@ -230,6 +231,10 @@ func (r *AccessProfileResource) Schema(ctx context.Context, req resource.SchemaR
 							Computed:            true,
 							Default:             booldefault.StaticBool(false),
 							MarkdownDescription: "Indicates whether the requester must provide access end date",
+						},
+						"form_definition_id": schema.StringAttribute{
+							Optional:            true,
+							MarkdownDescription: "ID of the form definition presented to the requester during the access request",
 						},
 					},
 					Blocks: map[string]schema.Block{
@@ -499,6 +504,9 @@ func (r *AccessProfileResource) apiFromModel(ctx context.Context, data AccessPro
 			}
 			if !arc.RequireEndDate.IsNull() {
 				config.RequireEndDate = arc.RequireEndDate.ValueBool()
+			}
+			if !arc.FormDefinitionID.IsNull() && !arc.FormDefinitionID.IsUnknown() {
+				config.FormDefinitionId = arc.FormDefinitionID.ValueString()
 			}
 			if !arc.ApprovalSchemes.IsNull() && len(arc.ApprovalSchemes.Elements()) > 0 {
 				var schemes []ApprovalSchemeModel
@@ -930,6 +938,7 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 		"denial_comments_required":      types.BoolType,
 		"reauthorization_required":      types.BoolType,
 		"require_end_date":              types.BoolType,
+		"form_definition_id":            types.StringType,
 		"approval_schemes":              types.ListType{ElemType: approvalSchemeObjType},
 		"max_permitted_access_duration": types.ListType{ElemType: maxDurationObjType},
 	}}
@@ -973,6 +982,7 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 				DenialCommentsRequired:     types.BoolValue(arc.DenialCommentsRequired),
 				ReauthorizationRequired:    types.BoolValue(arc.ReauthorizationRequired),
 				RequireEndDate:             types.BoolValue(arc.RequireEndDate),
+				FormDefinitionID:           stringValueOrNull(arc.FormDefinitionId),
 				ApprovalSchemes:            approvalSchemesList,
 				MaxPermittedAccessDuration: maxDurationList,
 			},
@@ -1059,7 +1069,7 @@ func (r *AccessProfileResource) setStateFromAPI(ctx context.Context, data *Acces
 // accessRequestConfigIsDefault reports whether the API returned only default access request settings.
 func accessRequestConfigIsDefault(arc *AccessRequestConfigList) bool {
 	return !arc.CommentsRequired && !arc.DenialCommentsRequired && !arc.ReauthorizationRequired && !arc.RequireEndDate &&
-		len(arc.ApprovalSchemes) == 0 && arc.MaxPermittedAccessDuration == nil
+		len(arc.ApprovalSchemes) == 0 && arc.MaxPermittedAccessDuration == nil && arc.FormDefinitionId == ""
 }
 
 // provisioningCriteriaAPIToState maps up to three levels of provisioning criteria to state.

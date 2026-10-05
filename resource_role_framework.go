@@ -73,10 +73,11 @@ type AccessModelMetadataValueModel struct {
 }
 
 type RoleAccessRequestConfigModel struct {
-	CommentsRequired       types.Bool `tfsdk:"comments_required"`
-	DenialCommentsRequired types.Bool `tfsdk:"denial_comments_required"`
-	ApprovalSchemes        types.List `tfsdk:"approval_schemes"`
-	DimensionSchema        types.List `tfsdk:"dimension_schema"`
+	CommentsRequired       types.Bool   `tfsdk:"comments_required"`
+	DenialCommentsRequired types.Bool   `tfsdk:"denial_comments_required"`
+	FormDefinitionID       types.String `tfsdk:"form_definition_id"`
+	ApprovalSchemes        types.List   `tfsdk:"approval_schemes"`
+	DimensionSchema        types.List   `tfsdk:"dimension_schema"`
 }
 
 type RoleDimensionSchemaModel struct {
@@ -329,6 +330,10 @@ func (r *RoleResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 							MarkdownDescription: "Whether comments are required when denying access",
 							Optional:            true,
 							Computed:            true,
+						},
+						"form_definition_id": schema.StringAttribute{
+							MarkdownDescription: "ID of the form definition presented to the requester during the access request",
+							Optional:            true,
 						},
 					},
 					Blocks: map[string]schema.Block{
@@ -1518,6 +1523,9 @@ func roleAccessRequestConfigModelToAPI(ctx context.Context, configList types.Lis
 		v := m.DenialCommentsRequired.ValueBool()
 		config.DenialCommentsRequired = &v
 	}
+	if !m.FormDefinitionID.IsNull() && !m.FormDefinitionID.IsUnknown() {
+		config.FormDefinitionId = m.FormDefinitionID.ValueString()
+	}
 
 	if !m.ApprovalSchemes.IsNull() && len(m.ApprovalSchemes.Elements()) > 0 {
 		var schemes []ApprovalSchemeModel
@@ -1584,6 +1592,7 @@ func roleAccessRequestConfigAPIToState(ctx context.Context, config *RoleAccessRe
 
 	model.CommentsRequired = types.BoolValue(config.CommentsRequired != nil && *config.CommentsRequired)
 	model.DenialCommentsRequired = types.BoolValue(config.DenialCommentsRequired != nil && *config.DenialCommentsRequired)
+	model.FormDefinitionID = stringValueOrNull(config.FormDefinitionId)
 
 	approvalSchemeObjType := roleApprovalSchemeObjectType()
 	if len(config.ApprovalSchemes) > 0 {
@@ -1646,6 +1655,7 @@ func roleAccessRequestConfigObjectType() types.ObjectType {
 	return types.ObjectType{AttrTypes: map[string]attr.Type{
 		"comments_required":        types.BoolType,
 		"denial_comments_required": types.BoolType,
+		"form_definition_id":       types.StringType,
 		"approval_schemes":         types.ListType{ElemType: roleApprovalSchemeObjectType()},
 		"dimension_schema":         types.ListType{ElemType: roleDimensionSchemaObjectType()},
 	}}
@@ -1732,7 +1742,7 @@ func roleAccessRequestConfigIsDefault(config *RoleAccessRequestConfig) bool {
 	return config == nil ||
 		((config.CommentsRequired == nil || !*config.CommentsRequired) &&
 			(config.DenialCommentsRequired == nil || !*config.DenialCommentsRequired) &&
-			len(config.ApprovalSchemes) == 0 &&
+			len(config.ApprovalSchemes) == 0 && config.FormDefinitionId == "" &&
 			(config.DimensionSchema == nil || len(config.DimensionSchema.DimensionAttributes) == 0))
 }
 

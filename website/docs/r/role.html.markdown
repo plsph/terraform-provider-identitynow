@@ -389,6 +389,7 @@ An `access_request_config` block supports:
 
 * `comments_required` - (Optional) Whether comments are required when requesting access. If not set, the value returned by the API is used.
 * `denial_comments_required` - (Optional) Whether comments are required when denying access. If not set, the value returned by the API is used.
+* `form_definition_id` - (Optional) ID of the form definition presented to the requester during the access request.
 * `approval_schemes` - (Optional) One or more `approval_schemes` blocks as defined below.
 * `dimension_schema` - (Optional) A `dimension_schema` block for dimension-specific approval configuration.
 

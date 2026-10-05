@@ -178,6 +178,7 @@ As per developer guide: (https://developer.sailpoint.com/docs/api/v3/create-acce
   * `denial_comments_required` - (Optional) Whether an approver must provide comments when denying the request. Defaults to `false`.
   * `reauthorization_required` - (Optional) Whether reauthorization is required for the request. Defaults to `false`.
   * `require_end_date` - (Optional) Whether the requester must provide an access end date. Defaults to `false`.
+  * `form_definition_id` - (Optional) ID of the form definition presented to the requester during the access request. The v2026 API documents this field only for roles, so it relies on the tenant accepting it for access profiles.
   * `approval_schemes` - (Optional) Approval steps of the request, in order. Can be repeated. Contains:
     * `approver_type` - (Required) Type of approver, e.g. `APP_OWNER`, `OWNER`, `SOURCE_OWNER`, `MANAGER` or `GOVERNANCE_GROUP`.
     * `approver_id` - (Optional) ID of the approver, required when `approver_type` is `GOVERNANCE_GROUP`. Defaults to an empty string.

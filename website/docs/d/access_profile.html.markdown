@@ -61,6 +61,7 @@ In addition to the Arguments listed above - the following Attributes are exporte
   * `denial_comments_required` - Whether an approver must provide comments when denying the request.
   * `reauthorization_required` - Whether reauthorization is required.
   * `require_end_date` - Whether the requester must provide an access end date.
+  * `form_definition_id` - ID of the form definition presented to the requester during the access request.
 
 * `revocation_request_config` - List with the revocation request configuration. Each element contains:
   * `approval_schemes` - List of the approver types of the revocation approval steps, e.g. `["MANAGER"]`.

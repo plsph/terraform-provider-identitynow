@@ -90,6 +90,46 @@ func TestAccessProfileStateOmitsEmptyRevocationConfig(t *testing.T) {
 	}
 }
 
+func TestAccessProfileAccessRequestConfigFormDefinitionRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	data := AccessProfileResourceModel{
+		AccessRequestConfig: types.ListNull(types.ObjectType{}),
+		Segments:            types.ListNull(types.StringType),
+	}
+	var diags diag.Diagnostics
+	r := &AccessProfileResource{}
+	r.setStateFromAPI(ctx, &data, &AccessProfile{
+		Name:                "Example",
+		AccessRequestConfig: &AccessRequestConfigList{FormDefinitionId: "form-1"},
+	}, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if len(data.AccessRequestConfig.Elements()) != 1 {
+		t.Fatalf("expected config with only a form definition to be kept, got %s", data.AccessRequestConfig)
+	}
+	ap := r.apiFromModel(ctx, data, &diags)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if ap.AccessRequestConfig == nil || ap.AccessRequestConfig.FormDefinitionId != "form-1" {
+		t.Fatalf("expected form definition form-1, got %+v", ap.AccessRequestConfig)
+	}
+
+	r.setStateFromAPI(ctx, &data, &AccessProfile{
+		Name:                "Example",
+		AccessRequestConfig: &AccessRequestConfigList{CommentsRequired: true},
+	}, &diags)
+	var models []AccessRequestConfigModel
+	diags.Append(data.AccessRequestConfig.ElementsAs(ctx, &models, false)...)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if !models[0].FormDefinitionID.IsNull() {
+		t.Fatalf("expected unset form definition to be null, got %s", models[0].FormDefinitionID)
+	}
+}
+
 func boolPtr(v bool) *bool { return &v }
 
 func TestAccessProfilePatchesOnlyChangedFields(t *testing.T) {

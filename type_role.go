@@ -27,6 +27,7 @@ type RoleAccessRequestConfig struct {
 	DenialCommentsRequired *bool                `json:"denialCommentsRequired,omitempty"`
 	ApprovalSchemes        []*ApprovalSchemes   `json:"approvalSchemes,omitempty"`
 	DimensionSchema        *RoleDimensionSchema `json:"dimensionSchema,omitempty"`
+	FormDefinitionId       string               `json:"formDefinitionId,omitempty"`
 }
 
 type RoleDimensionSchema struct {

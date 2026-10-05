@@ -96,6 +96,7 @@ func (d *AccessProfileDataSource) Schema(ctx context.Context, req datasource.Sch
 						"denial_comments_required": schema.BoolAttribute{Computed: true},
 						"reauthorization_required": schema.BoolAttribute{Computed: true},
 						"require_end_date":         schema.BoolAttribute{Computed: true},
+						"form_definition_id":       schema.StringAttribute{Computed: true},
 					},
 				},
 			},
@@ -304,6 +305,7 @@ func (d *AccessProfileDataSource) Read(ctx context.Context, req datasource.ReadR
 		"denial_comments_required": types.BoolType,
 		"reauthorization_required": types.BoolType,
 		"require_end_date":         types.BoolType,
+		"form_definition_id":       types.StringType,
 	}}
 	data.AccessRequestConfig = types.ListNull(requestConfigType)
 	if ap.AccessRequestConfig != nil {
@@ -312,6 +314,7 @@ func (d *AccessProfileDataSource) Read(ctx context.Context, req datasource.ReadR
 			"denial_comments_required": types.BoolValue(ap.AccessRequestConfig.DenialCommentsRequired),
 			"reauthorization_required": types.BoolValue(ap.AccessRequestConfig.ReauthorizationRequired),
 			"require_end_date":         types.BoolValue(ap.AccessRequestConfig.RequireEndDate),
+			"form_definition_id":       stringValueOrNull(ap.AccessRequestConfig.FormDefinitionId),
 		})
 		if d.HasError() {
 			resp.Diagnostics.Append(d...)

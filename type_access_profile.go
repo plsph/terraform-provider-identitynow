@@ -26,6 +26,7 @@ type AccessRequestConfigList struct {
 	ReauthorizationRequired    bool                        `json:"reauthorizationRequired,omitempty"`
 	RequireEndDate             bool                        `json:"requireEndDate,omitempty"`
 	MaxPermittedAccessDuration *MaxPermittedAccessDuration `json:"maxPermittedAccessDuration,omitempty"`
+	FormDefinitionId           string                      `json:"formDefinitionId,omitempty"`
 }
 
 type AccessProfileRevocationRequestConfig struct {
