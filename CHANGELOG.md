@@ -12,6 +12,7 @@ FEATURES:
   * tenant settings (one resource per tenant, destroy only removes it from state): access request, org, lockout, session, service provider, network, role propagation, work reassignment, MFA Duo and Okta, campaign reports, recommendations, AI access request recommendations, service desk status check, UI metadata, public identities; tenant, org config and valid time zones data sources
 * resource/identitynow_password_policy, resource/identitynow_account_schema, resource/identitynow_schedule_account_aggregation: import support (`<source_id>/<schema_id>` for account schemas)
 * provider: retries on 429 (and 502/503/504 for GET, PUT and DELETE requests) with Retry-After support, token refresh on 401
+* resource/identitynow_access_profile, resource/identitynow_role, data-source/identitynow_access_profile: `form_definition_id` in `access_request_config`
 * data sources: fill owner, source, cluster, access profiles, metadata, provisioning criteria and identity attributes that were declared but always empty
 
 BREAKING CHANGES AND BEHAVIOUR CHANGES:
