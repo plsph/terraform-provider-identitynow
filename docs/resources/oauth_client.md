@@ -13,7 +13,7 @@ Manages an OAuth (API) client, for example the credentials used by a CI pipeline
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_oauth_client" "ci" {
   name                          = "CI pipeline"
   description                   = "Used by the CI pipeline to deploy configuration"

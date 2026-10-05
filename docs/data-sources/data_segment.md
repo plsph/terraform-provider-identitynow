@@ -11,7 +11,7 @@ Use this data source to look up a data access segment by ID. It uses an experime
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_data_segment" "emea" {
   id = "ef38f943-47e9-4562-b5bb-8424a56397d8"
 }

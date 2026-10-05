@@ -13,7 +13,7 @@ Updates replace the whole integration (PUT) with the configured values.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_identity" "john_doe" {
   alias = "A12BCDE3F"
 }

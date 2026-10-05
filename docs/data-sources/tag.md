@@ -11,7 +11,7 @@ Use this data source to look up a tag by ID or name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_tag" "pci" {
   name = "PCI"
 }

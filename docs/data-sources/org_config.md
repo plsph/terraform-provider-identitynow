@@ -11,7 +11,7 @@ Use this data source to read the tenant-wide organization configuration, e.g. th
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_org_config" "current" {}
 
 output "org_time_zone" {

@@ -11,7 +11,7 @@ Use this data source to look up a transform by ID or name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_transform" "country_lookup" {
   name = "Country Lookup"
 }

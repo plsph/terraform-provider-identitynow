@@ -11,7 +11,7 @@ Manages an IdentityNow custom form definition.
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_form_definition" "access_request" {
   name        = "Access Request Justification"
   description = "Collects a business justification for an access request."

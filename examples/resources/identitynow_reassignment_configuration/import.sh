@@ -1,0 +1,1 @@
+terraform import identitynow_reassignment_configuration.example <identity-id>/ACCESS_REQUESTS

@@ -1,0 +1,1 @@
+terraform import identitynow_recommendations_config.this recommendations-config

@@ -1,0 +1,2 @@
+terraform import identitynow_custom_password_instruction.example reset-password:enter-password
+terraform import identitynow_custom_password_instruction.example reset-password:enter-password/de-DE

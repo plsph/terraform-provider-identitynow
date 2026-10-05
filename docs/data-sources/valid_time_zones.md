@@ -11,7 +11,7 @@ Use this data source to list the time zones that can be set as `time_zone` of th
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_valid_time_zones" "all" {}
 
 resource "identitynow_org_config" "this" {

@@ -13,7 +13,7 @@ Use this data source to look up an authentication profile by ID or name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_auth_profile" "default" {
   name = "Default"
 }

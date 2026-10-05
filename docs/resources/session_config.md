@@ -15,7 +15,7 @@ Only the settings present in the configuration are managed. Settings that are no
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_session_config" "this" {
   max_idle_time    = 15
   max_session_time = 480

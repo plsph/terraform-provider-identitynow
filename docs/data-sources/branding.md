@@ -11,7 +11,7 @@ Use this data source to look up a branding item by name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_branding" "default" {
   name = "default"
 }

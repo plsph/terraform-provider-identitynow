@@ -1,0 +1,1 @@
+terraform import identitynow_campaign_reports_config.this campaign-reports-config

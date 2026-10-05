@@ -1,0 +1,1 @@
+terraform import identitynow_ai_access_request_recommendations_config.this ai-access-request-recommendations-config

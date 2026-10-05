@@ -11,7 +11,7 @@ Use this data source to look up a parameter in parameter storage by ID or name. 
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_parameter" "db_credential" {
   name = "Database service account"
 }

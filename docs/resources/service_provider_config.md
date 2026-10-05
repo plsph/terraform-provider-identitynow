@@ -17,7 +17,7 @@ The identity provider settings (`idp_*`) belong to the IdP element of the SAML c
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_service_provider_config" "this" {
   enabled                = true
   bypass_idp             = false

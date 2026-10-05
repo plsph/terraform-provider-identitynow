@@ -11,7 +11,7 @@ Use this data source to look up a separation of duties (SOD) policy by ID or nam
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_sod_policy" "payables_receivables" {
   name = "Payables vs Receivables"
 }

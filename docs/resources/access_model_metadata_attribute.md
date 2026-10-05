@@ -13,7 +13,7 @@ Manages an access model metadata attribute and its values. Metadata attribute va
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_access_model_metadata_attribute" "data_sensitivity" {
   name         = "Data Sensitivity"
   description  = "Sensitivity of the data the access grants"

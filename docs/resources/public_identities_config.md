@@ -13,7 +13,7 @@ There is one configuration per tenant. Creating the resource replaces the curren
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_public_identities_config" "this" {
   attribute {
     key  = "country"

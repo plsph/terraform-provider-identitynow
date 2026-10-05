@@ -11,7 +11,7 @@ Use this data source to look up the provisioning policy of a source by usage typ
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_source_provisioning_policy" "create" {
   source_id  = "2c9180835d191a86015d28455b4a2329"
   usage_type = "CREATE"

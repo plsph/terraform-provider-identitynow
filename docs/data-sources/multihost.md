@@ -11,7 +11,7 @@ Use this data source to look up a Multi-Host Integration by ID.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_multihost" "sql_servers" {
   id = "2c91808568c529c60168cca6f90c1324"
 }

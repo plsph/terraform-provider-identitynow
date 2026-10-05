@@ -13,7 +13,7 @@ Updates replace the whole schedule (PUT) with the configured values.
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_das_task_schedule" "file_share_crawl" {
   task_type_name = "Crawl"
   schedule_type  = "Weekly"

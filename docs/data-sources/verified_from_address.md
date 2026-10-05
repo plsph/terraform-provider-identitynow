@@ -11,7 +11,7 @@ Use this data source to look up a sender ("From:") email address and its verific
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_verified_from_address" "no_reply" {
   email = "no-reply@example.com"
 }

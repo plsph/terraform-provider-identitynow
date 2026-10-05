@@ -11,7 +11,7 @@ Manages a non-employee source of Non-Employee Lifecycle Management. Creating it 
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_non_employee_source" "contractors" {
   name                 = "Contractors"
   description          = "External contractors"

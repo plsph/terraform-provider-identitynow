@@ -1,0 +1,1 @@
+terraform import identitynow_branding.example corporate

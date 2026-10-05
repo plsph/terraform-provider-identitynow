@@ -19,7 +19,7 @@ There is one set of instructions per page and locale, identified by the page ID 
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_custom_password_instruction" "reset_password" {
   page_id      = "reset-password:enter-password"
   page_content = "See the company password policy <a href=\"https://intranet.example.com/passwords\" target=\"_blank\">here</a>."

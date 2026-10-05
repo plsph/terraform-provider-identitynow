@@ -1,0 +1,1 @@
+terraform import identitynow_service_provider_config.this service-provider-config

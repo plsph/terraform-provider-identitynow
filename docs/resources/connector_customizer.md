@@ -11,7 +11,7 @@ Manages a connector customizer. The name is the only writable field; changes are
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_connector_customizer" "custom" {
   name = "My Connector Customizer"
 }

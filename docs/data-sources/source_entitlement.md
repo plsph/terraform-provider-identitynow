@@ -13,7 +13,7 @@ All entitlements of the source with the given name are returned in the `entitlem
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_source" "active_directory" {
   name = "Active Directory"
 }

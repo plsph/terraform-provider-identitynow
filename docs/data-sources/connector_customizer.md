@@ -11,7 +11,7 @@ Use this data source to look up a connector customizer by ID or name. Lookups by
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_connector_customizer" "custom" {
   name = "My Connector Customizer"
 }

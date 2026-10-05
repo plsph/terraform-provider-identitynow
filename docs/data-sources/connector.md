@@ -11,7 +11,7 @@ Use this data source to look up a connector by script name. It works for built-i
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_connector" "active_directory" {
   script_name = "active-directory"
 }

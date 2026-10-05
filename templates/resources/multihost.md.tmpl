@@ -1,0 +1,52 @@
+---
+subcategory: "Multi-Host Integration"
+page_title: "IdentityNow: identitynow_multihost"
+description: |-
+  Manages an IdentityNow Multi-Host Integration.
+---
+
+# identitynow_multihost
+
+Manages a Multi-Host Integration, which holds sources of the same type, e.g. many Microsoft SQL Server databases. A token with the Org Admin or Multi-Host Admin authority is required. Uploading connector files and creating the sources of the integration are not supported by this resource.
+
+Updates use JSON Patch. The API only supports adding and replacing values, so:
+
+* removing the `cluster` or `management_workgroup` block sends a replace with a null value,
+* connector attributes removed from `connector_attributes_json` are left unchanged in IdentityNow (the provider shows a warning), also inside nested objects,
+* only changed connector attributes are sent; inside a nested object that already exists in IdentityNow, such as `multiHostAttributes`, only the changed values are sent, so values that are not configured (e.g. `connector_files`) are kept,
+* `max_sources_per_agg_group` and `max_allowed_sources` are only managed while they are set.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+## Arguments Reference
+
+* `name` - (Required) Name of the Multi-Host Integration.
+* `description` - (Required) Description of the Multi-Host Integration.
+* `connector` - (Required) Connector script name, e.g. `multihost-microsoft-sql-server`. Changing this forces a new Multi-Host Integration to be created, which also deletes its sources.
+* `owner` - (Required) Identity that owns the Multi-Host Integration. Exactly one block is required:
+  * `id` - (Required) Identity ID.
+  * `name` - Identity name, resolved by IdentityNow.
+* `cluster` - (Optional) Virtual appliance cluster of the Multi-Host Integration. At most one block:
+  * `id` - (Required) Cluster ID.
+  * `name` - Cluster name, resolved by IdentityNow.
+* `management_workgroup` - (Optional) Governance group that manages the Multi-Host Integration. At most one block:
+  * `id` - (Required) Governance group ID.
+  * `name` - Governance group name, resolved by IdentityNow.
+* `connector_attributes_json` - (Optional) Connector attributes as a JSON object, e.g. `multiHostAttributes` with `authType`, `user` and `password`. Use `jsonencode()` for convenience. This value is sensitive, since it may contain credentials. Only the configured keys are managed and compared, also inside nested objects such as `multiHostAttributes`: attributes added by IdentityNow are ignored, and configured values that the API does not return, or returns masked or encrypted, keep the configured value. Use `max_sources_per_agg_group` and `max_allowed_sources` instead of the `maxSourcesPerAggGroup` and `maxAllowedSources` keys. After import the value is null until it is configured.
+* `max_sources_per_agg_group` - (Optional) Maximum number of sources per aggregation group (connector attribute `maxSourcesPerAggGroup`). When not set, the value is not managed.
+* `max_allowed_sources` - (Optional) Maximum number of sources in the Multi-Host Integration (connector attribute `maxAllowedSources`). When not set, the value is not managed.
+
+## Attributes Reference
+
+* `id` - Multi-Host Integration ID.
+* `type` - Type of system managed, e.g. `Multi-Host - Microsoft SQL Server`.
+* `created` - Creation date.
+* `modified` - Last modification date.
+
+## Import
+
+Multi-Host Integrations can be imported using their ID:
+
+{{ codefile "shell" .ImportFile }}

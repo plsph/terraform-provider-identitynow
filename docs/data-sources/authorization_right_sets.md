@@ -13,7 +13,7 @@ Use this data source to list the right sets that can be assigned to [identitynow
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_authorization_right_sets" "identity" {
   category = "identity"
 }

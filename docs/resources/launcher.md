@@ -11,7 +11,7 @@ Manages a launcher, which lets users start an interactive process such as a work
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_launcher" "onboarding" {
   name        = "Start onboarding"
   description = "Starts the onboarding workflow"

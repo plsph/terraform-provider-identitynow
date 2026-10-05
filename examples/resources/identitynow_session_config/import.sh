@@ -1,0 +1,1 @@
+terraform import identitynow_session_config.this session-config

@@ -11,7 +11,7 @@ Use this data source to look up a managed client (virtual appliance or connector
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_managed_client" "va_1" {
   id = "<MANAGED_CLIENT_ID>"
 }

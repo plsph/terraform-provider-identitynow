@@ -17,7 +17,7 @@ The lists are compared as sets on refresh, so a different order returned by the 
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_network_config" "this" {
   range       = ["10.0.0.0/8", "192.168.1.10"]
   geolocation = ["PL", "DE"]

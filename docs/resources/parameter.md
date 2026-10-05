@@ -13,7 +13,7 @@ Manages a parameter in parameter storage, for example a credential that connecto
 
 ## Example Usage
 
-```hcl
+```terraform
 variable "db_password_jwe" {
   description = "Private fields of the database credential, JWE encrypted."
   type        = string

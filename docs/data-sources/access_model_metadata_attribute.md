@@ -11,7 +11,7 @@ Use this data source to look up an access model metadata attribute and its value
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_access_model_metadata_attribute" "privacy" {
   key = "iscPrivacy"
 }

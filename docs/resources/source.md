@@ -15,7 +15,7 @@ The resource manages the basic settings of the source: name, description, connec
 
 ### Source with a Virtual Appliance Cluster
 
-```hcl
+```terraform
 resource "identitynow_source" "active_directory" {
   name             = "Active Directory"
   description      = "The Active Directory connector created by terraform"
@@ -39,7 +39,7 @@ resource "identitynow_source" "active_directory" {
 
 ### Direct Connect Source
 
-```hcl
+```terraform
 data "identitynow_identity" "owner" {
   alias = "john.doe"
 }

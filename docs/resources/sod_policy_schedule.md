@@ -11,7 +11,7 @@ Manages the schedule on which the violation report of a separation of duties (SO
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_sod_policy_schedule" "weekly" {
   policy_id           = "0f11f2a4-7c94-4bf3-a2bd-742580fe3bde"
   name                = "Weekly SOD report"

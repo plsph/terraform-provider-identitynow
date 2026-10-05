@@ -13,7 +13,7 @@ The list of members is authoritative: members added to the governance group outs
 
 ## Example Usage
 
-```hcl
+```terraform
 locals {
   owner_email   = "jane.doe@example.com"
   member_emails = ["john.doe@example.com", "mary.major@example.com"]

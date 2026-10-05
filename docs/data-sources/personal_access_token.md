@@ -11,7 +11,7 @@ Use this data source to look up a personal access token by name. The token secre
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_personal_access_token" "reporting" {
   name = "reporting"
 }

@@ -11,7 +11,7 @@ Use this data source to look up a Data Access Security application by ID.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_das_application" "file_share" {
   id = "42"
 }

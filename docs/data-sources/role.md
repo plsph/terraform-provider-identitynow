@@ -11,7 +11,7 @@ Use this data source to access information about an existing Role.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_role" "example" {
   id = "2c91808a7813090a017813b6301f1234"
 }

@@ -15,7 +15,7 @@ The visibility criteria can be configured either with nested `visibility_criteri
 
 ### Visibility Criteria as Blocks
 
-```hcl
+```terraform
 resource "identitynow_segment" "austin" {
   name        = "Austin employees"
   description = "Employees whose location is Austin"
@@ -43,7 +43,7 @@ resource "identitynow_segment" "austin" {
 
 ### Nested Visibility Criteria
 
-```hcl
+```terraform
 resource "identitynow_segment" "austin_engineering" {
   name   = "Austin engineering"
   active = true
@@ -82,7 +82,7 @@ resource "identitynow_segment" "austin_engineering" {
 
 ### Visibility Criteria as JSON
 
-```hcl
+```terraform
 resource "identitynow_segment" "austin_json" {
   name   = "Austin employees (JSON)"
   active = true

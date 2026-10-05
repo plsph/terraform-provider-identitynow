@@ -11,7 +11,7 @@ Use this data source to access information about an existing Governance Group.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_governance_group" "example" {
   name = "Access Approvers"
 }

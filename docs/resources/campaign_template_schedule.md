@@ -11,7 +11,7 @@ Manages the schedule that generates campaigns from a certification campaign temp
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_campaign_template" "quarterly_managers" {
   name        = "Quarterly manager certification"
   description = "Managers review the access of their reports every quarter."

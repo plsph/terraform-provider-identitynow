@@ -11,7 +11,7 @@ Manages a tag. Tags are assigned to objects with [identitynow_tagged_object](tag
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_tag" "pci" {
   name = "PCI"
 }

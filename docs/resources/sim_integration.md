@@ -13,7 +13,7 @@ The resource uses an experimental API; the provider sends the required `X-SailPo
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_sim_integration" "servicenow_sim" {
   name        = "ServiceNow SIM"
   description = "Service integration module for ServiceNow"

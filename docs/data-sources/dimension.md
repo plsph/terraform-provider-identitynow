@@ -11,7 +11,7 @@ Use this data source to access information about an existing Dimension. A dimens
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_dimension" "example" {
   id      = "2c91808a7813090a017813b6301f1234"
   role_id = "2c91808a7813090a017813b6301fabcd"

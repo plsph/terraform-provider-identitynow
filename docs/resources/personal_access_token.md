@@ -13,7 +13,7 @@ Manages a personal access token (PAT). The token is owned by the identity the pr
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_personal_access_token" "reporting" {
   name                          = "reporting"
   scope                         = ["sp:scopes:all"]

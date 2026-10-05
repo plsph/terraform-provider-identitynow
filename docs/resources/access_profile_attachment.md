@@ -15,7 +15,7 @@ An access profile attached to a source app can't be deleted, it must be detached
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_source_app" "example" {
   name        = "Active Directory Developers"
   description = "Application for requesting developer access"

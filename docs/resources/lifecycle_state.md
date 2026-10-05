@@ -11,7 +11,7 @@ Manages a lifecycle state of an identity profile. Lifecycle states control the a
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_lifecycle_state" "inactive" {
   identity_profile_id = "2b838de9-db9b-abcf-e646-d4f274ad4238"
   name                = "Inactive"

@@ -1,0 +1,32 @@
+---
+subcategory: "Authorization"
+page_title: "IdentityNow: Data Source: identitynow_authorization_right_sets"
+description: |-
+  Lists the IdentityNow right sets that can be assigned to custom user levels.
+---
+
+# Data Source: identitynow_authorization_right_sets
+
+Use this data source to list the right sets that can be assigned to [identitynow_custom_user_level](../resources/custom_user_level). The hierarchy is flattened: each right set is followed by its children.
+
+~> **Note:** This data source uses an experimental API that may change without notice.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+## Arguments Reference
+
+* `category` - (Optional) Only return right sets of this category, e.g. `identity`.
+
+## Attributes Reference
+
+* `right_sets` - Right sets. Each item contains:
+  * `id` - Right set ID, used in `right_sets` of `identitynow_custom_user_level`.
+  * `name` - Right set name.
+  * `description` - Right set description.
+  * `category` - Right set category.
+  * `parent_id` - ID of the parent right set, null for top-level right sets.
+  * `ancestor_id` - ID of the top-level ancestor right set.
+  * `depth` - Depth in the hierarchy, 0 for top-level right sets.
+  * `children_ids` - IDs of the child right sets.

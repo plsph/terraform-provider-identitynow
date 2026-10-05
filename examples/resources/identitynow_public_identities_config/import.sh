@@ -1,0 +1,1 @@
+terraform import identitynow_public_identities_config.this public-identities-config

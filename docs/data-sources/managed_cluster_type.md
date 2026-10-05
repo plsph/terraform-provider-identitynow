@@ -11,7 +11,7 @@ Use this data source to look up a managed cluster type by ID.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_managed_cluster_type" "custom" {
   id = "<CLUSTER_TYPE_ID>"
 }

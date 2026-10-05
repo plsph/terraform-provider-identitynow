@@ -11,7 +11,7 @@ Manages a certification campaign template. Campaigns can be generated from the t
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_campaign_template" "quarterly_managers" {
   name              = "Quarterly manager certification"
   description       = "Managers review the access of their reports every quarter."

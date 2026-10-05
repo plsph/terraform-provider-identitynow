@@ -1,0 +1,40 @@
+---
+subcategory: "Work Reassignment"
+page_title: "IdentityNow: identitynow_reassignment_configuration"
+description: |-
+  Manages an IdentityNow work reassignment configuration.
+---
+
+# identitynow_reassignment_configuration
+
+Manages the reassignment of one work type of an identity to another identity, e.g. to forward access request approvals during an absence. Each resource manages one work type (`config_type`) of one identity; use several resources to reassign several work types.
+
+~> **Note:** This resource uses an experimental API (`X-SailPoint-Experimental` header), which may change without notice.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+## Arguments Reference
+
+* `identity_id` - (Required) ID of the identity whose work is reassigned. Changing this forces a new reassignment to be created.
+* `config_type` - (Required) Work type to reassign: `ACCESS_REQUESTS`, `CERTIFICATIONS`, `MANUAL_TASKS` or `GENERIC_APPROVALS`. Changing this forces a new reassignment to be created.
+* `reassigned_to_id` - (Required) ID of the identity that receives the work items.
+* `start_date` - (Optional) RFC 3339 date-time from which work items are reassigned. When not set, the API default is used and kept.
+* `end_date` - (Optional) RFC 3339 date-time at which the reassignment ends. When not set, the reassignment is permanent.
+
+Dates that denote the same instant in a different format, e.g. with milliseconds or another time zone offset, do not produce a diff.
+
+Changes of `reassigned_to_id`, `start_date` and `end_date` are applied with `PUT /reassignment-configurations/{identityId}` for the configured work type.
+
+## Attributes Reference
+
+* `id` - Resource ID in the form `<identity_id>/<config_type>`.
+* `created` - Creation date.
+* `modified` - Last modification date.
+
+## Import
+
+Reassignment configurations can be imported using the identity ID and the work type separated by `/`:
+
+{{ codefile "shell" .ImportFile }}

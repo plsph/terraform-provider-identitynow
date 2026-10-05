@@ -15,7 +15,7 @@ All arguments except `role_id` can be updated in place. Removing `description`, 
 
 ### Dimension with Single Value Criteria
 
-```hcl
+```terraform
 resource "identitynow_role" "example" {
   name        = "Sales Role"
   description = "Dimensional role for the sales department"
@@ -63,7 +63,7 @@ resource "identitynow_dimension" "example" {
 
 ### Dimension with Multi-Value Criteria
 
-```hcl
+```terraform
 resource "identitynow_dimension" "multivalue" {
   role_id     = "2c91808a7813090a017813b6301fabcd"
   name        = "Multi-Value Dimension"

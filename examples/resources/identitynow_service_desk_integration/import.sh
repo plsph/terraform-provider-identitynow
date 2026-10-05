@@ -1,0 +1,1 @@
+terraform import identitynow_service_desk_integration.example <integration-id>

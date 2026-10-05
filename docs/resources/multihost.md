@@ -18,7 +18,7 @@ Updates use JSON Patch. The API only supports adding and replacing values, so:
 
 ## Example Usage
 
-```hcl
+```terraform
 variable "sql_server_password" {
   type      = string
   sensitive = true

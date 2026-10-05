@@ -13,7 +13,7 @@ Segment changes are made to an unpublished version of the segment and only take 
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_data_segment" "emea" {
   name        = "EMEA"
   description = "Members only see EMEA entitlements."

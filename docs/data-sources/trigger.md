@@ -11,7 +11,7 @@ Use this data source to look up an event trigger available in the tenant by ID o
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_trigger" "identity_created" {
   id = "idn:identity-created"
 }

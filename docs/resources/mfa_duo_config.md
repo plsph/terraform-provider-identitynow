@@ -19,7 +19,7 @@ Because the update sends the whole configuration, a secret that the API does not
 
 ## Example Usage
 
-```hcl
+```terraform
 variable "duo_access_key" {
   description = "Duo access key."
   type        = string

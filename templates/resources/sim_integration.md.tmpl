@@ -1,0 +1,47 @@
+---
+subcategory: "SIM Integration"
+page_title: "IdentityNow: identitynow_sim_integration"
+description: |-
+  Manages an IdentityNow SIM integration.
+---
+
+# identitynow_sim_integration
+
+Manages a service integration module (SIM) integration. A SIM integration creates service desk tickets, e.g. ServiceNow service requests, for the provisioning requests of its sources and maps the ticket status back to the provisioning result.
+
+The resource uses an experimental API; the provider sends the required `X-SailPoint-Experimental` header. Updates replace the whole integration (PUT) with the configured values.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+## Arguments Reference
+
+* `name` - (Required) Name of the integration.
+* `description` - (Optional) Description of the integration.
+* `type` - (Optional) Integration type, e.g. `ServiceNow Service Desk`. When not set, the value returned by the API is stored.
+* `sources` - (Optional) IDs of the sources (managed resources) of the integration.
+* `cluster` - (Optional) ID of the virtual appliance cluster the integration uses.
+* `status_map_json` - (Optional) Mapping between ticket statuses and provisioning results as a JSON object, e.g. `closed_complete` to `Committed`. Compared semantically; keys the API adds do not cause a diff. When not set, the value returned by the API is ignored.
+* `request_json` - (Optional) Request data that customizes the description and body of the created tickets, as a JSON object. Compared semantically; keys the API adds do not cause a diff. When not set, the value returned by the API is ignored.
+* `attributes_json` - (Optional) Integration attributes as a JSON object, including the credentials used to connect to the service desk. The value is sensitive and is not shown in plans. Keys missing from the API response, such as passwords, and keys the API adds do not cause a diff, while changed values of the other keys are detected as drift. When not set, the value returned by the API is ignored.
+* `before_provisioning_rule` - (Optional) Before provisioning rule of the integration. At most one block:
+    * `id` - (Required) Rule ID.
+    * `type` - (Optional) Reference type. Defaults to `RULE`.
+    * `name` - (Optional) Rule name. Resolved by the API when not set.
+
+  A configured `type` and `name` are kept in state as long as the rule `id` does not change, so a name that differs from the display name returned by the API does not cause a diff.
+
+## Attributes Reference
+
+* `id` - SIM integration ID.
+* `created` - Creation date.
+* `modified` - Last modification date.
+
+## Import
+
+SIM integrations can be imported using their ID:
+
+{{ codefile "shell" .ImportFile }}
+
+After an import, `status_map_json`, `request_json` and `attributes_json` contain the values returned by the API (without secrets). Configure the values you want to keep: updates replace the whole integration (PUT), so an attribute that is not configured is not sent.

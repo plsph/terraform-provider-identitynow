@@ -15,7 +15,7 @@ All arguments, including `name`, can be updated in place. Removing `description`
 
 ### Basic Role
 
-```hcl
+```terraform
 resource "identitynow_role" "example" {
   name        = "Example Role"
   description = "An example role"
@@ -39,7 +39,7 @@ resource "identitynow_role" "example" {
 
 ### Role with Entitlements and Dimensions
 
-```hcl
+```terraform
 resource "identitynow_role" "advanced" {
   name        = "Advanced Role"
   description = "A role with entitlements and dimensions"
@@ -64,7 +64,7 @@ resource "identitynow_role" "advanced" {
 
 ### Role with Access Model Metadata
 
-```hcl
+```terraform
 resource "identitynow_role" "with_metadata" {
   name        = "Metadata Role"
   description = "A role with access model metadata"
@@ -110,7 +110,7 @@ resource "identitynow_role" "with_metadata" {
 
 ### Role with Access Request Config
 
-```hcl
+```terraform
 resource "identitynow_role" "with_approval" {
   name        = "Approval Role"
   description = "A role with access request configuration"
@@ -148,7 +148,7 @@ resource "identitynow_role" "with_approval" {
 
 ### Dimensional Role with Dimension-Specific Approval Schemas
 
-```hcl
+```terraform
 resource "identitynow_role" "dimensional_approval" {
   name        = "Dimensional Approval Role"
   description = "A dimensional role with per-dimension approval schemas"
@@ -184,7 +184,7 @@ resource "identitynow_role" "dimensional_approval" {
 
 ### Role with Standard Membership Criteria
 
-```hcl
+```terraform
 resource "identitynow_role" "standard_membership" {
   name        = "Department Role"
   description = "Automatically assigned based on department"
@@ -221,7 +221,7 @@ resource "identitynow_role" "standard_membership" {
 
 ### Role with Compound Membership Criteria
 
-```hcl
+```terraform
 resource "identitynow_role" "compound_membership" {
   name        = "Compound Membership Role"
   description = "Assigned based on multiple criteria"
@@ -266,7 +266,7 @@ resource "identitynow_role" "compound_membership" {
 
 ### Role with Multi-Value Membership Criteria
 
-```hcl
+```terraform
 resource "identitynow_role" "multivalue_membership" {
   name        = "Multi-Value Membership Role"
   description = "Assigned based on multiple job codes"

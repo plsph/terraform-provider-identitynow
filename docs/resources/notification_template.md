@@ -15,7 +15,7 @@ A new custom template starts as a copy of the default template (`GET /notificati
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_notification_template" "work_item_summary" {
   key     = "cloud_manual_work_item_summary"
   medium  = "EMAIL"

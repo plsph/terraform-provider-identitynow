@@ -15,7 +15,7 @@ Only the settings present in the configuration are managed. Settings that are no
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_lockout_config" "this" {
   maximum_attempts = 5
   lockout_duration = 15

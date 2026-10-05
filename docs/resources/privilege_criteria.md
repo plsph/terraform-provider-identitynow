@@ -11,7 +11,7 @@ Manages a custom privilege criteria, which assigns a privilege level to the enti
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_privilege_criteria" "admins" {
   source_id       = "c42c45d8d7c04d2da64d215cd8c32f21"
   operator        = "AND"

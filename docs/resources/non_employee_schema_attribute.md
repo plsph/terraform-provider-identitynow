@@ -11,7 +11,7 @@ Manages a custom schema attribute of a non-employee source. Every non-employee s
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_non_employee_source" "contractors" {
   name        = "Contractors"
   description = "External contractors"

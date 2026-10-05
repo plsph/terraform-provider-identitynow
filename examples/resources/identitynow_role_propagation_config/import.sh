@@ -1,0 +1,1 @@
+terraform import identitynow_role_propagation_config.this role-propagation-config

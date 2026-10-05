@@ -13,7 +13,7 @@ Looking up by email address fails when several identities share the email addres
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_identity" "by_alias" {
   alias = "john.doe"
 }

@@ -17,7 +17,7 @@ Only the settings present in the configuration are managed. Settings that are no
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_access_request_config" "this" {
   request_on_behalf_of_employee_by_manager = true
   request_on_behalf_of_anyone_by_anyone    = false

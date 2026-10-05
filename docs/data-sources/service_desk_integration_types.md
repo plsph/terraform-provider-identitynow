@@ -11,7 +11,7 @@ Use this data source to list the supported service desk integration types, e.g. 
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_service_desk_integration_types" "all" {}
 
 output "service_desk_integration_types" {

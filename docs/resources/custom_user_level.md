@@ -15,7 +15,7 @@ A new user level is created in `DRAFT` status. Set `publish = true` to publish i
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_custom_user_level" "identity_managers" {
   name        = "Identity Managers"
   description = "Manage identities"

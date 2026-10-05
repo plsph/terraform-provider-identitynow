@@ -11,7 +11,7 @@ Use this data source to access information about an existing Access Profile.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_access_profile" "example" {
   name = "AD Developers"
 }

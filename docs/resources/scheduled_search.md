@@ -11,7 +11,7 @@ Manages a scheduled search, which runs a saved search on a schedule and emails t
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_saved_search" "disabled_accounts" {
   name    = "Identities with disabled accounts"
   indices = ["identities"]

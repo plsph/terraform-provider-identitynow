@@ -15,7 +15,7 @@ Only the settings present in the configuration are managed. Settings that are no
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_ai_access_request_recommendations_config" "this" {
   score_threshold           = 0.5
   restriction_attribute     = "location"

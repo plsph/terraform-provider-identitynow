@@ -13,7 +13,7 @@ Updates are sent as JSON Patch operations for the changed attributes only.
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_managed_cluster_type" "custom" {
   type                = "custom-cluster"
   pod                 = "<POD>"

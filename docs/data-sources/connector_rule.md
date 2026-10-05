@@ -11,7 +11,7 @@ Use this data source to look up a connector rule by ID or name. Lookups by name 
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_connector_rule" "before_create" {
   name = "AD Before Create"
 }

@@ -13,7 +13,7 @@ Manages a separation of duties (SOD) policy. A policy is either a `GENERAL` poli
 
 ### Conflicting access based policy
 
-```hcl
+```terraform
 resource "identitynow_sod_policy" "payables_receivables" {
   name                  = "Payables vs Receivables"
   description           = "Nobody may both create and approve payments."
@@ -56,7 +56,7 @@ resource "identitynow_sod_policy" "payables_receivables" {
 
 ### General policy
 
-```hcl
+```terraform
 resource "identitynow_sod_policy" "admins" {
   name         = "Privileged administrators"
   policy_query = "@access(name:\"Domain Admins\") AND @access(name:\"Security Auditors\")"

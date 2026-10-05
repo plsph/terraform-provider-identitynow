@@ -1,0 +1,1 @@
+terraform import identitynow_sdi_status_check_config.this sdi-status-check-config

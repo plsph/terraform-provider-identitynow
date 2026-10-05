@@ -11,7 +11,7 @@ Manages a transform. Transforms manipulate attribute values and are used in iden
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_transform" "country_lookup" {
   name = "Country Lookup"
   type = "lookup"

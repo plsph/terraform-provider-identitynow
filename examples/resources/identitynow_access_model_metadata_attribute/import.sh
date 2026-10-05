@@ -1,0 +1,1 @@
+terraform import identitynow_access_model_metadata_attribute.example <key>

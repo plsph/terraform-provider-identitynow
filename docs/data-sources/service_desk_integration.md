@@ -11,7 +11,7 @@ Use this data source to look up a service desk integration by ID or name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_service_desk_integration" "servicenow" {
   name = "ServiceNow"
 }

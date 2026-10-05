@@ -1,0 +1,1 @@
+terraform import identitynow_network_config.this network-config

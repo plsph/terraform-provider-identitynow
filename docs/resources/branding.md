@@ -15,7 +15,7 @@ The default branding item of the tenant is named `default` and already exists; m
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_branding" "corporate" {
   name                        = "corporate"
   product_name                = "Corporate Identity Portal"

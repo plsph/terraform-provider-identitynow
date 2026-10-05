@@ -1,0 +1,40 @@
+---
+subcategory: "Tenant Settings"
+page_title: "IdentityNow: identitynow_network_config"
+description: |-
+  Manages the IdentityNow network authentication restrictions.
+---
+
+# identitynow_network_config
+
+Manages the tenant-wide network restrictions of authentication: allowed or blocked IP ranges and countries.
+
+There is one network configuration per tenant. When the tenant has none yet, creating the resource creates it with the configured settings; otherwise the configured settings are applied to the existing configuration. There is no delete API: destroying the resource only removes it from Terraform state and leaves the settings unchanged in IdentityNow.
+
+Only the settings present in the configuration are managed. Settings that are not configured are never changed or reset; they show the current tenant value. Removing a setting from the configuration stops managing it and leaves its current value in place. Updates are sent as JSON Patch operations for the configured settings that changed.
+
+The lists are compared as sets on refresh, so a different order returned by the API does not show a diff. When the configuration no longer exists in IdentityNow, the resource is removed from state and created again on the next apply.
+
+## Example Usage
+
+{{ tffile .ExampleFile }}
+
+## Arguments Reference
+
+All arguments are optional; settings that are not configured keep their current value.
+
+* `range` - (Optional) IP addresses or subnets (CIDR), e.g. `10.0.0.0/8`.
+* `geolocation` - (Optional) Two-letter uppercase country codes, e.g. `PL`.
+* `whitelisted` - (Optional) Whether the IP ranges and countries are allowed (`true`) or blocked (`false`).
+
+## Attributes Reference
+
+In addition to the arguments, the following attributes are exported; arguments that are not configured show the current tenant value.
+
+* `id` - Always `network-config`.
+
+## Import
+
+The settings can be imported with any ID; the ID is always set to `network-config`:
+
+{{ codefile "shell" .ImportFile }}

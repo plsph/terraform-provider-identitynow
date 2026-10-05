@@ -19,7 +19,7 @@ Destroying the resource only removes it from the Terraform state. The schema and
 
 ### Manage schema settings only
 
-```hcl
+```terraform
 resource "identitynow_account_schema" "active_directory_account" {
   source_id          = "2c9180835d191a86015d28455b4a2329"
   schema_id          = "2c9180835d191a86015d28455b4a2330"
@@ -30,7 +30,7 @@ resource "identitynow_account_schema" "active_directory_account" {
 
 ### Manage the full list of attributes
 
-```hcl
+```terraform
 resource "identitynow_account_schema" "hr_account" {
   source_id          = "2c9180835d191a86015d28455b4a2329"
   schema_id          = "2c9180835d191a86015d28455b4a2331"

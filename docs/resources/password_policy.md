@@ -13,7 +13,7 @@ All numeric and boolean settings are optional. Settings that are not configured 
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_password_policy" "example" {
   name                    = "Primary Password Policy"
   description             = "Password policy for the Active Directory source"

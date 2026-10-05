@@ -11,7 +11,7 @@ Manages a subscription to an event trigger. The subscription defines where trigg
 
 ## Example Usage
 
-```hcl
+```terraform
 variable "webhook_token" {
   type      = string
   sensitive = true

@@ -13,7 +13,7 @@ All arguments can be updated in place, including `name`, the `source` together w
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_identity" "owner" {
   alias = "john.doe"
 }
@@ -106,7 +106,7 @@ resource "identitynow_access_profile" "developers" {
 
 ### Access Profile with Access Model Metadata
 
-```hcl
+```terraform
 resource "identitynow_access_profile" "with_metadata" {
   name        = "AD Operators"
   description = "Operator access in Active Directory"

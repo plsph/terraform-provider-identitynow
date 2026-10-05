@@ -1,0 +1,1 @@
+terraform import identitynow_lockout_config.this lockout-config

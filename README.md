@@ -154,8 +154,10 @@ The repository follows the layout of the [Terraform provider scaffolding](https:
 
 - `main.go` starts the provider server.
 - `internal/provider` contains the provider, the API client, and one `<name>_resource.go` or `<name>_data_source.go` file per resource and data source, with tests next to them.
-- `docs` contains the registry documentation: `index.md`, `resources/<name>.md` and `data-sources/<name>.md`.
-- `examples` contains an example Terraform configuration.
+- `templates` contains the documentation templates: `index.md.tmpl`, `resources/<name>.md.tmpl` and `data-sources/<name>.md.tmpl`.
+- `examples` contains the examples used in the documentation (`provider/provider.tf`, `resources/<type>/resource.tf` and `import.sh`, `data-sources/<type>/data-source.tf`) and a complete example configuration in `examples/complete`.
+- `docs` contains the registry documentation generated from `templates` and `examples`. Do not edit it directly.
+- `tools` contains the documentation tooling.
 
 Edit the Go files that make up the provider, and rebuild the provider.
 
@@ -165,6 +167,16 @@ Edit the Go files that make up the provider, and rebuild the provider.
 
 This script places the provider binary in an implied local mirror directory ($HOME/.terraform.d/plugins/). See build.sh
 for more comments about ensuring that Terraform uses the local mirror rather than searching the remote registry. 
+
+# Documentation
+
+The documentation in `docs` is generated with [tfplugindocs](https://github.com/hashicorp/terraform-plugin-docs). To change it, edit the templates in `templates` or the examples in `examples`, then run:
+
+```sh
+$ make generate
+```
+
+This formats the examples, renders the templates into `docs` and validates the result. It requires `terraform` on the `PATH`; if it is not found, tfplugindocs downloads it. A documentation template for a new resource or data source goes into `templates/resources/<name>.md.tmpl` or `templates/data-sources/<name>.md.tmpl`. Reference its example with `{{ tffile .ExampleFile }}` and its import command with `{{ codefile "shell" .ImportFile }}`. Without a template, tfplugindocs generates the page from the schema descriptions.
 
 # Testing the Provider
 

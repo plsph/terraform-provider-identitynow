@@ -15,7 +15,7 @@ The API creates the configuration asynchronously. After the create request, the 
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_search_attribute_config" "employee_number" {
   name         = "employeeNumber"
   display_name = "Employee Number"

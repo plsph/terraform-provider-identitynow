@@ -11,7 +11,7 @@ Use this data source to look up an identity attribute by its technical name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_identity_attribute" "department" {
   name = "department"
 }

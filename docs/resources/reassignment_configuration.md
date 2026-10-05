@@ -13,7 +13,7 @@ Manages the reassignment of one work type of an identity to another identity, e.
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_reassignment_configuration" "vacation_access_requests" {
   identity_id      = "2c9180867624cbd7017642d8c8c81f67"
   config_type      = "ACCESS_REQUESTS"

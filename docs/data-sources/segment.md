@@ -11,7 +11,7 @@ Use this data source to look up an existing IdentityNow segment by name. The loo
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_segment" "austin" {
   name = "Austin employees"
 }

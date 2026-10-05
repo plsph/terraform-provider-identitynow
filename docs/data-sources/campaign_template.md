@@ -11,7 +11,7 @@ Use this data source to look up a certification campaign template by ID or name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_campaign_template" "quarterly_managers" {
   name = "Quarterly manager certification"
 }

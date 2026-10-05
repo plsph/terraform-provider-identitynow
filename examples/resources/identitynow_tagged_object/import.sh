@@ -1,0 +1,1 @@
+terraform import identitynow_tagged_object.example ACCESS_PROFILE/2c91808568c529c60168cca6f90c1313

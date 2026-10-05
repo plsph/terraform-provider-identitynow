@@ -11,7 +11,7 @@ Use this data source to access information about an existing Source.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_source" "example" {
   name = "Active Directory"
 }

@@ -11,7 +11,7 @@ Use this data source to look up a managed cluster by ID or name, e.g. to referen
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_managed_cluster" "va_cluster" {
   name = "Primary VA Cluster"
 }

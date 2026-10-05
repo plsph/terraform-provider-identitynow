@@ -11,7 +11,7 @@ Use this data source to look up a privilege criteria by ID. Connector and single
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_privilege_criteria" "admins" {
   id = "2c9180867817ac4d017817c491119a20"
 }

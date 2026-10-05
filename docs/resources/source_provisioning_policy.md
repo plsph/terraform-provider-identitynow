@@ -13,7 +13,7 @@ Updates replace the whole policy, so the policy is fully managed by Terraform. I
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_source_provisioning_policy" "create" {
   source_id   = "2c9180835d191a86015d28455b4a2329"
   usage_type  = "CREATE"

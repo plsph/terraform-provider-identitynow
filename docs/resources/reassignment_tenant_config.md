@@ -15,7 +15,7 @@ Only the settings present in the configuration are managed. Settings that are no
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_reassignment_tenant_config" "this" {
   disabled = false
 }

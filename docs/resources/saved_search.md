@@ -11,7 +11,7 @@ Manages a saved search, which can be run on a schedule with `identitynow_schedul
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_saved_search" "disabled_accounts" {
   name        = "Identities with disabled accounts"
   description = "Identities that have at least one disabled account."

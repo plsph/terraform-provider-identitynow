@@ -13,7 +13,7 @@ Use this data source to read the custom password instructions of a page.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_custom_password_instruction" "reset_password" {
   page_id = "reset-password:enter-password"
 }

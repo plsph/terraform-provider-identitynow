@@ -15,7 +15,7 @@ Only the settings present in the configuration are managed. Settings that are no
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_campaign_reports_config" "this" {
   identity_attribute_columns = ["department", "location"]
 }

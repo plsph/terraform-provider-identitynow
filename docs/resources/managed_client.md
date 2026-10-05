@@ -13,7 +13,7 @@ Name and description are updated with JSON Patch; changing the cluster or the ty
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_managed_client" "va_1" {
   cluster_id  = "<CLUSTER_ID>"
   name        = "VA 1"

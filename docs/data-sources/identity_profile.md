@@ -11,7 +11,7 @@ Use this data source to look up an identity profile by ID or name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_identity_profile" "employees" {
   name = "Employees"
 }

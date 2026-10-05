@@ -11,7 +11,7 @@ Manages an IdentityNow Source App. Use `identitynow_access_profile_attachment` t
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_source_app" "example" {
   name               = "Active Directory Developers"
   description        = "Application for requesting developer access"

@@ -11,7 +11,7 @@ Use this data source to access information about an existing Workflow. The looku
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_workflow" "example" {
   name = "Send Email on Manager Change"
 }

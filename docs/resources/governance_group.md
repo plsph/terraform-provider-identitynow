@@ -11,7 +11,7 @@ Manages an IdentityNow Governance Group. Use `identitynow_governance_group_membe
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_governance_group" "this" {
   name        = "Access Approvers"
   description = "Approves access requests"

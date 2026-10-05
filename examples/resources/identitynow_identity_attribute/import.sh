@@ -1,0 +1,1 @@
+terraform import identitynow_identity_attribute.example costCenter

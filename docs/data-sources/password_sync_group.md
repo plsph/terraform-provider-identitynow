@@ -11,7 +11,7 @@ Use this data source to look up a password sync group by ID or name. Lookups by 
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_password_sync_group" "ad_and_entra" {
   name = "AD and Entra ID"
 }

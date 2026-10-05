@@ -11,7 +11,7 @@ Use this data source to look up a SIM integration by ID. It uses an experimental
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_sim_integration" "servicenow_sim" {
   id = "<SIM_INTEGRATION_ID>"
 }

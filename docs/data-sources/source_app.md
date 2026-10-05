@@ -11,7 +11,7 @@ Use this data source to access information about an existing Source App.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_source_app" "example" {
   name = "Active Directory Developers"
 }

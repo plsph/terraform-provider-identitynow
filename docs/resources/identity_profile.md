@@ -11,7 +11,7 @@ Manages an identity profile. An identity profile builds identities from the acco
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_identity" "owner" {
   alias = "john.doe"
 }

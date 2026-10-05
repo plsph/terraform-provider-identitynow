@@ -11,7 +11,7 @@ Use this data source to read information about the current tenant: its name, dep
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_tenant" "current" {}
 
 output "tenant_region" {

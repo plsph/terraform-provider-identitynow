@@ -19,7 +19,7 @@ Because the update sends the whole configuration, an access key that the API doe
 
 ## Example Usage
 
-```hcl
+```terraform
 variable "okta_api_token" {
   description = "Okta API token."
   type        = string

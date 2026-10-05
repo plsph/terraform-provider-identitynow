@@ -1,0 +1,1 @@
+terraform import identitynow_reassignment_tenant_config.this reassignment-tenant-config

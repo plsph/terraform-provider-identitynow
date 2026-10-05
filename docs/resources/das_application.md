@@ -17,7 +17,7 @@ The API only returns the name, description and read-only attributes of an applic
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_das_application" "file_share" {
   name             = "Finance File Share"
   description      = "Finance department file share"

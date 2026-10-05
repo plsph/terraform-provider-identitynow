@@ -29,7 +29,7 @@ Requests that fail with HTTP 429 (Too Many Requests) are retried, honouring the 
 
 ## Example Usage
 
-```hcl
+```terraform
 # We strongly recommend using the required_providers block to set the
 # IdentityNow Provider source and version being used
 terraform {

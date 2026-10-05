@@ -11,7 +11,7 @@ Use this data source to look up an OAuth (API) client by ID. The client secret i
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_oauth_client" "ci" {
   id = "2c9180835d2e5168015d32f890ca1581"
 }

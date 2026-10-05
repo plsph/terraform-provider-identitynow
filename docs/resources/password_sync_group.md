@@ -11,7 +11,7 @@ Manages a password sync group, a set of sources that share the same password. Up
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_password_sync_group" "ad_and_entra" {
   name               = "AD and Entra ID"
   password_policy_id = "2c91808d744ba0ce01746f93b6204199"

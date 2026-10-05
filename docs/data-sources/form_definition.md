@@ -11,7 +11,7 @@ Use this data source to look up an existing IdentityNow custom form definition b
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_form_definition" "access_request" {
   name = "Access Request Justification"
 }

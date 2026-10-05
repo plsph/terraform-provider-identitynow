@@ -19,7 +19,7 @@ Tags are case-insensitive and stored in uppercase, so `production` and `PRODUCTI
 
 ### Tag an Access Profile
 
-```hcl
+```terraform
 resource "identitynow_tagged_object" "access_profile_tags" {
   object_type = "ACCESS_PROFILE"
   object_ids  = ["2c91808568c529c60168cca6f90c1313"]
@@ -29,7 +29,7 @@ resource "identitynow_tagged_object" "access_profile_tags" {
 
 ### Tag a Role
 
-```hcl
+```terraform
 resource "identitynow_role" "example" {
   name        = "Finance Role"
   description = "Access for the finance department"
@@ -50,7 +50,7 @@ resource "identitynow_tagged_object" "role_tags" {
 
 ### Tag a Source
 
-```hcl
+```terraform
 data "identitynow_source" "hr" {
   name = "Workday"
 }
@@ -64,7 +64,7 @@ resource "identitynow_tagged_object" "source_tags" {
 
 ### Tag Multiple Objects
 
-```hcl
+```terraform
 resource "identitynow_tagged_object" "finance_access_profiles" {
   object_type = "ACCESS_PROFILE"
   object_ids = [

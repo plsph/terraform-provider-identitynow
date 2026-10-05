@@ -11,7 +11,7 @@ Use this data source to look up a non-employee source by ID or name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_non_employee_source" "contractors" {
   name = "Contractors"
 }

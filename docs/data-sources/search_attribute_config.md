@@ -13,7 +13,7 @@ Use this data source to look up an extended account search attribute by name.
 
 ## Example Usage
 
-```hcl
+```terraform
 data "identitynow_search_attribute_config" "employee_number" {
   name = "employeeNumber"
 }

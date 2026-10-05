@@ -1,0 +1,1 @@
+terraform import identitynow_access_request_config.this access-request-config

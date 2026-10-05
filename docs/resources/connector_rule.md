@@ -11,7 +11,7 @@ Manages a connector rule, a BeanShell rule that runs on the virtual appliance, e
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_connector_rule" "before_create" {
   name        = "AD Before Create"
   description = "Logs account creation"

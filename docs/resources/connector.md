@@ -15,7 +15,7 @@ Only the connector metadata and the application, correlation config and source c
 
 ## Example Usage
 
-```hcl
+```terraform
 resource "identitynow_connector" "custom" {
   name       = "My Custom Connector"
   class_name = "sailpoint.connector.OpenConnectorAdapter"

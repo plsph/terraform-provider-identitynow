@@ -1,0 +1,1 @@
+terraform import identitynow_search_attribute_config.example employeeNumber

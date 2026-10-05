@@ -15,7 +15,7 @@ Workflows can be created with `enabled = true`: the workflow is created disabled
 
 ### Basic Workflow with Event Trigger
 
-```hcl
+```terraform
 resource "identitynow_workflow" "email_on_manager_change" {
   name        = "Send Email on Manager Change"
   description = "Send an email to the identity when their manager attribute changes."
@@ -60,7 +60,7 @@ resource "identitynow_workflow" "email_on_manager_change" {
 
 ### Scheduled Workflow
 
-```hcl
+```terraform
 resource "identitynow_workflow" "scheduled_report" {
   name        = "Weekly Compliance Report"
   description = "Generate a weekly compliance report."
@@ -100,7 +100,7 @@ resource "identitynow_workflow" "scheduled_report" {
 
 ### External Trigger Workflow
 
-```hcl
+```terraform
 resource "identitynow_workflow" "external_trigger" {
   name        = "External Trigger Workflow"
   description = "A workflow triggered externally via API."
